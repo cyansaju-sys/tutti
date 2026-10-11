@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MdAdd, MdCallSplit, MdCloudQueue, MdInsertDriveFile, MdSearch, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdCallSplit, MdCloudQueue, MdSearch, MdTerminal } from 'react-icons/md'
 import type { AgentCandidate, GitBranch } from '@shared/types'
 import { newSince, parseChangelog } from '@/lib/changelog'
 import { ago } from '@/lib/format'
@@ -9,7 +9,8 @@ import { useT } from '@/lib/i18n'
 import { refreshGit } from '@/lib/gitSync'
 import { SECTIONS } from '@/lib/shortcuts'
 import { useStore } from '@/store'
-import { relative, toPosix } from '@/lib/paths'
+import { iconFor } from '@/lib/icons'
+import { basename, relative, toPosix } from '@/lib/paths'
 import { AgentIcon } from './AgentIcon'
 import changelogText from '../../../../CHANGELOG.md?raw'
 import changelogEn from '../../../../CHANGELOG.en.md?raw'
@@ -113,7 +114,7 @@ export function QuickOpenDialog() {
   return <Modal onClose={() => set({ modal: null })} width={560}>
     <Palette
       placeholder={t('dlg.quickOpen')} items={files} label={(path) => toPosix(relative(project, path))} empty={t('dlg.noFileMatch')}
-      render={(path, active) => <><span className={clsx('grid size-7 shrink-0 place-items-center rounded-md', active ? 'bg-accent/15 text-accent' : 'bg-ov/[0.04] text-muted')}><MdInsertDriveFile size={15} /></span><span className="truncate">{toPosix(relative(project, path))}</span></>}
+      render={(path, active) => <><img src={iconFor(basename(path))} alt="" className="size-4 shrink-0" draggable={false} /><span className="truncate">{toPosix(relative(project, path))}</span></>}
       onPick={(path) => { if (path) { set({ modal: null }); void openDoc(path) } }}
     />
   </Modal>
