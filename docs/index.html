@@ -51,6 +51,7 @@
   .star { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 10px; color: var(--text); font-size: 13px; font-weight: 600; background: var(--raised); }
   .star:hover { border-color: var(--accent); text-decoration: none; color: var(--text); }
   .star svg { width: 14px; height: 14px; color: #e2b93b; }
+  [data-version]:not(:empty)::after { content: " "; }
   [data-stars]:empty { display: none; }
   [data-stars]:not(:empty)::before { content: "·"; margin-right: 6px; color: var(--muted); }
   .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
@@ -315,7 +316,7 @@
 
 <footer>
   <div class="wrap in">
-    <div class="brand"><img src="icon.png" alt="" /> Tutti <span style="color:var(--muted);font-weight:400;font-size:14px">· MIT · <span data-i="f.built">Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)</span></span></div>
+    <div class="brand"><img src="icon.png" alt="" /> Tutti <span style="color:var(--muted);font-weight:400;font-size:14px"><span data-version></span>· MIT · <span data-i="f.built">Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic) y <a href="https://openai.com/codex" target="_blank" rel="noopener" style="text-decoration:underline">Codex</a> (OpenAI)</span></span></div>
     <div class="links">
       <a href="documentacion.html" data-i="f.docs">Documentación</a>
       <a href="documentacion.html#contribuir" data-i="f.contrib">Contribuir</a>
@@ -352,7 +353,7 @@ const T = {
     'g.1': 'Archivos y editor', 'g.2': 'Buscar y reemplazar en el proyecto', 'g.3': 'Cambios y commit', 'g.4': 'Contexto del proyecto para los agentes', 'g.5': 'Terminales integradas', 'g.6': 'Comparación de cambios',
     'i.eyebrow': 'Empieza ahora', 'i.h': 'Instálalo en un minuto', 'i.p': 'Gratis y de código abierto. Se actualiza solo y te cuenta qué cambió en cada versión.',
     'i.note': 'En Linux no hace falta ser administrador. El instalador de Windows no está firmado: pulsa «Más información → Ejecutar de todas formas». macOS llegará más adelante.',
-    'f.changes': 'Novedades', 'f.privacy': 'Privacidad', 'f.docs': 'Documentación', 'docs.btn': 'Leer la documentación', 'star.short': 'Estrella', 'star.btn': 'Dar una estrella', 'f.contrib': 'Contribuir', 'f.built': 'Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
+    'f.changes': 'Novedades', 'f.privacy': 'Privacidad', 'f.docs': 'Documentación', 'docs.btn': 'Leer la documentación', 'star.short': 'Estrella', 'star.btn': 'Dar una estrella', 'f.contrib': 'Contribuir', 'f.built': 'Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic) y <a href="https://openai.com/codex" target="_blank" rel="noopener" style="text-decoration:underline">Codex</a> (OpenAI)'
   },
   en: {
     'nav.why': 'Why', 'nav.features': 'Features', 'nav.install': 'Install', 'nav.docs': 'Docs',
@@ -378,7 +379,7 @@ const T = {
     'g.1': 'Files and editor', 'g.2': 'Find and replace across the project', 'g.3': 'Changes and commit', 'g.4': 'Project context for the agents', 'g.5': 'Built-in terminals', 'g.6': 'Diff view',
     'i.eyebrow': 'Get started', 'i.h': 'Install it in a minute', 'i.p': 'Free and open source. It updates itself and tells you what changed in every version.',
     'i.note': 'No admin rights needed on Linux. The Windows installer is not signed: click “More info → Run anyway”. macOS is coming later.',
-    'f.changes': 'Changelog', 'f.privacy': 'Privacy', 'f.docs': 'Documentation', 'docs.btn': 'Read the documentation', 'star.short': 'Star', 'star.btn': 'Star on GitHub', 'f.contrib': 'Contribute', 'f.built': 'Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic)'
+    'f.changes': 'Changelog', 'f.privacy': 'Privacy', 'f.docs': 'Documentation', 'docs.btn': 'Read the documentation', 'star.short': 'Star', 'star.btn': 'Star on GitHub', 'f.contrib': 'Contribute', 'f.built': 'Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic) and <a href="https://openai.com/codex" target="_blank" rel="noopener" style="text-decoration:underline">Codex</a> (OpenAI)'
   }
 }
 const media = matchMedia('(prefers-color-scheme: light)')
@@ -434,6 +435,19 @@ document.getElementById('copy').addEventListener('click', async (e) => {
     const text = n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
     document.querySelectorAll('[data-stars]').forEach((el) => { el.textContent = text })
   }
+})()
+
+// versión publicada (la última release de GitHub; si falla, no se muestra)
+;(async () => {
+  let v = null
+  try {
+    v = sessionStorage.getItem('tutti-version')
+    if (!v) {
+      const r = await fetch('https://api.github.com/repos/cyansaju-sys/tutti/releases/latest')
+      if (r.ok) { v = (await r.json()).tag_name; sessionStorage.setItem('tutti-version', v) }
+    }
+  } catch {}
+  if (v) document.querySelectorAll('[data-version]').forEach((el) => { el.textContent = '· ' + v })
 })()
 
 const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) } }), { threshold: 0.12 })

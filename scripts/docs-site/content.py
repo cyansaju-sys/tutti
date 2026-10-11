@@ -620,7 +620,7 @@ scripts/       dev.mjs</code></pre>
 </ol>
 <p>GitHub Actions comprueba que el tag coincide con la versión y que los dos changelogs la mencionan, pasa tipos y pruebas, empaqueta el AppImage y el instalador de Windows y crea la release (<code>Tutti-X.Y.Z-x86_64.AppImage</code>, <code>latest-linux.yml</code>, <code>install.sh</code>, <code>Tutti-Setup-X.Y.Z.exe</code> y <code>latest.yml</code>, que es lo que lee el actualizador). Si el build de Windows falla, la de Linux sale igual.</p>
 <h3>Créditos</h3>
-<p>Tutti se ha construido con la ayuda de <a href="https://claude.com/claude-code">Claude</a> (Anthropic), que ha colaborado en el código, las pruebas, las capturas y esta documentación. Las decisiones de producto y la revisión de cada cambio son de quien mantiene el proyecto.</p>
+<p>Tutti se ha construido con la ayuda de <a href="https://claude.com/claude-code">Claude</a> (Anthropic) y <a href="https://openai.com/codex">Codex</a> (OpenAI), que han colaborado en el código, las pruebas, las capturas y esta documentación. Las decisiones de producto y la revisión de cada cambio son de quien mantiene el proyecto.</p>
 ''', '''
 <pre><code>yarn install         # installs and rebuilds node-pty and better-sqlite3 for Electron
 yarn dev             # with hot reload
@@ -659,7 +659,7 @@ scripts/       dev.mjs</code></pre>
 </ol>
 <p>GitHub Actions checks that the tag matches the version and that both changelogs mention it, runs types and tests, packages the AppImage and the Windows installer and creates the release (<code>Tutti-X.Y.Z-x86_64.AppImage</code>, <code>latest-linux.yml</code>, <code>install.sh</code>, <code>Tutti-Setup-X.Y.Z.exe</code> and <code>latest.yml</code>, which is what the updater reads). If the Windows build fails, the Linux one still goes out.</p>
 <h3>Credits</h3>
-<p>Tutti was built with the help of <a href="https://claude.com/claude-code">Claude</a> (Anthropic), which collaborated on the code, the tests, the screenshots and this documentation. Product decisions and the review of every change belong to the project's maintainer.</p>
+<p>Tutti was built with the help of <a href="https://claude.com/claude-code">Claude</a> (Anthropic) and <a href="https://openai.com/codex">Codex</a> (OpenAI), which collaborated on the code, the tests, the screenshots and this documentation. Product decisions and the review of every change belong to the project's maintainer.</p>
 ''')
 
 sec('contribuir', 'Contribuir', 'Contributing', '''
