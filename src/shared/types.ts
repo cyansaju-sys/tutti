@@ -75,7 +75,7 @@ export interface McpResult { ok: boolean; message: string }
 
 /** Una sesión del historial de un agente. */
 export interface SessionInfo {
-  command: 'claude' | 'opencode' | 'agy'; agent: string; id: string; title: string; project: string; cwd: string
+  command: 'claude' | 'opencode' | 'agy' | 'codex'; agent: string; id: string; title: string; project: string; cwd: string
   tokens: number; start: number; end: number      // fechas en milisegundos
 }
 export interface LimitInfo { label: string; percent: number; resetsAt: number }
@@ -103,7 +103,8 @@ export interface Api {
   dialog: { chooseFolder(start?: string): Promise<string | null> }
   ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
   context: {
-    ensure(project: string): Promise<string>
+    open(project: string): Promise<{ file: string; text: string; exists: boolean }>      // no crea el archivo: se crea al guardar
+    ensureGlobal(): Promise<string>
     generate(project: string): Promise<McpResult & { text?: string; agent?: string }>
     onAgent(cb: (name: string) => void): () => void
   }
@@ -125,6 +126,7 @@ export interface Api {
     ignored(root: string, paths: string[]): Promise<string[]>
     stage(root: string, paths: string[]): Promise<string>
     unstage(root: string, paths: string[]): Promise<string>
+    discard(root: string, tracked: string[], untracked: string[]): Promise<string>      // devuelve el error, o '' si salió bien
     commit(root: string, message: string): Promise<string>
     push(root: string): Promise<string>
     branches(root: string): Promise<GitBranch[]>
@@ -179,6 +181,7 @@ export interface Api {
   pty: {
     spawn(opts: PtyOptions): Promise<{ ok: boolean; error?: string }>
     write(id: string, data: string): void
+    paste(id: string, text: string): void      // escribe en el prompt sin enviarlo
     resize(id: string, cols: number, rows: number): void
     kill(id: string): void
     onData(cb: (id: string, data: string) => void): () => void

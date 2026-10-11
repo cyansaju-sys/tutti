@@ -54,14 +54,14 @@ describe('arranque de cada agente', () => {
 })
 
 describe('arranque sin servidor de reparto de tareas', () => {
-  const context = { text: 'Es una app', file: '/cfg/tutti/p-1/contexto.md' }
+  const context = { text: 'Es una app', files: ['/cfg/tutti/contexto-global.md', '/cfg/tutti/p-1/contexto.md'] }
   it('Claude recibe solo el contexto', () => {
     expect(buildLaunch('claude', null, 'tarea', ['--model', 'x'], 2, context)).toEqual({ args: ['tarea', '--model', 'x', '--append-system-prompt', 'Es una app'], env: {} })
   })
   it('OpenCode recibe solo las instrucciones, sin MCP ni --standalone', () => {
     const l = buildLaunch('opencode', null, undefined, [], 2, context)
     expect(l.args).toEqual([])
-    expect(JSON.parse(l.env.OPENCODE_CONFIG_CONTENT)).toEqual({ instructions: [context.file] })
+    expect(JSON.parse(l.env.OPENCODE_CONFIG_CONTENT)).toEqual({ instructions: context.files })
   })
   it('sin servidor ni contexto no cambia nada', () => {
     expect(buildLaunch('claude', null, undefined, ['--a'], 2)).toEqual({ args: ['--a'], env: {} })
@@ -69,7 +69,7 @@ describe('arranque sin servidor de reparto de tareas', () => {
   })
   it('con servidor y contexto, el contexto se suma', () => {
     expect(buildLaunch('claude', entry, undefined, [], 2, context).args).toContain('--append-system-prompt')
-    expect(JSON.parse(buildLaunch('opencode', entry, undefined, [], 2, context).env.OPENCODE_CONFIG_CONTENT).instructions).toEqual([context.file])
+    expect(JSON.parse(buildLaunch('opencode', entry, undefined, [], 2, context).env.OPENCODE_CONFIG_CONTENT).instructions).toEqual(context.files)
   })
 })
 

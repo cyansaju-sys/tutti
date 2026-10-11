@@ -113,7 +113,7 @@ nombre de la app.
 
 Árbol con los íconos de Material Icon Theme y la letra de git en lo que cambió. Los archivos se abren en pestañas, ya editables,
 con colores, marcas de git en el margen (verde añadido, azul modificado, rojo borrado), autocompletado (`Enter` o `Tab` aceptan),
-`Ctrl+S` para guardar y recarga automática si otra herramienta cambia el archivo. El permiso **Edición** de la barra de título
+`Ctrl+S` para guardar y recarga automática si otra herramienta cambia el archivo. **Selecciona código y pulsa `Ctrl+L`** (o clic derecho → *Enviar selección al agente*) para escribir en el prompt del agente activo la referencia `@archivo:12-30` y el trozo, sin enviarlo. El permiso **Edición** de la barra de título
 (o `Ctrl+Shift+L`) los deja en solo lectura. Con el árbol enfocado se navega con las flechas.
 
 La cabecera del árbol tiene los botones **Nuevo archivo**, **Nueva carpeta**, **Actualizar**, **Contraer todo** y **Abrir otro
@@ -220,10 +220,16 @@ servicio compartido, así que a cada editor se le lanza con `--standalone`: su c
 
 ### Contexto del proyecto
 
-El apartado **Contexto** (`Ctrl+Shift+K`) guarda un texto sobre el proyecto —qué es, cómo se ejecuta, convenciones— que **leen los
-agentes que abras en él**: Claude Code lo recibe como parte de su prompt de sistema y OpenCode como archivo de instrucciones. Vive
-**fuera del repositorio**, en `<config>/tutti/<proyecto>-<huella>/contexto.md`, y se guarda solo (o con *Guardar*). Funciona
-también si el agente se abre en una subcarpeta y sin el reparto de tareas.
+El apartado **Contexto** (`Ctrl+Shift+K`) guarda un texto que **leen los agentes que abras**: qué es el proyecto, cómo se ejecuta,
+convenciones y cómo prefieres trabajar. Se ve como **Markdown** (*Editar* o doble clic para modificarlo) y tiene dos capas:
+
+- **Proyecto:** vive **en el repositorio**, en `AGENTS.md`, el archivo estándar que también leen Codex, OpenCode, Cursor y otros, así
+  que se versiona con git y se comparte con el equipo. No se crea hasta que escribes y guardas, y si el proyecto ya tiene uno se abre
+  tal cual. Los contextos de versiones anteriores (en la configuración de Tutti) se siguen usando hasta que los guardes en el proyecto.
+- **Global:** tus preferencias para **todos** los proyectos, en `<config>/tutti/contexto-global.md` (nunca en un repositorio).
+
+Al abrir un agente desde Tutti recibe primero el global y luego el del proyecto: Claude Code como parte de su prompt de sistema y
+OpenCode como archivos de instrucciones. Funciona también si el agente se abre en una subcarpeta y sin el reparto de tareas.
 
 **Generar con IA** lo redacta un agente a partir de un resumen pequeño del proyecto (estructura, `package.json`, inicio del README,
 últimos commits), sin dejarle explorar, para gastar muy pocos tokens: con Claude usa el modelo pequeño `haiku`, y si ningún agente
@@ -270,7 +276,7 @@ ejecuta código de terceros que el registro no revisa, y la ficha lo recuerda.
 
 Tokens de la ventana de 5 h de Claude, de hoy, de 7 días y totales; los porcentajes reales de límite que da Anthropic (se consultan
 una vez al abrir la pestaña, con la sesión de Claude Code); el consumo de OpenCode; y el historial del proyecto, donde puedes
-retomar, renombrar o borrar una sesión. De **Antigravity** se lee el historial de conversaciones (no guarda tokens en local).
+retomar, renombrar o borrar una sesión. De **Codex** se leen tokens, límite del plan e historial de sus registros locales (`~/.codex`), y de **Antigravity** el historial de conversaciones (no guarda tokens en local).
 
 ### Git
 
@@ -317,6 +323,7 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | Atajo | Acción |
 |---|---|
 | `Ctrl+S` / `Ctrl+W` | Guardar / cerrar el archivo abierto |
+| `Ctrl+L` | Enviar la selección (o la línea) al agente activo |
 | `Ctrl+Shift+F` / `Ctrl+Shift+H` | Buscar / buscar y reemplazar en el proyecto |
 | `Ctrl+F` / `Ctrl+H` | Buscar / reemplazar en el archivo abierto |
 | `Ctrl+Shift+L` | Permitir o bloquear la edición |
@@ -407,7 +414,7 @@ Tutti es de código abierto y cualquier ayuda suma: errores bien descritos, trad
 ## Privacidad
 
 Solo lectura sobre los datos de los agentes: los registros de Claude Code (`~/.claude/projects`), su configuración MCP
-(`~/.claude.json`), la base de OpenCode (`~/.local/share/opencode`) y el historial de Antigravity (`~/.gemini/antigravity-cli`).
+(`~/.claude.json`), la base de OpenCode (`~/.local/share/opencode`) y el historial de Antigravity (`~/.gemini/antigravity-cli`) y los registros de Codex (`~/.codex/sessions`).
 
 La app solo sale a internet para consultar tus límites en Anthropic (con la sesión de Claude Code) y para buscar actualizaciones en
 GitHub. El servidor de reparto de tareas escucha únicamente en `127.0.0.1`.

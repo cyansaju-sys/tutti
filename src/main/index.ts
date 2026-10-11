@@ -1,8 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents/agents'
-import { ensureContext } from './context/context'
+import { ensureGlobalContext, openProjectContext } from './context/context'
 import { generateContext } from './context/contextGen'
 import { suggestCommit } from './git/commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
@@ -75,7 +75,8 @@ function registerIpc(): void {
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
   ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
-  ipcMain.handle('context:ensure', (_e, project: string) => ensureContext(project))
+  ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
+  ipcMain.handle('context:ensure-global', () => ensureGlobalContext())
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))
   ipcMain.handle('search:run', (_e, root: string, opts: SearchOptions) => searchFiles(root, opts))
   ipcMain.handle('search:replace', (_e, root: string, opts: SearchOptions, text: string, paths: string[]) => replaceInFiles(root, opts, text, paths))
@@ -92,6 +93,15 @@ function registerIpc(): void {
   ipcMain.handle('git:ignored', (_e, root: string, paths: string[]) => git.ignored(root, paths))
   ipcMain.handle('git:stage', (_e, root: string, paths: string[]) => git.stage(root, paths))
   ipcMain.handle('git:unstage', (_e, root: string, paths: string[]) => git.unstage(root, paths))
+  // descartar: los archivos conocidos vuelven a su versión; los nuevos (sin seguimiento) van a la papelera para poder recuperarlos
+  ipcMain.handle('git:discard', async (_e, root: string, tracked: string[], untracked: string[]): Promise<string> => {
+    const inside = (rel: string): string | null => { const abs = resolve(root, rel); return abs !== resolve(root) && abs.startsWith(resolve(root) + sep) ? abs : null }
+    if ([...tracked, ...untracked].some((p) => !inside(p))) return tm('m.git.badPath')
+    const error = await git.discardTracked(root, tracked)
+    if (error) return error
+    for (const rel of untracked) { try { await shell.trashItem(inside(rel)!) } catch (e) { return e instanceof Error ? e.message : String(e) } }
+    return ''
+  })
   ipcMain.handle('git:commit', (_e, root: string, message: string) => git.commit(root, message))
   ipcMain.handle('git:push', (_e, root: string) => git.push(root))
   ipcMain.handle('git:branches', (_e, root: string) => git.branches(root))
@@ -131,6 +141,7 @@ function registerIpc(): void {
   ipcMain.handle('agents:removeCustom', (_e, command: string) => removeCustomAgent(command))
 
   ipcMain.handle('pty:spawn', (e, opts: PtyOptions) => pty.spawn(e.sender, opts))
+  ipcMain.on('pty:paste', (_e, id: string, text: string) => pty.pastePrompt(id, String(text).slice(0, 60_000)))
   ipcMain.on('pty:write', (_e, id: string, data: string) => pty.write(id, data))
   ipcMain.on('pty:resize', (_e, id: string, cols: number, rows: number) => pty.resize(id, cols, rows))
   ipcMain.on('pty:kill', (_e, id: string) => pty.kill(id))

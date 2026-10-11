@@ -11,8 +11,8 @@ export function isGlobalShortcut(e: KeyboardEvent): boolean {
 
 export const SECTIONS: Array<{ title: MsgKey; items: Array<[string, MsgKey]> }> = [
   { title: 'sc.files', items: [
-    ['Ctrl + S', 'sc.save'], ['Ctrl + W', 'sc.closeTab'],
-    ['Ctrl + F', 'sc.find'], ['Ctrl + H', 'sc.replace'],
+    ['Ctrl + S', 'sc.save'], ['Ctrl + L', 'sc.sendSelection'], ['Ctrl + W', 'sc.closeTab'],
+    ['Ctrl + F', 'sc.find'], ['Ctrl + H', 'sc.replace'], ['Ctrl + P', 'sc.quickOpen'], ['Ctrl + G', 'sc.goLine'],
     ['Ctrl + Shift + L', 'sc.toggleEdit'], ['Tab / Shift + Tab', 'sc.indent'],
     ['key.ctrlSpace', 'sc.complete'], ['↑ ↓ · Enter / Tab · Esc', 'sc.suggest'],
     ['↑ ↓ ← → · Enter · Esc', 'sc.tree']

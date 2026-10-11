@@ -60,6 +60,10 @@ export const stage = async (root: string, paths: string[]): Promise<string> => f
 export const unstage = async (root: string, paths: string[]): Promise<string> =>
   flat(await run(root, ['restore', '--staged', '--', ...paths]))
 
+/** Deshace los cambios sin preparar de archivos que git ya conoce: vuelven a lo que hay en el índice (o en el último commit). */
+export const discardTracked = async (root: string, paths: string[]): Promise<string> =>
+  paths.length ? flat(await run(root, ['restore', '--worktree', '--', ...paths])) : ''
+
 export async function commit(root: string, message: string): Promise<string> {
   const staged = await run(root, ['diff', '--cached', '--name-only'])
   if (staged.ok && !staged.out.trim()) {

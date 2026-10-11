@@ -9,6 +9,8 @@ import { useT } from '@/lib/i18n'
 import { refreshGit } from '@/lib/gitSync'
 import { SECTIONS } from '@/lib/shortcuts'
 import { useStore } from '@/store'
+import { iconFor } from '@/lib/icons'
+import { basename, relative, toPosix } from '@/lib/paths'
 import { AgentIcon } from './AgentIcon'
 import changelogText from '../../../../CHANGELOG.md?raw'
 import changelogEn from '../../../../CHANGELOG.en.md?raw'
@@ -86,6 +88,55 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
       </div>
     </div>
   )
+}
+
+export function QuickOpenDialog() {
+  const t = useT()
+  const project = useStore((s) => s.project)
+  const openDoc = useStore((s) => s.openDoc)
+  const set = useStore((s) => s.set)
+  const [files, setFiles] = useState<string[]>([])
+  useEffect(() => {
+    if (!project) return
+    let cancelled = false
+    const visit = async (dir: string, seen: Set<string>): Promise<string[]> => {
+      if (seen.has(dir)) return []
+      seen.add(dir)
+      const entries = await window.api.fs.list(dir)
+      const out: string[] = []
+      for (const entry of entries) entry.isDir ? out.push(...await visit(entry.path, seen)) : out.push(entry.path)
+      return out
+    }
+    void visit(project, new Set()).then((paths) => { if (!cancelled) setFiles(paths) })
+    return () => { cancelled = true }
+  }, [project])
+  if (!project) return <Modal onClose={() => set({ modal: null })} width={560}><p className="px-4 py-5 text-[12px] text-muted">{t('dlg.openProjectFirst')}</p></Modal>
+  return <Modal onClose={() => set({ modal: null })} width={560}>
+    <Palette
+      placeholder={t('dlg.quickOpen')} items={files} label={(path) => toPosix(relative(project, path))} empty={t('dlg.noFileMatch')}
+      render={(path, active) => <><img src={iconFor(basename(path))} alt="" className="size-4 shrink-0" draggable={false} /><span className="truncate">{toPosix(relative(project, path))}</span></>}
+      onPick={(path) => { if (path) { set({ modal: null }); void openDoc(path) } }}
+    />
+  </Modal>
+}
+
+export function GoLineDialog() {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  const active = useStore((s) => s.docs.find((d) => d.path === s.activeDoc))
+  const [value, setValue] = useState('')
+  const submit = (): void => {
+    const line = Number.parseInt(value, 10)
+    if (!active || active.kind !== 'text' || !Number.isFinite(line) || line < 1) return
+    set({ modal: null, reveal: { path: active.path, line, col: 0, length: 0, token: Date.now() }, focus: 'editor' })
+  }
+  return <Modal onClose={() => set({ modal: null })} width={360} title={t('dlg.goLine')}>
+    <div className="flex flex-col gap-3 px-4 pb-4">
+      <input autoFocus value={value} onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ''))} onKeyDown={(e) => { if (e.key === 'Enter') submit() }} placeholder={t('dlg.lineNumber')} inputMode="numeric" className={FIELD} />
+      {!active || active.kind !== 'text' ? <p className="text-[12px] text-muted">{t('dlg.noTextFile')}</p> : <p className="text-[11px] text-muted">{active.title}</p>}
+      <div className="flex justify-end"><button onClick={submit} disabled={!active || active.kind !== 'text' || !value} className="rounded-lg bg-accent px-3.5 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110 disabled:opacity-40">{t('dlg.go')}</button></div>
+    </div>
+  </Modal>
 }
 
 /** Ícono dentro de una pastilla cuadrada: da el mismo ritmo a todas las filas. */

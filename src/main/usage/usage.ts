@@ -3,6 +3,7 @@
  *
  * - Claude Code: ~/.claude/projects/<proyecto>/<sesión>.jsonl (cada respuesta trae su `usage`).
  * - OpenCode: su base SQLite (tabla session_v2).
+ * - Codex: ~/.codex/sessions/AAAA/MM/DD/rollout-*.jsonl (tokens acumulados y límites de su plan en cada aviso).
  * - Antigravity (agy): solo historial, desde conversation_summaries.db (no guarda tokens).
  *
  * Solo se lee: nunca se modifica nada de los agentes (salvo borrar una sesión si el usuario lo pide).
@@ -13,6 +14,7 @@ import { homedir } from 'node:os'
 import { basename, join, relative, isAbsolute } from 'node:path'
 import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../../shared/types'
 import { deleteAgyConversation, readAgyConversations } from './agyDb'
+import { deleteCodexSession, readCodexData } from './codexDb'
 import { readOpenCodeSessions } from './opencodeDb'
 import { getSetting, setSetting } from '../settings'
 import { extendedPath } from '../shellpath'
@@ -236,6 +238,13 @@ export function inProject(cwd: string, project: string): boolean {
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
 }
 
+/** Consumo e historial de Codex, desde sus registros locales (los límites vienen en ellos: no hace falta red). */
+export function codexSessions(now: number): { usage: Omit<AgentUsage, 'limits' | 'limitsError' | 'limitsAge' | 'name'>; sessions: SessionInfo[]; limits: LimitInfo[]; limitsAge: number } | null {
+  const data = readCodexData(now)
+  if (!data) return null
+  return { usage: { command: 'codex', window: null, ...data.usage, note: data.sessions.length ? '' : tm('m.us.noCodex') }, sessions: data.sessions, limits: data.limits, limitsAge: data.limitsAge }
+}
+
 export async function collectUsage(agents: AgentInfo[], project: string | null, fetchLimits: boolean): Promise<UsageData> {
   const now = Date.now()
   const out: AgentUsage[] = []
@@ -245,6 +254,12 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
     if (agent.command === 'claude') found = claudeSessions(now)
     else if (agent.command === 'opencode') found = opencodeSessions(now)
     else if (agent.command === 'agy') found = agySessions(now)
+    else if (agent.command === 'codex') {
+      const c = codexSessions(now)
+      if (c) { out.push({ ...c.usage, name: agent.name, limits: c.limits, limitsError: '', limitsAge: c.limitsAge }); all.push(...c.sessions) }
+      else out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: tm('m.us.noCodex'), limits: [], limitsError: '', limitsAge: 0 })
+      continue
+    }
     if (!found) {
       out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: tm('m.us.unreadable'), limits: [], limitsError: '', limitsAge: 0 })
       continue
@@ -288,6 +303,10 @@ export function deleteSession(session: SessionInfo): Promise<McpResult> {
   if (session.command === 'agy') {
     const ok = deleteAgyConversation(session.id)
     return Promise.resolve(finish({ ok, message: ok ? tm('m.us.deleted') : tm('m.us.agyBusy') }))
+  }
+  if (session.command === 'codex') {
+    const ok = deleteCodexSession(session.id)
+    return Promise.resolve(finish({ ok, message: ok ? tm('m.us.deleted') : tm('m.us.noFile') }))
   }
   if (session.command !== 'opencode') return Promise.resolve({ ok: false, message: tm('m.us.noDelete') })
   return new Promise((done) => {

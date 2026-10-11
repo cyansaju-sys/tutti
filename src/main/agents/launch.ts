@@ -1,8 +1,8 @@
 /** Cómo arrancar cada agente conectado al reparto de tareas (argumentos y variables de entorno). */
 
 export interface McpEntry { type: 'http'; url: string; headers: Record<string, string> }
-/** Contexto del proyecto: el texto y el archivo donde vive. */
-export interface ProjectContext { text: string; file: string }
+/** Contexto para los agentes: el texto (global y del proyecto juntos) y los archivos donde vive cada parte. */
+export interface ProjectContext { text: string; files: string[] }
 export interface Launch { args: string[]; env: Record<string, string>; after?: () => void }
 
 // herramientas del servidor «tutti» que Claude Code puede usar sin pedir permiso cada vez
@@ -14,7 +14,7 @@ export const PROMPT_ARGS: Record<string, (text: string) => string[]> = {
 }
 
 /** OpenCode lee las instrucciones adicionales de la clave `instructions` (rutas de archivos). */
-const instructions = (context?: ProjectContext): { instructions?: string[] } => (context ? { instructions: [context.file] } : {})
+const instructions = (context?: ProjectContext): { instructions?: string[] } => (context ? { instructions: context.files } : {})
 
 /**
  * OpenCode 2.x atiende a todos sus clientes desde UN servicio en segundo plano compartido: la configuración que se le pasa

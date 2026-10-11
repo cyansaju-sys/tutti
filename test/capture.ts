@@ -7,7 +7,8 @@ import * as pty from '../src/main/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { legacyContextFile } from '../src/main/context/context'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
@@ -54,6 +55,11 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await run(`${store}.setTheme('${process.env.TUTTI_CAPTURE_LIGHT ? 'light' : 'dark'}')`)
   await open('docs/demo/ejemplo.sql')
   await snap('03-sql')
+  // clic derecho en el editor: enviar la selección al agente, copiar, pegar…
+  await open('src/main/git/git.ts')
+  await run(`(() => { const c = document.querySelector('.cm-content'); const r = c.querySelector('.cm-line:nth-child(9)').getBoundingClientRect(); c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: r.left + 80, clientY: r.top + 6 })) })()`)
+  await snap('03a-menu-editor', 600)
+  await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
   // buscar en el archivo abierto: Ctrl+H abre el cuadro flotante con la fila de reemplazo
   await open('src/main/git/git.ts')
   await run(`(() => {
@@ -143,7 +149,9 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   }
   if (process.env.TUTTI_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
     const sample = '# Tutti\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
-    await run(`window.api.context.ensure(${JSON.stringify(project)}).then((f) => window.api.fs.write(f, ${JSON.stringify(sample)}, false))`)
+    // el ejemplo va a la ubicación antigua (configuración aislada de la captura): así no se crea un AGENTS.md en el proyecto fotografiado
+    mkdirSync(dirname(legacyContextFile(project)), { recursive: true })
+    writeFileSync(legacyContextFile(project), sample, 'utf8')
     await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'context', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/tutti-docs'] })`)
     await snap('21-contexto', 1500)
     await run(`${store}.set({ tab: 'files' })`)

@@ -2,6 +2,15 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## Próximamente
+
+- **Enviar código al agente:** selecciona código en el editor y pulsa `Ctrl+L` (o clic derecho → *Enviar selección al agente*) para escribir en el prompt del agente activo la referencia `@archivo:12-30` y el trozo, sin enviarlo; sin selección manda la línea del cursor. Si el trozo pasa de 200 líneas, solo va la referencia. El clic derecho del editor también ofrece copiar, cortar, pegar y seleccionar todo.
+- **El contexto del proyecto vive en el repositorio:** ahora se guarda en `AGENTS.md` dentro de la carpeta del proyecto, el archivo estándar que leen también Codex, OpenCode, Cursor y otros, así que se versiona con git y se comparte con el equipo. No se crea hasta que escribes y guardas; si ya tenías un `AGENTS.md`, se abre tal cual. Los contextos que tenías guardados en la configuración de Tutti se siguen usando hasta que los guardes en el proyecto.
+- **Contexto global:** una segunda pestaña con tus preferencias para **todos** los proyectos (cómo trabajas, tu estilo, lo que no quieres que hagan los agentes). Se entrega a cada agente antes del contexto del proyecto.
+- **El contexto se ve en Markdown:** títulos, listas, código y enlaces con formato en lugar de texto plano; pulsa *Editar* (o doble clic) para modificarlo.
+- **Consumo e historial de Codex:** la pestaña de consumo muestra los tokens de hoy, de 7 días y totales de Codex, el porcentaje de su límite (con cuándo se reinicia) y el historial de sus sesiones, que se pueden retomar, renombrar o borrar. Se lee de los registros locales de `~/.codex`, sin conectarse a nada.
+- **Descartar cambios en Git:** un botón ↶ en cada archivo de *cambios* (y otro en la cabecera de la sección) deshace los cambios sin preparar, pidiendo confirmación. Los archivos nuevos van a la papelera, así que se pueden recuperar; lo preparado no se toca.
+
 ## 1.0.8
 
 - **Codex ya se conecta al reparto de tareas:** al abrirlo desde Tutti ve `list_agents`, `delegate_task`, `wait_agent` y `read_agent_output`, sin tocar su `config.toml`.

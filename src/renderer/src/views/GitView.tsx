@@ -1,12 +1,13 @@
 import { clsx } from 'clsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { MdAdd, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdOpenInNew, MdRemove } from 'react-icons/md'
+import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdOpenInNew, MdRemove } from 'react-icons/md'
 import type { GitFile } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/lib/gitSync'
 import { iconFor } from '@/lib/icons'
 import { basename, dirname } from '@/lib/paths'
 import { AgentIcon } from '@/components/AgentIcon'
 import { useT } from '@/lib/i18n'
+import { Modal } from '@/components/ui'
 import { useStore } from '@/store'
 
 export function GitView() {
@@ -20,6 +21,7 @@ export function GitView() {
   const [message, setMessage] = useState('')
   const [phase, setPhase] = useState<'idle' | 'commit' | 'push' | 'pull' | 'done'>('idle')
   const [busy, setBusy] = useState(false)
+  const [discarding, setDiscarding] = useState<GitFile[] | null>(null)          // archivos a los que se les van a deshacer los cambios (tras confirmar)
   const area = useRef<HTMLTextAreaElement>(null)
   const [writing, setWriting] = useState('')            // agente que está redactando (vacío = ninguno)
   const [author, setAuthor] = useState('')              // agente que redactó el mensaje que hay en el input
@@ -117,6 +119,11 @@ export function GitView() {
       <button title={t('git.openFile')} onClick={() => void openDoc(`${project}/${f.path}`)} className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100">
         <MdOpenInNew size={14} />
       </button>
+      {!isStaged && (
+        <button title={t('git.discard')} onClick={() => setDiscarding([f])} className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100">
+          <MdUndo size={14} />
+        </button>
+      )}
       <button
         title={isStaged ? t('git.unstageTip') : t('git.stageTip')}
         onClick={() => void run(isStaged ? t('git.unstage') : t('git.stage'), () => (isStaged ? window.api.git.unstage : window.api.git.stage)(project, [f.path]))}
@@ -181,16 +188,23 @@ export function GitView() {
       </button>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {staged.length > 0 && <Group id="staged" title={t('git.staged', { n: staged.length })}>{staged.map((f) => <File key={`s${f.path}`} f={f} isStaged />)}</Group>}
-        <Group id="changes" title={t('git.changes', { n: changes.length })} action={changes.length > 0 ? { title: t('git.stageAll'), run: () => void run(t('git.stage'), () => window.api.git.stage(project, changes.map((f) => f.path))) } : undefined}>
+        <Group id="changes" title={t('git.changes', { n: changes.length })} actions={changes.length > 0 ? [
+          { title: t('git.discardAll'), icon: <MdUndo size={14} />, danger: true, run: () => setDiscarding(changes) },
+          { title: t('git.stageAll'), icon: <MdAdd size={15} />, run: () => void run(t('git.stage'), () => window.api.git.stage(project, changes.map((f) => f.path))) }
+        ] : undefined}>
           {changes.map((f) => <File key={`c${f.path}`} f={f} isStaged={false} />)}
         </Group>
         {git.files.length === 0 && <p className="px-2 py-3 text-[12px] text-muted">{t('git.clean')}</p>}
       </div>
+      {discarding && <DiscardDialog files={discarding} onClose={() => setDiscarding(null)} onConfirm={(list) => {
+        setDiscarding(null)
+        void run(t('git.discard'), () => window.api.git.discard(project, list.filter((f) => f.index !== '?').map((f) => f.path), list.filter((f) => f.index === '?').map((f) => f.path))).then((ok) => { if (ok) toast(t('git.discardDone'), 'ok') })
+      }} />}
     </div>
   )
 }
 
-function Group({ id, title, children, action }: { id: string; title: string; children: React.ReactNode; action?: { title: string; run: () => void } }) {
+function Group({ id, title, children, actions }: { id: string; title: string; children: React.ReactNode; actions?: Array<{ title: string; run: () => void; icon: React.ReactNode; danger?: boolean }> }) {
   const key = `tutti.git.${id}.collapsed`
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
   const toggle = (): void => {
@@ -203,10 +217,31 @@ function Group({ id, title, children, action }: { id: string; title: string; chi
           <MdChevronRight size={15} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
           <h4 className="truncate text-[11px] font-semibold tracking-wide">{title}</h4>
         </button>
-        {action && <button title={action.title} onClick={action.run} className={clsx('grid size-5 place-items-center rounded text-muted transition-colors hover:text-accent')}><MdAdd size={15} /></button>}
+        {actions?.map((a) => <button key={a.title} title={a.title} onClick={a.run} className={clsx('grid size-5 place-items-center rounded text-muted transition-colors', a.danger ? 'hover:text-danger' : 'hover:text-accent')}>{a.icon}</button>)}
       </div>
       {!collapsed && <ul>{children}</ul>}
     </section>
   )
 }
 
+
+/** Confirmación antes de deshacer cambios: lo ya conocido por git no se puede recuperar; los archivos nuevos van a la papelera. */
+function DiscardDialog({ files, onClose, onConfirm }: { files: GitFile[]; onClose: () => void; onConfirm: (files: GitFile[]) => void }) {
+  const t = useT()
+  const fresh = files.filter((f) => f.index === '?').length
+  const one = files.length === 1 ? files[0] : null
+  return (
+    <Modal onClose={onClose} width={420} title={t('git.discardTitle')}>
+      <div className="px-4 pb-4">
+        <p className="text-[12px] leading-relaxed text-muted">
+          {one ? t(one.index === '?' ? 'git.discardNew' : 'git.discardOne', { name: basename(one.path) }) : t('git.discardMany', { n: files.length })}
+          {!one && fresh > 0 && ` ${t('git.discardManyNew', { n: fresh })}`}
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
+          <button autoFocus onClick={() => onConfirm(files)} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">{t('git.discard')}</button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
