@@ -198,7 +198,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></div>
         <h3 data-i="c2.h">Todo en la misma ventana</h3>
-        <p data-i="c2.p">Terminales, editor con búsqueda y reemplazo, git con grafo de commits, servidores MCP y consumo de tokens.</p>
+        <p data-i="c2.p">Terminales, editor que te muestra lo que cambia un agente, git con grafo de commits, servidores MCP y consumo de tokens de Claude Code, Codex y más.</p>
       </div>
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 7l-5 5 5 5"/><path d="M20 12H9"/><path d="M4 4v16"/></svg></div>
@@ -220,7 +220,7 @@
       <div class="text">
         <div class="eyebrow" data-i="f1.eyebrow">Reparto de tareas</div>
         <h2 data-i="f1.h">Tus agentes trabajan en equipo</h2>
-        <p data-i="f1.p">Tutti abre un servidor MCP local y conecta a cada agente con cuatro herramientas para listar, delegar, esperar y leer a los demás.</p>
+        <p data-i="f1.p">Tutti abre un servidor MCP local y conecta a cada agente (Claude Code, Codex, OpenCode, Gemini, Antigravity…) con cuatro herramientas para listar, delegar, esperar y leer a los demás.</p>
         <ul>
           <li data-i="f1.l1">Asigna por dificultad: el justo para la tarea, libre antes que ocupado.</li>
           <li data-i="f1.l2">Cada sub-agente se abre en su propio panel, marcado «sub de …».</li>
@@ -337,10 +337,10 @@ const T = {
     'hero.cap': 'Un Claude Code (el líder) reparte una tarea a OpenCode y a Antigravity; cada uno se abre en su propio panel.',
     'why.eyebrow': 'Por qué Tutti', 'why.h': 'Menos pestañas, más trabajo hecho',
     'c1.h': 'Que se coordinen', 'c1.p': 'Un agente le manda tareas a otro, y Tutti elige el más adecuado según la dificultad, el modelo y su límite de uso.',
-    'c2.h': 'Todo en la misma ventana', 'c2.p': 'Terminales, editor con búsqueda y reemplazo, git con grafo de commits, servidores MCP y consumo de tokens.',
+    'c2.h': 'Todo en la misma ventana', 'c2.p': 'Terminales, editor que te muestra lo que cambia un agente, git con grafo de commits, servidores MCP y consumo de tokens de Claude Code, Codex y más.',
     'c3.h': 'Sin atarte a nadie', 'c3.p': 'Detecta más de 20 agentes y añade el tuyo. Es de código abierto, sin cuentas, y tus datos se quedan en tu equipo.',
     'chips.more': 'y más de 10 otros…',
-    'f1.eyebrow': 'Reparto de tareas', 'f1.h': 'Tus agentes trabajan en equipo', 'f1.p': 'Tutti abre un servidor MCP local y conecta a cada agente con cuatro herramientas para listar, delegar, esperar y leer a los demás.',
+    'f1.eyebrow': 'Reparto de tareas', 'f1.h': 'Tus agentes trabajan en equipo', 'f1.p': 'Tutti abre un servidor MCP local y conecta a cada agente (Claude Code, Codex, OpenCode, Gemini, Antigravity…) con cuatro herramientas para listar, delegar, esperar y leer a los demás.',
     'f1.l1': 'Asigna por dificultad: el justo para la tarea, libre antes que ocupado.', 'f1.l2': 'Cada sub-agente se abre en su propio panel, marcado «sub de …».', 'f1.l3': 'Un panel muestra qué tarea lleva cada uno, con su modelo y duración.',
     'f2.eyebrow': 'Git', 'f2.h': 'Del cambio al commit, sin salir', 'f2.p': 'Un botón que hace commit, push o pull según toque, mensajes de commit redactados por un agente y el grafo de todas las ramas.',
     'f2.l1': 'Mensaje en Conventional Commits a partir de lo que tienes preparado.', 'f2.l2': 'Cherry-pick, revert, merge, rebase y reset con clic derecho.', 'f2.l3': 'Comparación de cambios en dos columnas y selector de ramas.',
@@ -363,10 +363,10 @@ const T = {
     'hero.cap': 'A Claude Code (the leader) hands a task to OpenCode and Antigravity; each one opens in its own panel.',
     'why.eyebrow': 'Why Tutti', 'why.h': 'Fewer tabs, more work done',
     'c1.h': 'Let them coordinate', 'c1.p': 'One agent hands tasks to another, and Tutti picks the most suitable one by difficulty, model and usage limit.',
-    'c2.h': 'Everything in one window', 'c2.p': 'Terminals, an editor with find and replace, git with a commit graph, MCP servers and token usage.',
+    'c2.h': 'Everything in one window', 'c2.p': 'Terminals, an editor that shows you what an agent changes, git with a commit graph, MCP servers and token usage for Claude Code, Codex and more.',
     'c3.h': 'No lock-in', 'c3.p': 'It detects more than 20 agents and lets you add your own. It is open source, needs no account, and your data stays on your machine.',
     'chips.more': 'and 10+ more…',
-    'f1.eyebrow': 'Task delegation', 'f1.h': 'Your agents work as a team', 'f1.p': 'Tutti opens a local MCP server and connects every agent with four tools to list, delegate, wait for and read the others.',
+    'f1.eyebrow': 'Task delegation', 'f1.h': 'Your agents work as a team', 'f1.p': 'Tutti opens a local MCP server and connects every agent (Claude Code, Codex, OpenCode, Gemini, Antigravity…) with four tools to list, delegate, wait for and read the others.',
     'f1.l1': 'Assigns by difficulty: just enough for the task, idle before busy.', 'f1.l2': 'Each sub-agent opens in its own panel, tagged “sub of …”.', 'f1.l3': 'A panel shows which task each one has, with its model and duration.',
     'f2.eyebrow': 'Git', 'f2.h': 'From change to commit, without leaving', 'f2.p': 'One button that commits, pushes or pulls as needed, commit messages written by an agent, and a graph of every branch.',
     'f2.l1': 'Conventional Commits message from what you have staged.', 'f2.l2': 'Cherry-pick, revert, merge, rebase and reset with a right click.', 'f2.l3': 'Two-column diff view and a branch picker.',
