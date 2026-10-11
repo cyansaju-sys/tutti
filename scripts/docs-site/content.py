@@ -14,7 +14,7 @@ sec('instalar', 'Instalar', 'Install', '''
 <table>
 <tr><th>Comando</th><th>Qué hace</th></tr>
 <tr><td><code>install.sh</code></td><td>Instala o reinstala la última versión</td></tr>
-<tr><td><code>install.sh --version 1.0.8</code></td><td>Instala una versión concreta</td></tr>
+<tr><td><code>install.sh --version 1.0.9</code></td><td>Instala una versión concreta</td></tr>
 <tr><td><code>install.sh --uninstall</code></td><td>Lo quita (tus ajustes en <code>~/.config/tutti</code> se conservan)</td></tr>
 </table>
 <p>Variables: <code>TUTTI_HOME</code> (dónde se guarda el AppImage) y <code>TUTTI_REPO</code> (usuario/repositorio).</p>
@@ -32,7 +32,7 @@ sec('instalar', 'Instalar', 'Install', '''
 <table>
 <tr><th>Command</th><th>What it does</th></tr>
 <tr><td><code>install.sh</code></td><td>Installs or reinstalls the latest version</td></tr>
-<tr><td><code>install.sh --version 1.0.8</code></td><td>Installs a specific version</td></tr>
+<tr><td><code>install.sh --version 1.0.9</code></td><td>Installs a specific version</td></tr>
 <tr><td><code>install.sh --uninstall</code></td><td>Removes it (your settings in <code>~/.config/tutti</code> are kept)</td></tr>
 </table>
 <p>Variables: <code>TUTTI_HOME</code> (where the AppImage is stored) and <code>TUTTI_REPO</code> (user/repository).</p>
@@ -104,6 +104,10 @@ sec('archivos', 'Archivos y editor', 'Files and editor', '''
 <tr><td>Copiar ruta / ruta relativa</td><td>Al portapapeles</td></tr>
 <tr><td>Borrar</td><td>Pide confirmación y lo manda a la <strong>papelera</strong> (se puede recuperar)</td></tr>
 </table>
+<h3>Cuando un agente cambia un archivo abierto</h3>
+<p>Tutti lo detecta y marca en el editor las líneas antiguas (rojo) y las nuevas (verde); arriba hay un panel con cada tramo, con <em>Aceptar</em> y <em>Deshacer</em> por tramo y para todos. Lo aceptado queda como modificación local, sin guardar, para que lo revises. Mientras decides, el archivo es de solo lectura.</p>
+<h3>Lenguajes</h3>
+<p>Resaltado para JavaScript/TypeScript, Python, SQL, JSON, CSS, HTML/XML, Markdown, Rust, Go, Java, C/C++, PHP, shell, YAML y TOML. El autocompletado y el plegado usan íconos de Material; <kbd>Ctrl</kbd> + rueda (o <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd>) cambia el zoom.</p>
 <h3>Cada proyecto recuerda lo suyo</h3>
 <p>Al cambiar de proyecto se cierran sus agentes, terminales y archivos (si hay cambios sin guardar, antes pregunta). Al volver a uno ya conocido se recupera la pestaña de la barra lateral y los archivos que tenías abiertos.</p>
 ''', '''
@@ -129,6 +133,10 @@ sec('archivos', 'Archivos y editor', 'Files and editor', '''
 <tr><td>Copy path / relative path</td><td>To the clipboard</td></tr>
 <tr><td>Delete</td><td>Asks for confirmation and sends it to the <strong>trash</strong> (recoverable)</td></tr>
 </table>
+<h3>When an agent changes an open file</h3>
+<p>Tutti detects it and marks the old lines (red) and the new ones (green) in the editor; a panel at the top lists each chunk, with <em>Accept</em> and <em>Undo</em> per chunk and for all. What you accept stays as an unsaved local modification for you to review. While you decide, the file is read-only.</p>
+<h3>Languages</h3>
+<p>Highlighting for JavaScript/TypeScript, Python, SQL, JSON, CSS, HTML/XML, Markdown, Rust, Go, Java, C/C++, PHP, shell, YAML and TOML. Autocomplete and folding use Material icons; <kbd>Ctrl</kbd> + wheel (or <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd>) changes the zoom.</p>
 <h3>Each project remembers its own</h3>
 <p>Switching project closes its agents, terminals and files (if there are unsaved changes, it asks first). Returning to a known project restores the sidebar tab and the files you had open.</p>
 ''', 'Editor|Editor')
