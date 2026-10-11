@@ -5,7 +5,9 @@ import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
 import { drawSelection, EditorView, gutter, GutterMarker, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useT } from '@/lib/i18n'
+import { Menu } from './Menu'
 import type { GitMarks } from '@shared/types'
 import { languageFor } from '@/lib/languages'
 import { findPanel, openFind } from './searchPanel'
@@ -97,18 +99,36 @@ interface Props {
   onChange: (text: string) => void
   onSave: () => void
   focusToken: number
+  onSend?: (sel: { startLine: number; endLine: number; text: string }) => void      // «enviar al agente»: la selección, o la línea del cursor si no hay
   reveal?: { path: string; line: number; col: number; length: number; token: number } | null
 }
 
 /** Editor de código: guarda el estado de cada archivo (deshacer, cursor) al cambiar de pestaña. */
-export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focusToken, reveal }: Props) {
+export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focusToken, reveal, onSend }: Props) {
+  const t = useT()
+  const [menu, setMenu] = useState<DOMRect | null>(null)
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const states = useRef(new Map<string, EditorState>())
   const current = useRef(path)
   const ro = useRef(new Compartment())
-  const handlers = useRef({ onChange, onSave })
-  handlers.current = { onChange, onSave }
+  const handlers = useRef({ onChange, onSave, onSend })
+  handlers.current = { onChange, onSave, onSend }
+
+  /** La selección con sus líneas (1..n); sin selección, la línea del cursor. */
+  const selection = (v: EditorView): { startLine: number; endLine: number; text: string; empty: boolean } => {
+    const { from, to } = v.state.selection.main
+    const empty = from === to
+    const a = v.state.doc.lineAt(from)
+    const b = v.state.doc.lineAt(empty ? from : to === v.state.doc.lineAt(to).from && to > from ? to - 1 : to)
+    return { startLine: a.number, endLine: b.number, text: empty ? a.text : v.state.sliceDoc(from, to), empty }
+  }
+  const send = (v: EditorView): boolean => {
+    if (!handlers.current.onSend) return false
+    const { startLine, endLine, text } = selection(v)
+    handlers.current.onSend({ startLine, endLine, text })
+    return true
+  }
 
   const makeState = (p: string, doc: string, locked: boolean): EditorState => EditorState.create({
     doc,
@@ -124,8 +144,10 @@ export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focu
         { key: 'Mod-f', run: (v) => openFind(v, false), scope: 'editor search-panel', preventDefault: true },
         { key: 'Mod-h', run: (v) => openFind(v, true), scope: 'editor search-panel', preventDefault: true },
         { key: 'Mod-s', run: () => { handlers.current.onSave(); return true } },
+        { key: 'Mod-l', run: send, preventDefault: true },
         ...closeBracketsKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, indentWithTab, ...defaultKeymap
       ]),
+      EditorView.domEventHandlers({ contextmenu: (e) => { e.preventDefault(); setMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)); return true } }),
       EditorView.updateListener.of((u) => { if (u.docChanged) handlers.current.onChange(u.state.doc.toString()) })
     ]
   })
@@ -168,5 +190,21 @@ export function CodeEditor({ path, text, readOnly, marks, onChange, onSave, focu
   }, [reveal?.token])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (focusToken) view.current?.focus() }, [focusToken])
 
-  return <div ref={host} className="min-h-0 flex-1 overflow-hidden" />
+  const v = view.current
+  const hasSelection = !!v && !v.state.selection.main.empty
+  const copy = (): void => { if (v) void navigator.clipboard.writeText(v.state.sliceDoc(v.state.selection.main.from, v.state.selection.main.to)) }
+  return (
+    <>
+      <div ref={host} className="min-h-0 flex-1 overflow-hidden" />
+      {menu && v && (
+        <Menu anchor={menu} onClose={() => { setMenu(null); v.focus() }} items={[
+          { label: hasSelection ? t('ed.sendSelection') : t('ed.sendToAgent'), hidden: !onSend, detail: 'Ctrl+L', onClick: () => send(v) },
+          { label: t('term.copy'), separator: true, hidden: !hasSelection, onClick: copy },
+          { label: t('ed.cut'), hidden: !hasSelection || readOnly, onClick: () => { copy(); v.dispatch(v.state.replaceSelection('')) } },
+          { label: t('term.paste'), hidden: readOnly, onClick: () => { void navigator.clipboard.readText().then((text) => { if (text) v.dispatch(v.state.replaceSelection(text)) }) } },
+          { label: t('term.selectAll'), separator: true, onClick: () => v.dispatch({ selection: { anchor: 0, head: v.state.doc.length } }) }
+        ]} />
+      )}
+    </>
+  )
 }

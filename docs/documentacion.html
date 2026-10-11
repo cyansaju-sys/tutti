@@ -222,6 +222,7 @@
 <ul>
 <li><kbd>Ctrl</kbd>+<kbd>S</kbd> guarda; <kbd>Ctrl</kbd>+<kbd>W</kbd> cierra la pestaña (pregunta si hay cambios sin guardar).</li>
 <li>El permiso <strong>Edición</strong> de la barra de título (o <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>) deja los archivos en solo lectura. Los archivos de más de 1 MB o que no son UTF-8 siempre se abren como solo lectura.</li>
+<li><strong>Enviar al agente:</strong> selecciona código y pulsa <kbd>Ctrl</kbd>+<kbd>L</kbd> (o clic derecho → <em>Enviar selección al agente</em>) para escribir en el prompt del agente activo la referencia <code>@archivo:12-30</code> y el trozo en un bloque de código, <strong>sin enviarlo</strong>: sigues escribiendo tu petición. Sin selección manda la línea del cursor; si el trozo pasa de 200 líneas, solo va la referencia.</li>
 <li>Autocompletado con <kbd>Ctrl</kbd>+<kbd>Espacio</kbd>; <kbd>Enter</kbd> o <kbd>Tab</kbd> aceptan y <kbd>Esc</kbd> cierra la sugerencia.</li>
 <li>Resaltado de sintaxis para JavaScript/TypeScript (y JSX), Python, SQL, JSON, CSS, HTML, Markdown, XML, Vue y más.</li>
 </ul>
@@ -247,6 +248,7 @@
 <ul>
 <li><kbd>Ctrl</kbd>+<kbd>S</kbd> saves; <kbd>Ctrl</kbd>+<kbd>W</kbd> closes the tab (it asks if there are unsaved changes).</li>
 <li>The <strong>Editing</strong> permission in the title bar (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>) makes files read-only. Files larger than 1 MB or not in UTF-8 always open read-only.</li>
+<li><strong>Send to agent:</strong> select code and press <kbd>Ctrl</kbd>+<kbd>L</kbd> (or right click → <em>Send selection to agent</em>) to type the reference <code>@file:12-30</code> and the snippet in a code block into the active agent's prompt, <strong>without sending it</strong>: you keep typing your request. With no selection it sends the cursor's line; if the snippet is over 200 lines, only the reference goes.</li>
 <li>Autocomplete with <kbd>Ctrl</kbd>+<kbd>Space</kbd>; <kbd>Enter</kbd> or <kbd>Tab</kbd> accept and <kbd>Esc</kbd> closes the suggestion.</li>
 <li>Syntax highlighting for JavaScript/TypeScript (and JSX), Python, SQL, JSON, CSS, HTML, Markdown, XML, Vue and more.</li>
 </ul>
@@ -406,22 +408,34 @@
 <section id="contexto">
   <h2><span class="es">Contexto del proyecto</span><span class="en">Project context</span></h2>
   <div class="es">
-<p>El apartado <strong>Contexto</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd>) guarda un texto sobre el proyecto —qué es, cómo se ejecuta, convenciones— que <strong>leen los agentes que abras en él</strong>: Claude Code lo recibe como parte de su prompt de sistema y OpenCode como archivo de instrucciones. Funciona también si el agente se abre en una subcarpeta y sin el reparto de tareas.</p>
+<p>El apartado <strong>Contexto</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd>) guarda un texto que <strong>leen los agentes que abras</strong>: qué es el proyecto, cómo se ejecuta, convenciones y cómo prefieres trabajar. Tiene dos capas y se ve como <strong>Markdown</strong> (títulos, listas, código y enlaces con formato); <em>Editar</em> o un doble clic lo abren para modificarlo.</p>
 <img src="img/contexto.png" alt="Contexto del proyecto" loading="lazy" />
+<h3>Proyecto</h3>
 <ul>
-<li>Vive <strong>fuera del repositorio</strong>, en <code>&lt;config&gt;/tutti/&lt;proyecto&gt;-&lt;huella&gt;/contexto.md</code>, y se guarda solo (o con <em>Guardar</em>).</li>
-<li>La plantilla inicial sin tocar no se envía a los agentes.</li>
+<li>Vive <strong>en el repositorio</strong>, en <code>AGENTS.md</code> dentro de la carpeta del proyecto: es el archivo estándar que también leen Codex, OpenCode, Cursor y otros agentes, y al estar en git se versiona y se comparte con el equipo.</li>
+<li>No se crea hasta que escribes y guardas (se guarda solo). Si el proyecto ya tiene un <code>AGENTS.md</code>, se abre tal cual.</li>
+<li>Los contextos que tenías de la versión anterior (guardados en la configuración de Tutti, fuera del repositorio) se siguen usando hasta que los guardes en el proyecto.</li>
 <li><strong>Generar con IA</strong> lo redacta un agente a partir de un resumen pequeño del proyecto (estructura, <code>package.json</code>, inicio del README, últimos commits), sin dejarle explorar, para gastar muy pocos tokens. Con Claude usa el modelo pequeño <code>haiku</code>; si ningún agente responde arma un borrador con reglas. Se escribe en el idioma de la interfaz y se cancela al cambiar de apartado.</li>
 </ul>
+<h3>Global</h3>
+<p>La pestaña <strong>Global</strong> guarda tus preferencias para <strong>todos</strong> los proyectos —cómo trabajas, tu estilo de código, lo que no quieres que hagan los agentes—. Se guarda en la configuración de Tutti (<code>contexto-global.md</code>), nunca en un repositorio, y funciona aunque no haya proyecto abierto.</p>
+<h3>Quién lo recibe</h3>
+<p>Al abrir un agente desde Tutti recibe primero el global y después el del proyecto. Claude Code los toma como parte de su prompt de sistema y OpenCode como archivos de instrucciones (<code>AGENTS.md</code> no se repite porque OpenCode ya lo lee solo). Funciona también si el agente se abre en una subcarpeta y sin el reparto de tareas. Una plantilla sin tocar no se envía.</p>
 </div>
   <div class="en">
-<p>The <strong>Context</strong> section (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd>) stores a text about the project —what it is, how to run it, conventions— that <strong>the agents you open in it read</strong>: Claude Code receives it as part of its system prompt and OpenCode as an instructions file. It works even if the agent opens in a subfolder and without task delegation.</p>
+<p>The <strong>Context</strong> section (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd>) stores a text that <strong>the agents you open read</strong>: what the project is, how to run it, conventions and how you prefer to work. It has two layers and is shown as <strong>Markdown</strong> (headings, lists, code and links with formatting); <em>Edit</em> or a double click opens it for changes.</p>
 <img src="img/contexto.png" alt="Project context" loading="lazy" />
+<h3>Project</h3>
 <ul>
-<li>It lives <strong>outside the repository</strong>, at <code>&lt;config&gt;/tutti/&lt;project&gt;-&lt;hash&gt;/contexto.md</code>, and saves itself (or with <em>Save</em>).</li>
-<li>The untouched starting template is not sent to the agents.</li>
+<li>It lives <strong>in the repository</strong>, in <code>AGENTS.md</code> inside the project folder: the standard file that Codex, OpenCode, Cursor and other agents also read, and being in git it is versioned and shared with the team.</li>
+<li>It is not created until you write and save (it saves itself). If the project already has an <code>AGENTS.md</code>, it opens as is.</li>
+<li>Contexts you had from the previous version (stored in Tutti's configuration, outside the repository) keep being used until you save them in the project.</li>
 <li><strong>Generate with AI</strong> has an agent write it from a small summary of the project (structure, <code>package.json</code>, start of the README, latest commits), without letting it explore, to spend very few tokens. With Claude it uses the small <code>haiku</code> model; if no agent answers it builds a draft with rules. It is written in the interface language and cancelled when you leave the section.</li>
 </ul>
+<h3>Global</h3>
+<p>The <strong>Global</strong> tab stores your preferences for <strong>all</strong> projects —how you work, your code style, what you do not want agents to do—. It is stored in Tutti's configuration (<code>contexto-global.md</code>), never in a repository, and works even with no project open.</p>
+<h3>Who receives it</h3>
+<p>When you open an agent from Tutti it receives the global one first and then the project's. Claude Code takes them as part of its system prompt and OpenCode as instruction files (<code>AGENTS.md</code> is not repeated because OpenCode already reads it by itself). It also works if the agent opens in a subfolder and without task delegation. An untouched template is not sent.</p>
 </div>
 </section>
 <section id="mcp">
@@ -478,6 +492,7 @@
 <ul>
 <li>Los <strong>tokens</strong> de la ventana de 5 h de Claude, de hoy, de 7 días y totales.</li>
 <li>Los <strong>porcentajes reales de límite</strong> que da Anthropic (sesión de 5 h, semanal, por modelo) y cuándo se reinician. Se consultan una vez al abrir la pestaña, con la sesión de Claude Code; si caducó, basta abrir Claude Code una vez.</li>
+<li>De <strong>Codex</strong>, los tokens de hoy, de 7 días y totales, el porcentaje de su límite y cuándo se reinicia; todo se lee de los registros locales de <code>~/.codex</code>, sin red.</li>
 <li>El consumo de OpenCode, y de <strong>Antigravity</strong> el historial de conversaciones (no guarda tokens en local).</li>
 </ul>
 <h3>Historial del proyecto</h3>
@@ -488,6 +503,7 @@
 <ul>
 <li>The <strong>tokens</strong> of Claude's 5 h window, today, 7 days and total.</li>
 <li>The <strong>real limit percentages</strong> Anthropic reports (5 h session, weekly, per model) and when they reset. They are queried once when you open the tab, using the Claude Code session; if it expired, opening Claude Code once is enough.</li>
+<li>For <strong>Codex</strong>, the tokens for today, 7 days and total, its limit percentage and when it resets; everything is read from the local records in <code>~/.codex</code>, with no network.</li>
 <li>OpenCode usage, and for <strong>Antigravity</strong> the conversation history (it does not store tokens locally).</li>
 </ul>
 <h3>Project history</h3>
@@ -501,6 +517,7 @@
 <h3>Cambios y commit</h3>
 <ul>
 <li><strong>Cambios</strong> con preparar / quitar, y secciones <em>preparados</em> y <em>cambios</em> que se pliegan. Al pulsar un archivo se abre su comparación.</li>
+<li><strong>Descartar cambios:</strong> el botón ↶ de cada archivo de <em>cambios</em> (o el de la cabecera, para todos) deshace los cambios sin preparar, pidiendo confirmación. Los archivos nuevos van a la <strong>papelera</strong> y se pueden recuperar; lo ya preparado no se toca.</li>
 <li><strong>Mensaje de commit con IA.</strong> La ✨ del campo le pide a un agente instalado un mensaje en <a href="https://www.conventionalcommits.org">Conventional Commits</a> a partir de <em>lo que tienes preparado</em>, y lo deja para que lo revises. Se ve qué agente lo redacta. Si ninguno responde, se arma con reglas sencillas sobre los archivos tocados.</li>
 <li><strong>Un solo botón, un paso por pulsación.</strong> Con mensaje hace <em>Commit</em>; después pasa a <em>Push</em> o, si faltan cambios del remoto, a <em>Pull</em> (solo avance simple, nunca une a ciegas), con una animación del progreso. Sin repositorio remoto solo ofrece commit. Funciona también en un repositorio recién creado, sin commits.</li>
 </ul>
@@ -523,6 +540,7 @@
 <h3>Changes and commit</h3>
 <ul>
 <li><strong>Changes</strong> with stage / unstage, and <em>staged</em> and <em>changes</em> sections that fold. Clicking a file opens its comparison.</li>
+<li><strong>Discard changes:</strong> the ↶ button on each file under <em>changes</em> (or the one in the header, for all of them) undoes unstaged changes, asking for confirmation. New files go to the <strong>trash</strong> and can be recovered; anything already staged is left alone.</li>
 <li><strong>AI commit message.</strong> The ✨ in the field asks an installed agent for a <a href="https://www.conventionalcommits.org">Conventional Commits</a> message based on <em>what you have staged</em>, and leaves it for you to review. You can see which agent writes it. If none answers, it is built with simple rules over the touched files.</li>
 <li><strong>One button, one step per press.</strong> With a message it does <em>Commit</em>; afterwards it becomes <em>Push</em> or, if the remote has new changes, <em>Pull</em> (fast-forward only, it never merges blindly), with a progress animation. Without a remote it only offers commit. It also works in a freshly created repository with no commits.</li>
 </ul>
@@ -571,6 +589,7 @@
 <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>Guardar / cerrar el archivo abierto</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd> / <kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>Buscar / reemplazar en el archivo abierto</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Espacio</kbd></td><td>Pedir autocompletado</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Enviar la selección (o la línea) al agente activo</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> / <kbd>H</kbd></td><td>Buscar / buscar y reemplazar en el proyecto</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td><td>Permitir o bloquear la edición</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></td><td>Abrir un agente</td></tr>
@@ -591,6 +610,7 @@
 <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>Save / close the open file</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd> / <kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>Find / replace in the open file</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Space</kbd></td><td>Ask for autocomplete</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Send the selection (or the line) to the active agent</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> / <kbd>H</kbd></td><td>Find / find and replace across the project</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td><td>Allow or lock editing</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd></td><td>Open an agent</td></tr>
@@ -612,7 +632,7 @@
 <table>
 <tr><th>Archivo</th><th>Qué contiene</th></tr>
 <tr><td><code>settings.json</code></td><td>Los ajustes (tabla de abajo)</td></tr>
-<tr><td><code>&lt;proyecto&gt;-&lt;huella&gt;/contexto.md</code></td><td>El contexto de cada proyecto</td></tr>
+<tr><td><code>contexto-global.md</code></td><td>Tus preferencias para todos los proyectos (el contexto de cada proyecto está en su <code>AGENTS.md</code>)</td></tr>
 <tr><td><code>mcp-bridge.mjs</code></td><td>El puente que usa Antigravity para el reparto de tareas</td></tr>
 </table>
 <h3>Claves de <code>settings.json</code></h3>
@@ -629,14 +649,14 @@
 </table>
 <p>Casi todo se cambia desde la app; editar el archivo a mano es útil sobre todo para <code>orchestration</code>. Las ventanas comparten el archivo.</p>
 <h3>Lo que lee de tu equipo</h3>
-<p>Solo lectura: los registros de Claude Code (<code>~/.claude/projects</code>), su configuración MCP (<code>~/.claude.json</code>), la base de OpenCode (<code>~/.local/share/opencode</code>) y el historial de Antigravity (<code>~/.gemini/antigravity-cli</code>). Escribe en las configuraciones MCP de los agentes solo cuando tú añades o quitas un servidor (y en <code>~/.gemini/config/mcp_config.json</code> para el puente de Antigravity).</p>
+<p>Solo lectura: los registros de Claude Code (<code>~/.claude/projects</code>), su configuración MCP (<code>~/.claude.json</code>), la base de OpenCode (<code>~/.local/share/opencode</code>), los registros de Codex (<code>~/.codex/sessions</code>) y el historial de Antigravity (<code>~/.gemini/antigravity-cli</code>). Escribe en las configuraciones MCP de los agentes solo cuando tú añades o quitas un servidor (y en <code>~/.gemini/config/mcp_config.json</code> para el puente de Antigravity).</p>
 </div>
   <div class="en">
 <p>Tutti stores its data in the system configuration folder: <code>~/.config/tutti</code> on Linux and <code>%APPDATA%\tutti</code> on Windows.</p>
 <table>
 <tr><th>File</th><th>What it contains</th></tr>
 <tr><td><code>settings.json</code></td><td>The settings (table below)</td></tr>
-<tr><td><code>&lt;project&gt;-&lt;hash&gt;/contexto.md</code></td><td>Each project's context</td></tr>
+<tr><td><code>contexto-global.md</code></td><td>Your preferences for all projects (each project's context is in its <code>AGENTS.md</code>)</td></tr>
 <tr><td><code>mcp-bridge.mjs</code></td><td>The bridge Antigravity uses for task delegation</td></tr>
 </table>
 <h3><code>settings.json</code> keys</h3>
@@ -653,7 +673,7 @@
 </table>
 <p>Almost everything is changed from the app; editing the file by hand is mostly useful for <code>orchestration</code>. All windows share the file.</p>
 <h3>What it reads from your machine</h3>
-<p>Read only: Claude Code's logs (<code>~/.claude/projects</code>), its MCP configuration (<code>~/.claude.json</code>), OpenCode's database (<code>~/.local/share/opencode</code>) and Antigravity's history (<code>~/.gemini/antigravity-cli</code>). It writes to the agents' MCP configurations only when you add or remove a server (and to <code>~/.gemini/config/mcp_config.json</code> for the Antigravity bridge).</p>
+<p>Read only: Claude Code's logs (<code>~/.claude/projects</code>), its MCP configuration (<code>~/.claude.json</code>), OpenCode's database (<code>~/.local/share/opencode</code>), Codex's records (<code>~/.codex/sessions</code>) and Antigravity's history (<code>~/.gemini/antigravity-cli</code>). It writes to the agents' MCP configurations only when you add or remove a server (and to <code>~/.gemini/config/mcp_config.json</code> for the Antigravity bridge).</p>
 </div>
 </section>
 <section id="privacidad">

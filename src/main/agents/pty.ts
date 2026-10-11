@@ -120,6 +120,14 @@ export function screenText(id: string, lines: number): string {
   return rows.slice(-lines).join('\n')
 }
 
+/** Escribe texto en el prompt del agente SIN enviarlo (el usuario sigue escribiendo). Con varias líneas usa el pegado entre corchetes; si el agente no lo admite, una sola línea. */
+export function pastePrompt(id: string, text: string): void {
+  const s = sessions.get(id)
+  if (!s) return
+  if (s.screen.modes.bracketedPasteMode) s.term.write(`\x1b[200~${text}\x1b[201~`)
+  else s.term.write(text.replace(/\s*\n\s*/g, ' '))
+}
+
 /** Escribe una instrucción en el agente y la envía (como si la pegaras y pulsaras Enter). */
 export function sendPrompt(id: string, text: string): void {
   const s = sessions.get(id)

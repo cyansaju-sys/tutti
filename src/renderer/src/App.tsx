@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/components/AgentsArea'
-import { AgentPicker, AddAgentDialog, BranchPicker, NewsDialog, ShortcutsDialog } from '@/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, GoLineDialog, NewsDialog, QuickOpenDialog, ShortcutsDialog } from '@/components/Dialogs'
 import { EditorArea, saveDoc } from '@/components/EditorArea'
 import { Sidebar, TABS } from '@/components/Sidebar'
 import { Toasts } from '@/components/Toasts'
@@ -106,6 +106,8 @@ export function App() {
         if (!isDirty(doc) || window.confirm(t('app.unsaved', { title: doc.title }))) st.closeDoc(doc.path)
         return
       }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'P') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'quickOpen' }); return }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'G') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'goLine' }); return }
       if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }
       if (!isGlobalShortcut(e)) return
       e.preventDefault(); e.stopPropagation()
@@ -171,6 +173,8 @@ export function App() {
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
       {s.modal === 'news' && <NewsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
+      {s.modal === 'quickOpen' && <QuickOpenDialog />}
+      {s.modal === 'goLine' && <GoLineDialog />}
       <Toasts />
       <Tooltips />
     </div>

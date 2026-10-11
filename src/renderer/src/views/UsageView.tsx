@@ -132,12 +132,6 @@ export function UsageView() {
       <Section title={t('us.history')} id="history" detail={project ? basename(project) : ''} folded={!!folded.history} onToggle={toggle}>
         {!project && <p className="px-1 text-[11px] text-muted">{t('us.openProject')}</p>}
         {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">{t('us.noSessions')}</p>}
-        {project && data.history.length > 0 && (
-          <button onClick={() => setClearing(true)} title={t('us.clearTip')}
-            className="flex items-center gap-1.5 self-end rounded-md px-2 py-1 text-[11px] text-muted transition-colors hover:bg-danger/10 hover:text-danger">
-            <MdDeleteSweep size={14} /> {t('us.clear')}
-          </button>
-        )}
         <ul className="flex flex-col gap-0.5">
           {data.history.slice(0, 12).map((s) => {
             const can = resumeArgs(s.command, s.id) !== null
@@ -156,6 +150,12 @@ export function UsageView() {
             )
           })}
         </ul>
+        {project && data.history.length > 0 && (
+          <button onClick={() => setClearing(true)} title={t('us.clearTip')}
+            className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-1.5 text-[12px] text-muted transition-colors hover:border-danger/50 hover:bg-danger/10 hover:text-danger">
+            <MdDeleteSweep size={15} /> {t('us.clear')}
+          </button>
+        )}
       </Section>
 
       {menu && (

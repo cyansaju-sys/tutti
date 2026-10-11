@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { joinSummary, numstatPath, opArgs, branches, checkoutDetached, status, validBranchName } from '../../../src/main/git/git'
+import { joinSummary, numstatPath, opArgs, branches, checkoutDetached, discardTracked, status, validBranchName } from '../../../src/main/git/git'
 
 const H = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
@@ -92,6 +92,28 @@ describe('ramas con su último commit', () => {
       expect(await checkoutDetached(dir, 'otra')).not.toMatch(/fatal|error/i)
       expect((await branches(dir)).map((b) => b.name).sort()).toEqual(['main', 'otra'])      // HEAD suelto: no aparece «(HEAD detached…)» como rama
       expect(await checkoutDetached(dir, '--x')).toBe('Referencia no válida')
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+})
+
+describe('descartar cambios', () => {
+  it('vuelve a la versión guardada, recupera lo borrado y respeta lo preparado', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-discard-'))
+    const git = (...a: string[]): string => execFileSync('git', ['-C', dir, '-c', 'user.name=Ana', '-c', 'user.email=a@b.c', ...a], { encoding: 'utf8' })
+    try {
+      git('init', '-q', '-b', 'main')
+      writeFileSync(join(dir, 'a.txt'), 'uno\n'); writeFileSync(join(dir, 'b.txt'), 'dos\n'); writeFileSync(join(dir, 'c.txt'), 'tres\n')
+      git('add', '-A'); git('commit', '-q', '-m', 'base')
+      writeFileSync(join(dir, 'a.txt'), 'cambiado\n')          // modificado sin preparar
+      rmSync(join(dir, 'b.txt'))                                 // borrado
+      writeFileSync(join(dir, 'c.txt'), 'preparado\n'); git('add', 'c.txt')
+      writeFileSync(join(dir, 'c.txt'), 'preparado y más\n')    // preparado y luego tocado otra vez
+      expect(await discardTracked(dir, ['a.txt', 'b.txt', 'c.txt'])).toBe('')
+      expect(readFileSync(join(dir, 'a.txt'), 'utf8')).toBe('uno\n')
+      expect(existsSync(join(dir, 'b.txt'))).toBe(true)
+      expect(readFileSync(join(dir, 'c.txt'), 'utf8')).toBe('preparado\n')          // lo preparado no se pierde
+      expect(await discardTracked(dir, [])).toBe('')
+      expect(await discardTracked(dir, ['no-existe.txt'])).not.toBe('')
     } finally { rmSync(dir, { recursive: true, force: true }) }
   })
 })

@@ -7,6 +7,7 @@ import { t, useT } from '@/lib/i18n'
 import { iconFor } from '@/lib/icons'
 import { languageName } from '@/lib/languages'
 import { crumbs, relative, toPosix } from '@/lib/paths'
+import { selectionMessage, selectionRef } from '@/lib/selectionRef'
 import { isDirty, useStore, type Doc } from '@/store'
 import { CodeEditor } from './CodeEditor'
 import { DiffView } from './DiffView'
@@ -53,6 +54,16 @@ export function EditorArea() {
     return () => clearInterval(timer)
   }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Escribe en el prompt del agente activo la referencia al trozo (y el código si es corto), sin enviarla. */
+  const sendSelection = (path: string, sel: { startLine: number; endLine: number; text: string }): void => {
+    const { panes, activePane, toast } = useStore.getState()
+    const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
+    if (!pane || !project) { toast(t('ed.noAgent'), 'error'); return }
+    const rel = toPosix(relative(project, path))
+    window.api.pty.paste(pane.id, selectionMessage(pane.command, rel, sel.startLine, sel.endLine, sel.text))
+    set({ activePane: pane.id, focus: 'pane' })
+    toast(t('ed.sent', { agent: pane.name ?? pane.command, ref: selectionRef(pane.command, rel, sel.startLine, sel.endLine) }), 'ok')
+  }
   const close = (d: Doc): void => {
     if (isDirty(d) && !window.confirm(t('app.unsaved', { title: d.title }))) return
     closeDoc(d.path)
@@ -112,6 +123,7 @@ export function EditorArea() {
           path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled} marks={marks}
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
+          onSend={(sel) => sendSelection(doc.path, sel)}
         />
       )}
       {doc?.kind === 'graph' && <GitGraph />}

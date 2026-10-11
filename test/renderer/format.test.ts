@@ -10,6 +10,6 @@ describe('formato', () => {
   it('hace cuánto', () => { expect(ago(1000, 30_000)).toBe('ahora'); expect(ago(0, 3 * 3_600_000)).toBe('hace 3 h 00 min') })
   it('gravedad', () => { expect(severity(10)).toBe('accent'); expect(severity(60)).toBe('warn'); expect(severity(90)).toBe('danger') })
   it('cómo retomar una sesión', () => {
-    expect(resumeArgs('claude', 'x')).toEqual(['--resume', 'x']); expect(resumeArgs('opencode', 'y')).toEqual(['--session', 'y']); expect(resumeArgs('codex', 'z')).toBeNull()
+    expect(resumeArgs('claude', 'x')).toEqual(['--resume', 'x']); expect(resumeArgs('opencode', 'y')).toEqual(['--session', 'y']); expect(resumeArgs('codex', 'z')).toEqual(['resume', 'z']); expect(resumeArgs('aider', 'w')).toBeNull()
   })
 })

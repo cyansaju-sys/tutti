@@ -7,7 +7,7 @@ import { cacheTheme, cachedTheme, paintTheme, resolveTheme, type ThemeMode, type
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'mcp' | 'ai' | 'context'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news'
+export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news' | 'quickOpen' | 'goLine'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
