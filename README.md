@@ -9,6 +9,10 @@
 La IA y los agentes cambiaron la forma de programar. Tutti los reúne:<br />
 Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otro, cada uno con su instrumento, tocando juntos en una sola ventana.
 
+[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=flat-square&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
+![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=flat-square)
+![Electron](https://img.shields.io/badge/Electron-33-8fa6c4?style=flat-square)
+![Licencia](https://img.shields.io/badge/licencia-MIT-8fa6c4?style=flat-square)
 <br />
 
 [![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=for-the-badge&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)

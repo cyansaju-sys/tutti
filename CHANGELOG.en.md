@@ -2,7 +2,7 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
-## Coming soon
+## 1.0.9
 
 - **Send code to the agent:** select code in the editor and press `Ctrl+L` (or right click → *Send selection to agent*) to type the reference `@file:12-30` and the snippet into the active agent's prompt, without sending it; with no selection it sends the cursor's line. If the snippet is over 200 lines, only the reference goes. The editor's right-click menu also offers copy, cut, paste and select all.
 - **The project context lives in the repository:** it is now stored in `AGENTS.md` inside the project folder, the standard file that Codex, OpenCode, Cursor and others also read, so it is versioned with git and shared with the team. It is not created until you write and save; if you already had an `AGENTS.md`, it opens as is. Contexts you had stored in Tutti's configuration keep being used until you save them in the project.
@@ -10,6 +10,10 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **The context is shown as Markdown:** headings, lists, code and links with formatting instead of plain text; press *Edit* (or double-click) to change it.
 - **Codex usage and history:** the usage tab shows Codex's tokens for today, 7 days and total, the percentage of its limit (and when it resets) and the history of its sessions, which can be resumed, renamed or deleted. It is read from the local records in `~/.codex`, without connecting to anything.
 - **Discard changes in Git:** an ↶ button on each file under *changes* (and another in the section header) undoes unstaged changes, asking for confirmation. New files go to the trash, so they can be recovered; staged work is left alone.
+- **Agent changes to an open file:** if an agent modifies a file you have open, Tutti detects it and marks the old lines (red) and the new ones (green) in the editor. You can accept or undo each chunk, or all at once; what you accept stays as a local modification for you to review and save. While you decide, the file is read-only.
+- **More languages in the editor:** highlighting for Rust, Go, Java, C/C++, PHP, shell, YAML and TOML.
+- **A more polished editor:** Material icons in the autocomplete suggestions and in code folding, indentation guides and zoom with `Ctrl` + wheel (or `Ctrl` + `+` / `-`).
+- **Icons in “Open file”:** the quick picker shows the same icon for each file as the tree.
 
 ## 1.0.8
 

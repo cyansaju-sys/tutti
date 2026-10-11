@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
 
       - name: La versión del tag debe ser la de package.json
         run: |
@@ -36,7 +36,7 @@ jobs:
           grep -qE "^## v?${v//./\\.}( |$)" CHANGELOG.md || { echo "Falta la sección '## $v' en CHANGELOG.md: es lo que verán los usuarios al actualizar."; exit 1; }
           grep -qE "^## v?${v//./\\.}( |$)" CHANGELOG.en.md || { echo "Falta la sección '## $v' en CHANGELOG.en.md (la versión en inglés de las novedades)."; exit 1; }
 
-      - run: npm ci
+      - run: yarn install --frozen-lockfile
       - run: npm run typecheck
       - run: npm test
 
@@ -64,9 +64,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          cache: yarn
 
-      - run: npm ci                # compila node-pty y better-sqlite3 para Electron
+      - run: yarn install --frozen-lockfile  # compila node-pty y better-sqlite3 para Electron
 
       - name: Empaquetar el instalador
         run: npm run dist:win
