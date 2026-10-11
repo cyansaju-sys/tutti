@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAccountTree, MdClose } from 'react-icons/md'
 import type { GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/lib/gitSync'
@@ -8,8 +8,9 @@ import { iconFor } from '@/lib/icons'
 import { languageName } from '@/lib/languages'
 import { crumbs, relative, toPosix } from '@/lib/paths'
 import { selectionMessage, selectionRef } from '@/lib/selectionRef'
+import { applyHunks, textHunks, type TextHunk } from '@/lib/textHunks'
 import { isDirty, useStore, type Doc } from '@/store'
-import { CodeEditor } from './CodeEditor'
+import { CodeEditor, type ExternalChange } from './CodeEditor'
 import { DiffView } from './DiffView'
 import { GitGraph } from './GitGraph'
 
@@ -22,6 +23,16 @@ export async function saveDoc(doc: Doc): Promise<void> {
   } catch (e) {
     toast(t('ed.saveFailed', { title: doc.title, error: e instanceof Error ? e.message : String(e) }), 'error')
   }
+}
+
+interface PendingExternal {
+  path: string
+  mtimeMs: number
+  before: string
+  after: string
+  hunks: TextHunk[]
+  decided: Set<number>
+  accepted: Set<number>
 }
 
 export function EditorArea() {
@@ -37,7 +48,25 @@ export function EditorArea() {
   const closeDoc = useStore((s) => s.closeDoc)
   const updateDocText = useStore((s) => s.updateDocText)
   const [marks, setMarks] = useState<GitMarks>({})
+  // cambios externos por decidir, por archivo: sobreviven al cambiar de pestaña
+  const [pendings, setPendings] = useState<Record<string, PendingExternal>>({})
+  const pendingsRef = useRef(pendings)
+  pendingsRef.current = pendings
   const doc = docs.find((d) => d.path === activePath) ?? null
+  const pending = doc ? pendings[doc.path] ?? null : null
+  const setPending = (path: string, value: PendingExternal | null): void =>
+    setPendings((all) => { const next = { ...all }; if (value) next[path] = value; else delete next[path]; return next })
+  // al cerrar una pestaña se descartan sus cambios pendientes
+  useEffect(() => {
+    setPendings((all) => {
+      const open = new Set(docs.map((d) => d.path))
+      const stale = Object.keys(all).filter((path) => !open.has(path))
+      if (!stale.length) return all
+      const next = { ...all }
+      stale.forEach((path) => delete next[path])
+      return next
+    })
+  }, [docs])
 
   const loadMarks = useCallback(async () => { if (doc?.kind === 'text') setMarks(await window.api.git.marks(doc.path)) }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setMarks({}); void loadMarks() }, [doc?.path, git?.files.length, doc?.savedText])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -47,12 +76,38 @@ export function EditorArea() {
     if (!doc || doc.kind !== 'text') return
     const timer = setInterval(async () => {
       const current = useStore.getState().docs.find((d) => d.path === doc.path)
-      if (!current || isDirty(current)) return
+      if (!current || isDirty(current) || pendingsRef.current[current.path]) return
       const m = await window.api.fs.mtime(current.path)
-      if (m && m !== current.mtimeMs) useStore.getState().replaceDoc(current.path, await window.api.fs.read(current.path))
+      if (m && m !== current.mtimeMs) {
+        const data = await window.api.fs.read(current.path)
+        const hunks = textHunks(current.text, data.text)
+        if (hunks.length) setPending(current.path, { path: current.path, mtimeMs: data.mtimeMs, before: current.text, after: data.text, hunks, decided: new Set(), accepted: new Set() })
+        else useStore.getState().markExternalSeen(current.path, data.mtimeMs)
+      }
     }, 2000)
     return () => clearInterval(timer)
   }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const decideExternal = (index: number, accept: boolean): void => {
+    if (!pending || !doc) return
+    const decided = new Set(pending.decided).add(index)
+    const accepted = new Set(pending.accepted)
+    if (accept) accepted.add(index); else accepted.delete(index)
+    const text = applyHunks(pending.before, pending.hunks, accepted)
+    updateDocText(doc.path, text)
+    // el disco ya se vio por completo: así, deshacer luego lo aceptado no vuelve a mostrar los mismos tramos
+    useStore.getState().markExternalSeen(doc.path, pending.mtimeMs)
+    if (decided.size === pending.hunks.length) {
+      setPending(doc.path, null)
+    } else setPending(doc.path, { ...pending, decided, accepted })
+  }
+  const decideAllExternal = (accept: boolean): void => {
+    if (!pending || !doc) return
+    const accepted = accept ? new Set(pending.hunks.map((_, i) => i)) : new Set<number>()
+    updateDocText(doc.path, applyHunks(pending.before, pending.hunks, accepted))
+    useStore.getState().markExternalSeen(doc.path, pending.mtimeMs)
+    setPending(doc.path, null)
+  }
 
   /** Escribe en el prompt del agente activo la referencia al trozo (y el código si es corto), sin enviarla. */
   const sendSelection = (path: string, sel: { startLine: number; endLine: number; text: string }): void => {
@@ -72,6 +127,18 @@ export function EditorArea() {
     const rel = project ? toPosix(relative(project, d.diffOf ?? d.path)) : ''
     return git?.files.find((f) => toPosix(f.path) === rel)?.code ?? ''
   }
+  const visiblePending = pending
+  // posición de cada tramo sin decidir en el texto actual: los ya aceptados desplazan las líneas siguientes
+  const externalChanges = useMemo<ExternalChange[]>(() => {
+    if (!pending) return []
+    let shift = 0
+    const out: ExternalChange[] = []
+    pending.hunks.forEach((h, i) => {
+      if (!pending.decided.has(i)) out.push({ line: h.beforeStart + shift, removed: h.beforeLines.length, added: h.afterLines })
+      else if (pending.accepted.has(i)) shift += h.afterLines.length - h.beforeLines.length
+    })
+    return out
+  }, [pending])
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface" onMouseDown={() => set({ focus: 'editor' })}>
@@ -118,9 +185,37 @@ export function EditorArea() {
           {doc.truncated ? t('ed.firstMb') : doc.readOnly ? t('ed.tooBig') : t('ed.locked')}
         </div>
       )}
+      {visiblePending && (
+        <div className="shrink-0 border-b border-warn/30 bg-warn/[0.08] px-3 py-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-warn">{t('ed.externalTitle')}</span>
+            <span className="text-muted">{t('ed.externalHint')}</span>
+            <button onClick={() => decideAllExternal(true)} className="ml-auto rounded bg-ok/15 px-2 py-1 text-ok hover:bg-ok/25">{t('ed.externalAcceptAll')}</button>
+            <button onClick={() => decideAllExternal(false)} className="rounded bg-danger/15 px-2 py-1 text-danger hover:bg-danger/25">{t('ed.externalRejectAll')}</button>
+          </div>
+          <div className="mt-2 flex max-h-40 flex-col gap-1 overflow-y-auto">
+            {visiblePending.hunks.map((hunk, i) => !visiblePending.decided.has(i) && (
+              <details key={i} className="rounded border border-line bg-surface/50">
+                <summary className="flex cursor-pointer items-center gap-2 px-2 py-1">
+                  <span className="font-medium">{t('ed.externalHunk', { n: i + 1 })}</span>
+                  <span className="text-muted">{hunk.afterLines.length ? `+${hunk.afterLines.length}` : ''}{hunk.beforeLines.length ? ` −${hunk.beforeLines.length}` : ''}</span>
+                  <span className="ml-auto flex gap-1">
+                    <button onClick={(e) => { e.preventDefault(); decideExternal(i, true) }} className="rounded px-1.5 text-ok hover:bg-ok/15">{t('ed.externalAccept')}</button>
+                    <button onClick={(e) => { e.preventDefault(); decideExternal(i, false) }} className="rounded px-1.5 text-danger hover:bg-danger/15">{t('ed.externalReject')}</button>
+                  </span>
+                </summary>
+                <div className="grid grid-cols-2 gap-px border-t border-line bg-line font-mono text-[10px]">
+                  <pre className="overflow-x-auto bg-danger/[0.08] p-1.5 whitespace-pre-wrap">{hunk.beforeLines.join('\n') || '∅'}</pre>
+                  <pre className="overflow-x-auto bg-ok/[0.08] p-1.5 whitespace-pre-wrap">{hunk.afterLines.join('\n') || '∅'}</pre>
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
       {doc?.kind === 'text' && (
         <CodeEditor
-          path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled} marks={marks}
+          path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled || !!visiblePending} marks={marks} changes={externalChanges}
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
           onSend={(sel) => sendSelection(doc.path, sel)}

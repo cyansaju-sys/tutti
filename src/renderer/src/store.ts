@@ -69,6 +69,7 @@ interface State {
   dropDocs: (path: string) => void                    // se borró: se cierran sus pestañas
   updateDocText: (path: string, text: string) => void
   markSaved: (path: string, text: string, mtimeMs: number) => void
+  markExternalSeen: (path: string, mtimeMs: number) => void
   replaceDoc: (path: string, data: FileData) => void
   openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string }) => Promise<void>
   addPane: (pane: Pane) => void
@@ -211,6 +212,7 @@ export const useStore = create<State>((set, get) => ({
   }),
   updateDocText: (path, text) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, text } : d)) })),
   markSaved: (path, text, mtimeMs) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, savedText: text, mtimeMs } : d)) })),
+  markExternalSeen: (path, mtimeMs) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, mtimeMs } : d)) })),
   replaceDoc: (path, data) => set((s) => ({ docs: s.docs.map((d) => (d.path === path ? { ...d, ...data, savedText: data.text } : d)) })),
 
   openAgent: async (agent, args = [], opts = {}) => {
