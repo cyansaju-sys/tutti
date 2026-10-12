@@ -2,6 +2,10 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.1.0
+
+- **Cleaner quick open:** the quick-open dialog no longer lists hidden files and folders.
+
 ## 1.0.9
 
 - **Send code to the agent:** select code in the editor and press `Ctrl+L` (or right click → *Send selection to agent*) to type the reference `@file:12-30` and the snippet into the active agent's prompt, without sending it; with no selection it sends the cursor's line. If the snippet is over 200 lines, only the reference goes. The editor's right-click menu also offers copy, cut, paste and select all.

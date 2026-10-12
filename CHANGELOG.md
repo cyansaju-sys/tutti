@@ -2,6 +2,10 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.1.0
+
+- **Apertura rápida más limpia:** el diálogo de apertura rápida ya no muestra archivos ni carpetas ocultos.
+
 ## 1.0.9
 
 - **Enviar código al agente:** selecciona código en el editor y pulsa `Ctrl+L` (o clic derecho → *Enviar selección al agente*) para escribir en el prompt del agente activo la referencia `@archivo:12-30` y el trozo, sin enviarlo; sin selección manda la línea del cursor. Si el trozo pasa de 200 líneas, solo va la referencia. El clic derecho del editor también ofrece copiar, cortar, pegar y seleccionar todo.
