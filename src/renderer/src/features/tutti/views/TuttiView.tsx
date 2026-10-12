@@ -5,6 +5,7 @@ import type { MsgKey } from '@shared/i18n'
 import type { DirEntry, HookInfo, SteeringInfo } from '@shared/types'
 import { FIELD_SLIM } from '@/shared/components/ui'
 import { McpView } from '@/features/mcp/views/McpView'
+import { useAskAgent } from '@/features/tutti/lib/useAskAgent'
 import { HookChoiceDialog } from '@/features/tutti/components/HookChoiceDialog'
 import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
 import { iconFor } from '@/shared/lib/icons'
@@ -51,9 +52,8 @@ export function TuttiView() {
   const openSpecForm = useStore((s) => s.openSpecForm)
   const openSteeringForm = useStore((s) => s.openSteeringForm)
   const openSkillForm = useStore((s) => s.openSkillForm)
-  const panes = useStore((s) => s.panes)
-  const activePane = useStore((s) => s.activePane)
-  const agent = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
+  const ask = useAskAgent()
+  const agent = ask.selected
   const lang = useStore((s) => s.lang)
   const [lists, setLists] = useState<Record<Kind, DirEntry[]>>({ specs: [], hooks: [], steering: [], skills: [], docs: [] })
   const [addMcp, setAddMcp] = useState(0)
@@ -129,9 +129,8 @@ export function TuttiView() {
     const dir = await window.api.context.init(project, 'docs')
     const made = await window.api.fs.create(dir, OVERVIEW_FILE, false)
     if (made.ok) await window.api.fs.write(made.message, overviewTemplate(lang), false)
-    window.api.pty.paste(agent.id, overviewAgentPrompt(lang, '.tutti/docs'))
-    setTimeout(() => window.api.pty.write(agent.id, '\r'), 500)
-    toast(t('sa.sent', { agent: agent.name ?? agent.title }), 'ok')
+    const name = await ask.send(overviewAgentPrompt(lang, '.tutti/docs'))
+    if (name) toast(t('sa.sent', { agent: name }), 'ok')
     void refresh(); void openDoc(`${dir}/${OVERVIEW_FILE}`)
   }
   const toggleHook = async (h: HookInfo, index: number): Promise<void> => {

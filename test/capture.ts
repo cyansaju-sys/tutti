@@ -196,6 +196,8 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('25-md-vista', 1200)
     await run(`document.querySelector('button[title="${process.env.TUTTI_CAPTURE_LANG === 'en' ? 'New hook' : 'Nuevo hook'}"]')?.click()`)         // el «+» de Hooks: el diálogo con las dos opciones
     await snap('26a-hook-opciones', 600)
+    await run(`[...document.querySelectorAll('[role="dialog"] button, .fixed button')].find((b) => /Pedírselo al agente|Ask the agent/.test(b.textContent))?.click()`)
+    await snap('26b-hook-agente', 600)
     await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
     await run(`${store}.openHookForm()`)
     await snap('26-hook-formulario', 800)

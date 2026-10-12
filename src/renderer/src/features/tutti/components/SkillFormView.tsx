@@ -5,6 +5,8 @@ import { FIELD } from '@/shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 import { slug } from '../lib/spec'
+import { useAskAgent } from '../lib/useAskAgent'
+import { AgentSelect } from './AgentSelect'
 import { buildSkillFile, EMPTY_SKILL_FORM, skillAgentPrompt, skillFormError, type SkillForm } from '../lib/skillForm'
 
 /** Crear una skill como una pestaña del editor: nombre, cuándo usarla y las instrucciones (o pedirle al agente que las redacte). */
@@ -12,7 +14,6 @@ export function SkillFormView() {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const project = useStore((s) => s.project)
-  const panes = useStore((s) => s.panes)
   const toast = useStore((s) => s.toast)
   const openDoc = useStore((s) => s.openDoc)
   const closeDoc = useStore((s) => s.closeDoc)
@@ -20,7 +21,8 @@ export function SkillFormView() {
   const [tried, setTried] = useState(false)
   const set = (patch: Partial<SkillForm>): void => setForm((f) => ({ ...f, ...patch }))
   const error = skillFormError(form)
-  const agent = panes.find((p) => p.id === useStore.getState().activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
+  const ask = useAskAgent()
+  const agent = ask.selected
   const bad = (field: typeof error): string => (tried && error === field ? 'ring-1 ring-danger/70' : '')
   const Label = ({ k }: { k: MsgKey }) => <label className="mb-1 mt-4 block text-[11px] font-medium text-muted">{t(k)}</label>
   const useAgent = form.useAgent && !!agent
@@ -46,10 +48,7 @@ export function SkillFormView() {
     if (!made.ok) { toast(made.message, 'error'); return }
     const file = `${made.message}/SKILL.md`
     await window.api.fs.write(file, buildSkillFile(lang, form), false)
-    if (useAgent && agent) {
-      window.api.pty.paste(agent.id, skillAgentPrompt(lang, form, `.tutti/skills/${folder}`))
-      setTimeout(() => window.api.pty.write(agent.id, '\r'), 500)
-    }
+    if (useAgent) await ask.send(skillAgentPrompt(lang, form, `.tutti/skills/${folder}`))
     closeDoc('skill:new')
     void openDoc(file)
   }
@@ -81,6 +80,7 @@ export function SkillFormView() {
           <input type="checkbox" checked={useAgent} disabled={!agent} onChange={(e) => set({ useAgent: e.target.checked })} className="accent-[var(--color-accent)]" />
           {t(agent ? 'skf.agent' : 'skf.noAgent')}
         </label>
+        {useAgent && agent && <div className="mt-2"><AgentSelect options={ask.options} value={agent} onChange={ask.setPicked} /></div>}
 
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={() => closeDoc('skill:new')} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>

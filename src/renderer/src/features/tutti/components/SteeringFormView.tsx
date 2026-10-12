@@ -5,6 +5,8 @@ import { FIELD } from '@/shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 import { slug } from '../lib/spec'
+import { useAskAgent } from '../lib/useAskAgent'
+import { AgentSelect } from './AgentSelect'
 import { buildSteeringFile, EMPTY_STEERING_FORM, FOUNDATION, foundationFiles, foundationPrompt, INCLUSIONS, steeringFormError, type SteeringForm } from '../lib/steeringForm'
 
 /**
@@ -15,7 +17,6 @@ export function SteeringFormView() {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const project = useStore((s) => s.project)
-  const panes = useStore((s) => s.panes)
   const toast = useStore((s) => s.toast)
   const openDoc = useStore((s) => s.openDoc)
   const closeDoc = useStore((s) => s.closeDoc)
@@ -24,7 +25,8 @@ export function SteeringFormView() {
   const [askAgent, setAskAgent] = useState(true)
   const set = (patch: Partial<SteeringForm>): void => setForm((f) => ({ ...f, ...patch }))
   const error = steeringFormError(form)
-  const agent = panes.find((p) => p.id === useStore.getState().activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
+  const ask = useAskAgent()
+  const agent = ask.selected
   const bad = (field: typeof error): string => (tried && error === field ? 'ring-1 ring-danger/70' : '')
   const Label = ({ k }: { k: MsgKey }) => <label className="mb-1 mt-4 block text-[11px] font-medium text-muted">{t(k)}</label>
 
@@ -50,10 +52,7 @@ export function SteeringFormView() {
       if (made.ok) { await window.api.fs.write(made.message, files[name], false); created++ }
     }
     if (!created) { toast(t('stf.baseExists'), 'info'); return }
-    if (askAgent && agent) {
-      window.api.pty.paste(agent.id, foundationPrompt(lang, '.tutti/steering'))
-      setTimeout(() => window.api.pty.write(agent.id, '\r'), 500)
-    }
+    if (askAgent && agent) await ask.send(foundationPrompt(lang, '.tutti/steering'))
     closeDoc('steering:new')
     void openDoc(`${dir}/product.md`)
   }
@@ -113,6 +112,7 @@ export function SteeringFormView() {
             <input type="checkbox" checked={askAgent && !!agent} disabled={!agent} onChange={(e) => setAskAgent(e.target.checked)} className="accent-[var(--color-accent)]" />
             {t(agent ? 'stf.baseAgent' : 'stf.baseNoAgent')}
           </label>
+          {askAgent && agent && <div className="mb-3"><AgentSelect options={ask.options} value={agent} onChange={ask.setPicked} /></div>}
           <button onClick={() => void foundation()} className="rounded-lg border border-line px-3 py-1.5 text-[12px] transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent">{t('stf.baseCreate')}</button>
         </div>
       </div>

@@ -5,6 +5,8 @@ import { FIELD, Modal } from '@/shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 import { hookAgentPrompt } from '../lib/hookEdit'
+import { useAskAgent } from '../lib/useAskAgent'
+import { AgentSelect } from './AgentSelect'
 
 /**
  * Crear un hook, como el selector de Kiro: ¿con un formulario guiado o describiéndoselo al agente abierto? El formulario se abre como una
@@ -13,18 +15,17 @@ import { hookAgentPrompt } from '../lib/hookEdit'
 export function HookChoiceDialog({ onClose }: { onClose: () => void }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
-  const panes = useStore((s) => s.panes)
   const openHookForm = useStore((s) => s.openHookForm)
   const toast = useStore((s) => s.toast)
   const [step, setStep] = useState<'choose' | 'describe'>('choose')
   const [idea, setIdea] = useState('')
-  const agent = panes.find((p) => p.id === useStore.getState().activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
+  const ask = useAskAgent()
+  const agent = ask.selected
 
-  const send = (): void => {
+  const send = async (): Promise<void> => {
     if (!agent || !idea.trim()) return
-    window.api.pty.paste(agent.id, hookAgentPrompt(lang, idea))
-    setTimeout(() => window.api.pty.write(agent.id, '\r'), 500)
-    toast(t('sa.sent', { agent: agent.name ?? agent.title }), 'ok')
+    const name = await ask.send(hookAgentPrompt(lang, idea))
+    if (name) toast(t('sa.sent', { agent: name }), 'ok')
     onClose()
   }
   const Option = ({ icon, title, hint, onClick, off }: { icon: React.ReactNode; title: string; hint: string; onClick: () => void; off?: boolean }) => (
@@ -51,11 +52,14 @@ export function HookChoiceDialog({ onClose }: { onClose: () => void }) {
           <>
             <label className="text-[11px] font-medium text-muted">{t('hf.nl')}</label>
             <textarea autoFocus value={idea} onChange={(e) => setIdea(e.target.value)} rows={4} placeholder={t('hf.nlPh')} spellCheck={false}
-              onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send() }} className={clsx(FIELD, 'resize-none')} />
+              onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void send() }} className={clsx(FIELD, 'resize-none')} />
             <p className="text-[10px] leading-snug text-muted">{t('hf.nlHint')}</p>
-            <div className="mt-1 flex justify-between gap-2">
+            <div className="mt-1 flex items-center justify-between gap-2">
               <button onClick={() => setStep('choose')} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('hc.back')}</button>
-              <button onClick={send} disabled={!idea.trim()} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">{t('hf.nlSend')}</button>
+              <span className="flex items-center gap-2">
+                <AgentSelect options={ask.options} value={agent} onChange={ask.setPicked} />
+                <button onClick={() => void send()} disabled={!idea.trim()} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">{t('hf.nlSend')}</button>
+              </span>
             </div>
           </>
         )}

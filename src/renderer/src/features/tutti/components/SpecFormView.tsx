@@ -5,6 +5,8 @@ import { FIELD } from '@/shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 import { slug } from '../lib/spec'
+import { useAskAgent } from '../lib/useAskAgent'
+import { AgentSelect } from './AgentSelect'
 import { EMPTY_SPEC_FORM, firstSpecFile, specAgentPrompt, specFiles, specFormError, type SpecForm } from '../lib/specForm'
 
 /** Una fila de botones para elegir una opción (como en Kiro: ¿funcionalidad o error?, ¿requisitos o diseño primero?). */
@@ -27,7 +29,6 @@ export function SpecFormView() {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const project = useStore((s) => s.project)
-  const panes = useStore((s) => s.panes)
   const toast = useStore((s) => s.toast)
   const openDoc = useStore((s) => s.openDoc)
   const closeDoc = useStore((s) => s.closeDoc)
@@ -35,7 +36,8 @@ export function SpecFormView() {
   const [tried, setTried] = useState(false)
   const set = (patch: Partial<SpecForm>): void => setForm((f) => ({ ...f, ...patch }))
   const error = specFormError(form)
-  const agent = panes.find((p) => p.id === useStore.getState().activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
+  const ask = useAskAgent()
+  const agent = ask.selected
   const bad = (field: typeof error): string => (tried && error === field ? 'ring-1 ring-danger/70' : '')
   const Label = ({ k }: { k: MsgKey }) => <label className="mb-1 mt-4 block text-[11px] font-medium text-muted">{t(k)}</label>
   const bug = form.type === 'bugfix'
@@ -49,10 +51,7 @@ export function SpecFormView() {
     if (!made.ok) { toast(made.message, 'error'); return }
     const files = specFiles(lang, form)
     for (const [name, text] of Object.entries(files)) await window.api.fs.write(`${made.message}/${name}`, text, false)
-    if (form.useAgent && agent) {
-      window.api.pty.paste(agent.id, specAgentPrompt(lang, form, `.tutti/specs/${folder}`))
-      setTimeout(() => window.api.pty.write(agent.id, '\r'), 500)
-    }
+    if (form.useAgent && agent) await ask.send(specAgentPrompt(lang, form, `.tutti/specs/${folder}`))
     closeDoc('spec:new')
     void openDoc(`${made.message}/${firstSpecFile(form)}`)
   }
@@ -90,6 +89,7 @@ export function SpecFormView() {
         <p className={clsx('mt-1 text-[10px] leading-snug', tried && error === 'description' ? 'text-danger' : 'text-muted')}>
           {tried && error === 'description' ? t('sf.needDescription') : agent ? t(form.useAgent ? 'sf.agentHint' : 'sf.templateHint') : t('sf.noAgent')}
         </p>
+        {form.useAgent && agent && <div className="mt-2"><AgentSelect options={ask.options} value={agent} onChange={ask.setPicked} /></div>}
 
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={() => closeDoc('spec:new')} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>

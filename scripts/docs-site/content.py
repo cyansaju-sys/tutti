@@ -386,6 +386,7 @@ sec('dottutti', 'La carpeta .tutti', 'The .tutti folder', '''
 ├─ hooks/      un .json por hook (formato de Kiro)
 └─ skills/     una carpeta por skill, con su SKILL.md</code></pre>
 <p>Las <strong>subcarpetas aparecen solo cuando añades su primer elemento</strong>, y se crean todas desde la pestaña <a href="#tutti">Tutti</a> (o a mano: Tutti lee lo que haya).</p>
+<p>Siempre que una acción le pida algo a un agente (redactar una spec, un hook, una skill o el steering base, ejecutar tareas…), puedes <strong>elegir el agente</strong>: uno de los que ya tienes abiertos, que recibe la petición en su panel, o cualquiera de los instalados, que Tutti <strong>abre con la petición como tarea inicial</strong>. Por defecto va al agente activo, o al primero instalado si no hay ninguno abierto.</p>
 <h3>specs/</h3>
 <img src="img/spec-formulario.png" alt="El formulario para crear una spec" loading="lazy" />
 <p>Una spec es una carpeta con tres archivos, como en Kiro: <code>requirements.md</code> (historia de usuario y criterios en formato EARS: «CUANDO … EL SISTEMA DEBERÁ …»), <code>design.md</code> (arquitectura, componentes, datos, errores y pruebas) y <code>tasks.md</code> (casillas <code>- [ ]</code>, también anidadas). En la lista ves el avance de cada una, por ejemplo <code>2/5</code>.</p>
@@ -422,8 +423,9 @@ Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></
 <p><strong>Steering global:</strong> en el formulario puedes elegir <em>Todos mis proyectos</em>. Esas guías se guardan en la configuración de Tutti (fuera de cualquier repositorio) y valen en todos tus proyectos; si el proyecto tiene un archivo con el mismo nombre, manda el del proyecto. Sus referencias <code>#[[file:…]]</code> se resuelven desde la carpeta de los globales. Aparecen en la lista con la etiqueta «Global».</p>
 <h3>hooks/</h3>
 <img src="img/hook-opciones.png" alt="El diálogo para elegir cómo crear un hook" loading="lazy" />
+<img src="img/hook-agente.png" alt="Describir el hook y elegir el agente" loading="lazy" />
 <img src="img/hook-formulario.png" alt="El formulario para crear un hook" loading="lazy" />
-<p>El <strong>+</strong> abre un diálogo con dos opciones, como el de Kiro: <strong>Crear un hook</strong> (un formulario guiado, en una pestaña del editor, con nombre, evento, filtro y acción) o <strong>Pedírselo al agente</strong> (describes el hook con tus palabras y el agente abierto escribe el JSON: te lo enseña y lo guarda apagado hasta que lo apruebes). El lápiz de cada hook lo abre en el mismo formulario para <strong>editarlo</strong> sin tocar el JSON; el resto de hooks del archivo y su interruptor se respetan.</p>
+<p>El <strong>+</strong> abre un diálogo con dos opciones, como el de Kiro: <strong>Crear un hook</strong> (un formulario guiado, en una pestaña del editor, con nombre, evento, filtro y acción) o <strong>Pedírselo al agente</strong> (describes el hook con tus palabras y un agente escribe el JSON: te lo enseña y lo guarda apagado hasta que lo apruebes). El lápiz de cada hook lo abre en el mismo formulario para <strong>editarlo</strong> sin tocar el JSON; el resto de hooks del archivo y su interruptor se respetan.</p>
 <p>Un hook es un archivo <code>.tutti/hooks/&lt;nombre&gt;.json</code> en el <strong>formato de Kiro</strong>: <code>version</code>, una lista <code>hooks</code> y, en cada uno, <code>name</code>, <code>description</code>, <code>trigger</code>, <code>matcher</code> (expresión regular sobre la ruta), <code>action</code> (<code>command</code> o <code>agent</code>), <code>timeout</code> (segundos, 60 por defecto) y <code>enabled</code>. Un archivo puede tener varios.</p>
 <pre><code>{ "version": "v1", "hooks": [{
     "name": "Lint al guardar", "trigger": "PostFileSave", "matcher": "\\\\.(ts|tsx)$",
@@ -447,6 +449,7 @@ Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></
 ├─ hooks/      one .json per hook (Kiro's format)
 └─ skills/     one folder per skill, with its SKILL.md</code></pre>
 <p><strong>Subfolders only appear when you add their first item</strong>, and they are all created from the <a href="#tutti">Tutti</a> tab (or by hand: Tutti reads whatever is there).</p>
+<p>Whenever an action asks an agent for something (writing a spec, a hook, a skill or the foundation steering, running tasks…), you can <strong>choose the agent</strong>: one you already have open, which receives the request in its panel, or any installed one, which Tutti <strong>opens with the request as its first task</strong>. By default it goes to the active agent, or to the first installed one if none is open.</p>
 <h3>specs/</h3>
 <img src="img/spec-formulario.png" alt="The form to create a spec" loading="lazy" />
 <p>A spec is a folder with three files, as in Kiro: <code>requirements.md</code> (user story and criteria in EARS format: “WHEN … THE SYSTEM SHALL …”), <code>design.md</code> (architecture, components, data, errors and tests) and <code>tasks.md</code> (<code>- [ ]</code> checkboxes, also nested). In the list you see each one's progress, for example <code>2/5</code>.</p>
@@ -483,8 +486,9 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <p><strong>Global steering:</strong> in the form you can choose <em>All my projects</em>. Those guides are saved in Tutti's configuration (outside any repository) and apply to all your projects; if the project has a file with the same name, the project's wins. Their <code>#[[file:…]]</code> references are resolved from the folder of the global ones. They show in the list with the “Global” tag.</p>
 <h3>hooks/</h3>
 <img src="img/hook-opciones.png" alt="The dialog to choose how to create a hook" loading="lazy" />
+<img src="img/hook-agente.png" alt="Describing the hook and choosing the agent" loading="lazy" />
 <img src="img/hook-formulario.png" alt="The form to create a hook" loading="lazy" />
-<p>The <strong>+</strong> opens a dialog with two options, like Kiro's: <strong>Create a hook</strong> (a guided form, in an editor tab, with name, event, filter and action) or <strong>Ask the agent</strong> (you describe the hook in your own words and the open agent writes the JSON: it shows it to you and saves it switched off until you approve). The pencil on each hook opens it in the same form so you can <strong>edit</strong> it without touching the JSON; the other hooks in the file and its switch are kept.</p>
+<p>The <strong>+</strong> opens a dialog with two options, like Kiro's: <strong>Create a hook</strong> (a guided form, in an editor tab, with name, event, filter and action) or <strong>Ask the agent</strong> (you describe the hook in your own words and an agent writes the JSON: it shows it to you and saves it switched off until you approve). The pencil on each hook opens it in the same form so you can <strong>edit</strong> it without touching the JSON; the other hooks in the file and its switch are kept.</p>
 <p>A hook is a <code>.tutti/hooks/&lt;name&gt;.json</code> file in <strong>Kiro's format</strong>: <code>version</code>, a <code>hooks</code> list and, in each one, <code>name</code>, <code>description</code>, <code>trigger</code>, <code>matcher</code> (a regular expression on the path), <code>action</code> (<code>command</code> or <code>agent</code>), <code>timeout</code> (seconds, 60 by default) and <code>enabled</code>. One file can hold several.</p>
 <pre><code>{ "version": "v1", "hooks": [{
     "name": "Lint on save", "trigger": "PostFileSave", "matcher": "\\\\.(ts|tsx)$",

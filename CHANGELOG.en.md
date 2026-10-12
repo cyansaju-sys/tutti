@@ -4,6 +4,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 
 ## 1.2.2
 
+- **Improvement request addressed — documentation under a methodology:** the `.tutti/docs` folder follows **Diátaxis** (tutorials, how-to guides, reference and explanation) and extends what was already there with the **project's general information**: the overview (`overview.md`, which the agent can fill in) and the foundation steering files (`product.md`, `tech.md` and `structure.md`). Read more: https://cyansaju-sys.github.io/tutti/documentacion.html
 - **Specs like Kiro's:** a guided form in an editor tab (feature or bug, requirements or design first, or **Quick**), with `bugfix.md` for bugs. You can ask the agent to write each phase waiting for your approval, and from the editor bar **analyze** the requirements, **update** the design and the tasks, and **run the tasks** (the next one or all).
 - **Hooks:** JSON files in `.tutti/hooks` in Kiro's format. `PostFileSave` runs a command or types a prompt into the agent; the **+** offers a guided form or describing it to the agent, they are **edited** with the same form and only run if you allow hooks in that project.
 - **Steering with Kiro's modes:** always, by files, manual or automatic, with `#[[file:path]]` references, the foundation files (`product`, `tech`, `structure`) and **global** steering for all your projects. `fileMatch` also counts the files open in the editor.
