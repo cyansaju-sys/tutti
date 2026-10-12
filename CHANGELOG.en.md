@@ -2,6 +2,15 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.2.2
+
+- **Specs like Kiro's:** a guided form in an editor tab (feature or bug, requirements or design first, or **Quick**), with `bugfix.md` for bugs. You can ask the agent to write each phase waiting for your approval, and from the editor bar **analyze** the requirements, **update** the design and the tasks, and **run the tasks** (the next one or all).
+- **Hooks:** JSON files in `.tutti/hooks` in Kiro's format. `PostFileSave` runs a command or types a prompt into the agent; the **+** offers a guided form or describing it to the agent, they are **edited** with the same form and only run if you allow hooks in that project.
+- **Steering with Kiro's modes:** always, by files, manual or automatic, with `#[[file:path]]` references, the foundation files (`product`, `tech`, `structure`) and **global** steering for all your projects. `fileMatch` also counts the files open in the editor.
+- **Skills and documentation:** a form to create a skill (name, when to use it and instructions), with the option to have the agent write them or to **import** one you already have; and the documentation overview that the agent fills in.
+- **Tutti, in depth in the documentation:** the landing page and the documentation explain every part of the Tutti tab and of the `.tutti` folder, with new screenshots.
+- **Landing page in Kiro's style:** a header with central links, quick guides, frequently asked questions and a footer in columns.
+
 ## 1.2.1
 
 - **The `.tutti` folder in every project:** Tutti creates `.tutti/` with a `README.md` when you open a project; subfolders only appear when you add something. It is versioned with git and shared by the team.

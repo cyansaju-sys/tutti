@@ -47,4 +47,15 @@ describe('formulario de una spec (flujo de Kiro)', () => {
     expect(prompt).toContain('No escribas código')
     expect(specAgentPrompt('en', { ...feature, type: 'bugfix' }, 'dir')).toContain('1. bugfix.md')
   })
+
+  it('la spec rápida se lo pide todo al agente de una vez, sin esperar aprobación entre archivos', () => {
+    const quick = { ...feature, flow: 'quick' as const }
+    const prompt = specAgentPrompt('es', quick, '.tutti/specs/carrito')
+    expect(prompt).toContain('spec rápida')
+    expect(prompt).toContain('de una sola vez')
+    expect(prompt).toContain('sin esperar mi aprobación entre archivos')
+    expect(prompt).not.toContain('Trabaja por fases')
+    expect(firstSpecFile(quick)).toBe('requirements.md')
+    expect(specAgentPrompt('es', { ...quick, type: 'bugfix' as const }, 'd')).toContain('Trabaja por fases')          // un error sigue por fases
+  })
 })

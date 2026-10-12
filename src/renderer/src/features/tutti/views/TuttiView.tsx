@@ -1,11 +1,12 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdAdd, MdChevronRight, MdExplore } from 'react-icons/md'
+import { MdAdd, MdChevronRight, MdEdit, MdExplore } from 'react-icons/md'
 import type { MsgKey } from '@shared/i18n'
 import type { DirEntry, HookInfo, SteeringInfo } from '@shared/types'
 import { FIELD_SLIM } from '@/shared/components/ui'
 import { McpView } from '@/features/mcp/views/McpView'
-import { DOC_CATEGORIES, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
+import { HookChoiceDialog } from '@/features/tutti/components/HookChoiceDialog'
+import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
 import { iconFor } from '@/shared/lib/icons'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -14,7 +15,6 @@ const REFRESH_MS = 5000
 /** El botón que ocupa todo el ancho donde no hay nada todavía. */
 const EMPTY_BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent'
 type Kind = 'specs' | 'hooks' | 'steering' | 'skills' | 'docs'
-const SKILL_TEMPLATE = (name: string): string => `---\nname: ${name}\ndescription: \n---\n\n# ${name}\n`
 
 /** Sección plegable: el título con una flecha y, a la derecha, el botón + para añadir; se recuerda si estaba cerrada. */
 function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title: string; count?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
@@ -50,9 +50,14 @@ export function TuttiView() {
   const openHookForm = useStore((s) => s.openHookForm)
   const openSpecForm = useStore((s) => s.openSpecForm)
   const openSteeringForm = useStore((s) => s.openSteeringForm)
+  const openSkillForm = useStore((s) => s.openSkillForm)
+  const panes = useStore((s) => s.panes)
+  const activePane = useStore((s) => s.activePane)
+  const agent = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
   const lang = useStore((s) => s.lang)
   const [lists, setLists] = useState<Record<Kind, DirEntry[]>>({ specs: [], hooks: [], steering: [], skills: [], docs: [] })
   const [addMcp, setAddMcp] = useState(0)
+  const [hookChoice, setHookChoice] = useState(false)          // el diálogo «¿cómo quieres crear el hook?»
   const [steeringInfo, setSteeringInfo] = useState<Record<string, SteeringInfo>>({})
   const [hooks, setHooks] = useState<{ list: HookInfo[]; trusted: boolean }>({ list: [], trusted: false })
   const [specInfo, setSpecs] = useState<Record<string, { files: DirEntry[]; done: number; total: number }>>({})   // por carpeta de spec
@@ -99,14 +104,6 @@ export function TuttiView() {
     if (!kind || !raw) return
     const sub = where ? where.slice(root.length + 1) : kind === 'docs' ? `docs/${docCat}` : kind          // carpeta de .tutti donde va lo nuevo
     const dir = await window.api.context.init(project, sub)        // la primera vez crea .tutti y esa carpeta
-    if (kind === 'skills') {                                      // una skill es una carpeta con su SKILL.md
-      const made = await window.api.fs.create(dir, raw, true)
-      if (!made.ok) { toast(made.message, 'error'); return }
-      const file = `${made.message}/SKILL.md`
-      await window.api.fs.write(file, SKILL_TEMPLATE(raw), false)
-      void refresh(); void openDoc(file)
-      return
-    }
     const made = await window.api.fs.create(dir, /\.\w+$/.test(raw) ? raw : `${raw}.md`, false)
     if (!made.ok) { toast(made.message, 'error'); return }
     void refresh(); void openDoc(made.message)
@@ -126,6 +123,17 @@ export function TuttiView() {
       className={clsx(FIELD_SLIM, 'mx-1 mb-1 w-[calc(100%-0.5rem)]')} />
   )
 
+  /** La visión general de la documentación: se crea con su esqueleto y el agente abierto la rellena explorando el proyecto. */
+  const askOverview = async (): Promise<void> => {
+    if (!project || !agent) return
+    const dir = await window.api.context.init(project, 'docs')
+    const made = await window.api.fs.create(dir, OVERVIEW_FILE, false)
+    if (made.ok) await window.api.fs.write(made.message, overviewTemplate(lang), false)
+    window.api.pty.paste(agent.id, overviewAgentPrompt(lang, '.tutti/docs'))
+    setTimeout(() => window.api.pty.write(agent.id, '\r'), 500)
+    toast(t('sa.sent', { agent: agent.name ?? agent.title }), 'ok')
+    void refresh(); void openDoc(`${dir}/${OVERVIEW_FILE}`)
+  }
   const toggleHook = async (h: HookInfo, index: number): Promise<void> => {
     const text = await window.api.fs.read(h.file).then((d) => d.text, () => null)
     const next = text === null ? null : withEnabled(text, index, !h.enabled)
@@ -139,7 +147,7 @@ export function TuttiView() {
   const HooksSection = () => {
     const perFile = new Map<string, number>()
     return (
-      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} onAdd={openHookForm} addTip={t('tutti.add.hooks')}>
+      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} onAdd={() => setHookChoice(true)} addTip={t('tutti.add.hooks')}>
         {hooks.list.length > 0 && (
           <div className={clsx('mx-1 mb-1.5 rounded-md border px-2.5 py-1.5 text-[11px] leading-snug', hooks.trusted ? 'border-line text-muted' : 'border-warn/40 bg-warn/[0.08] text-text')}>
             {hooks.trusted
@@ -160,6 +168,8 @@ export function TuttiView() {
                   </span>
                   <span className={clsx('truncate text-[10px]', h.error ? 'text-danger' : 'text-muted')}>{h.error ?? (h.matcher ? `${h.actionType} · ${h.matcher}` : h.actionType)}</span>
                 </button>
+                <button title={t('tutti.hookEdit')} onClick={() => openHookForm({ file: h.file, index, name: h.name })}
+                  className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100"><MdEdit size={13} /></button>
                 {!h.error && (
                   <button role="switch" aria-checked={h.enabled} title={t('tutti.hookToggle')} onClick={() => void toggleHook(h, index)}
                     className={clsx('mr-1.5 h-4 w-7 shrink-0 rounded-full p-0.5 transition-colors', h.enabled ? 'bg-accent' : 'bg-ov/[0.15]')}>
@@ -172,7 +182,7 @@ export function TuttiView() {
         </ul>
         {creating !== 'hooks' && hooks.list.length === 0 && (
           <div className="px-1 pt-1">
-            <button onClick={openHookForm} className={EMPTY_BUTTON}><MdAdd size={15} /> {t('tutti.add.hooks')}</button>
+            <button onClick={() => setHookChoice(true)} className={EMPTY_BUTTON}><MdAdd size={15} /> {t('tutti.add.hooks')}</button>
           </div>
         )}
       </Fold>
@@ -181,10 +191,11 @@ export function TuttiView() {
 
   const Section = ({ kind, title }: { kind: Kind; title: string }) => {
     // en la documentación solo se ven las categorías que ya tienen documentos; la categoría se elige al crear uno
+    const globals: DirEntry[] = kind === 'steering' ? Object.values(steeringInfo).filter((x) => x.scope === 'global').map((x) => ({ name: x.base, path: x.file, isDir: false })) : []
     const items: DirEntry[] = kind === 'docs' ? lists.docs.filter((e) => !e.isDir || specInfo[e.path]?.files.length) : lists[kind]
     const nothingYet = kind === 'docs' || items.length === 0
     return (
-    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} onAdd={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
+    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} onAdd={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
       {creating === kind && !target && NameInput(kind)}
       {creating === 'docs' && kind === 'docs' && !target && (
         <div className="mx-1 mb-1.5 flex flex-wrap gap-1" role="radiogroup" aria-label={t('tutti.category')}>
@@ -223,13 +234,16 @@ export function TuttiView() {
               ? <MdExplore size={15} className="shrink-0 text-accent" aria-hidden />          // las guías de steering llevan una brújula en lugar del icono de Markdown
               : <img src={iconFor(e.name, e.isDir)} alt="" className="size-4 shrink-0" draggable={false} />}
             <span className="min-w-0 flex-1 truncate">{kind === 'steering' && !e.isDir ? e.name.replace(/\.md$/i, '') : e.name}</span>
-            {kind === 'steering' && steeringInfo[e.path] && <span className="shrink-0 rounded bg-ov/[0.07] px-1.5 py-px text-[9px] font-medium text-muted" title={steeringInfo[e.path].patterns.join(', ') || steeringInfo[e.path].description || undefined}>{t(`stf.m.${steeringInfo[e.path].inclusion}` as MsgKey)}</span>}
+            {kind === 'steering' && steeringInfo[e.path] && <span className="shrink-0 rounded bg-ov/[0.07] px-1.5 py-px text-[9px] font-medium text-muted" title={steeringInfo[e.path].patterns.join(', ') || steeringInfo[e.path].description || undefined}>{steeringInfo[e.path].scope === 'global' ? `${t('stf.global')} · ` : ''}{t(`stf.m.${steeringInfo[e.path].inclusion}` as MsgKey)}</span>}
           </button>
         </li>
       ))}</ul>
       {creating !== kind && nothingYet && (
         <div className="px-1 pt-1">
-          <button onClick={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : start(kind))} className={EMPTY_BUTTON}><MdAdd size={15} /> {t(`tutti.add.${kind}` as MsgKey)}</button>
+          {kind === 'docs' && !lists.docs.some((e) => e.name === OVERVIEW_FILE) && (
+            <button onClick={() => void askOverview()} disabled={!agent} title={agent ? t('tutti.overviewTip') : t('sa.noAgent')} className={clsx(EMPTY_BUTTON, 'mb-1 disabled:cursor-not-allowed disabled:opacity-40')}>{t('tutti.overviewAgent')}</button>
+          )}
+          <button onClick={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} className={EMPTY_BUTTON}><MdAdd size={15} /> {t(`tutti.add.${kind}` as MsgKey)}</button>
         </div>
       )}
     </Fold>
@@ -241,6 +255,7 @@ export function TuttiView() {
       <Section kind="docs" title={t('tutti.docs')} />
       <Section kind="specs" title={t('tutti.specs')} />
       {HooksSection()}
+      {hookChoice && <HookChoiceDialog onClose={() => setHookChoice(false)} />}
       <Section kind="steering" title={t('tutti.steering')} />
       <Section kind="skills" title={t('tutti.skills')} />
       <Fold id="mcp" title={t('tutti.mcp')} onAdd={() => setAddMcp((n) => n + 1)} addTip={t('mcp.addTip')}>

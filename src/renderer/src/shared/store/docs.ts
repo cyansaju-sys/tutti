@@ -28,6 +28,11 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const doc: Doc = { kind: 'graph', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: 'Commits' }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
+  openSkillForm: () => {
+    const path = 'skill:new'
+    const doc: Doc = { kind: 'skillform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'skf.tabTitle') }
+    set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+  },
   openSteeringForm: () => {
     const path = 'steering:new'
     const doc: Doc = { kind: 'steeringform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'stf.tabTitle') }
@@ -38,9 +43,9 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const doc: Doc = { kind: 'specform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'sf.tabTitle') }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
-  openHookForm: () => {
-    const path = 'hook:new'
-    const doc: Doc = { kind: 'hookform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'hf.tabTitle') }
+  openHookForm: (edit) => {
+    const path = edit ? `hook:edit:${edit.index}:${edit.file}` : 'hook:new'
+    const doc: Doc = { kind: 'hookform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: edit ? `${tr(get, 'hf.editTab')}${edit.name ? ` · ${edit.name}` : ''}` : tr(get, 'hf.tabTitle') }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
   openCommitDiff: async (hash, parent, path, label) => {

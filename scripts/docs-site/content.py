@@ -302,7 +302,7 @@ sec('contexto', 'Contexto del proyecto', 'Project context', '''
 <table>
 <tr><th>Modo</th><th>Qué hace</th></tr>
 <tr><td><code>inclusion: always</code> (por defecto)</td><td>Se entrega entero en cada sesión</td></tr>
-<tr><td><code>inclusion: fileMatch</code> + <code>fileMatchPattern</code></td><td>Entero si hay cambios en archivos que coinciden con el patrón (uno o una lista); si no, solo se lista</td></tr>
+<tr><td><code>inclusion: fileMatch</code> + <code>fileMatchPattern</code></td><td>Entero si hay cambios en git o archivos abiertos en el editor que coinciden con el patrón (uno o una lista); si no, solo se lista</td></tr>
 <tr><td><code>inclusion: manual</code></td><td>No se copia: se lista con su ruta para que el agente la lea cuando la menciones</td></tr>
 <tr><td><code>inclusion: auto</code> + <code>name</code> y <code>description</code></td><td>No se copia: se lista con su descripción para que el agente la lea cuando venga al caso</td></tr>
 </table>
@@ -327,7 +327,7 @@ sec('contexto', 'Contexto del proyecto', 'Project context', '''
 <table>
 <tr><th>Mode</th><th>What it does</th></tr>
 <tr><td><code>inclusion: always</code> (default)</td><td>Handed over whole in every session</td></tr>
-<tr><td><code>inclusion: fileMatch</code> + <code>fileMatchPattern</code></td><td>Whole if files matching the pattern (one or a list) have changes; otherwise only listed</td></tr>
+<tr><td><code>inclusion: fileMatch</code> + <code>fileMatchPattern</code></td><td>Whole if files with changes in git, or open in the editor, match the pattern (one or a list); otherwise only listed</td></tr>
 <tr><td><code>inclusion: manual</code></td><td>Not copied: listed with its path so the agent reads it when you mention it</td></tr>
 <tr><td><code>inclusion: auto</code> + <code>name</code> and <code>description</code></td><td>Not copied: listed with its description so the agent reads it when it applies</td></tr>
 </table>
@@ -344,7 +344,7 @@ sec('tutti', 'La pestaña Tutti', 'The Tutti tab', '''
 <tr><td><strong>Specs</strong></td><td>Una carpeta por spec, con su avance (<code>2/5</code>) y una etiqueta roja si corrige un error</td><td>Abre el formulario guiado, en una pestaña del editor</td></tr>
 <tr><td><strong>Hooks</strong></td><td>Cada hook con su evento y un interruptor para activarlo</td><td>Abre el formulario para crear un hook</td></tr>
 <tr><td><strong>Steering</strong></td><td>Las guías, con su modo (Siempre, Por archivos, Manual, Automático)</td><td>Abre el formulario del steering y de los archivos base</td></tr>
-<tr><td><strong>Skills</strong></td><td>Una carpeta por skill; al pulsar se abre su <code>SKILL.md</code></td><td>Crea la skill con una plantilla</td></tr>
+<tr><td><strong>Skills</strong></td><td>Una carpeta por skill; al pulsar se abre su <code>SKILL.md</code></td><td>Abre el formulario de la skill (nombre, cuándo usarla e instrucciones)</td></tr>
 <tr><td><strong>Servidores MCP</strong></td><td>Los MCP instalados en tus agentes (los mismos de la pestaña MCP)</td><td>Abre el diálogo de añadir un servidor</td></tr>
 </table>
 <p>Cada sección se pliega (y se recuerda). Si una sección está vacía, en lugar de una lista verás un botón de ancho completo para crear el primer elemento. La carpeta <code>.tutti</code> y sus subcarpetas <strong>no se crean hasta que añades algo</strong>: abrir un proyecto o mirar la pestaña no escribe nada, salvo el <code>README.md</code> de <code>.tutti</code>.</p>
@@ -364,7 +364,7 @@ sec('tutti', 'La pestaña Tutti', 'The Tutti tab', '''
 <tr><td><strong>Specs</strong></td><td>One folder per spec, with its progress (<code>2/5</code>) and a red tag if it fixes a bug</td><td>Opens the guided form, in an editor tab</td></tr>
 <tr><td><strong>Hooks</strong></td><td>Each hook with its event and a switch to turn it on</td><td>Opens the form to create a hook</td></tr>
 <tr><td><strong>Steering</strong></td><td>The guides, with their mode (Always, By files, Manual, Automatic)</td><td>Opens the steering form and the foundation files</td></tr>
-<tr><td><strong>Skills</strong></td><td>One folder per skill; clicking opens its <code>SKILL.md</code></td><td>Creates the skill with a template</td></tr>
+<tr><td><strong>Skills</strong></td><td>One folder per skill; clicking opens its <code>SKILL.md</code></td><td>Opens the skill form (name, when to use it and instructions)</td></tr>
 <tr><td><strong>MCP servers</strong></td><td>The MCPs installed in your agents (the same as the MCP tab)</td><td>Opens the add-a-server dialog</td></tr>
 </table>
 <p>Each section folds (and remembers it). When a section is empty, instead of a list you see a full-width button to create the first item. The <code>.tutti</code> folder and its subfolders are <strong>not created until you add something</strong>: opening a project or looking at the tab writes nothing, except the <code>README.md</code> in <code>.tutti</code>.</p>
@@ -390,9 +390,17 @@ sec('dottutti', 'La carpeta .tutti', 'The .tutti folder', '''
 <img src="img/spec-formulario.png" alt="El formulario para crear una spec" loading="lazy" />
 <p>Una spec es una carpeta con tres archivos, como en Kiro: <code>requirements.md</code> (historia de usuario y criterios en formato EARS: «CUANDO … EL SISTEMA DEBERÁ …»), <code>design.md</code> (arquitectura, componentes, datos, errores y pruebas) y <code>tasks.md</code> (casillas <code>- [ ]</code>, también anidadas). En la lista ves el avance de cada una, por ejemplo <code>2/5</code>.</p>
 <p>El formulario guiado pregunta lo mismo que Kiro: ¿una <em>funcionalidad</em> o <em>corregir un error</em>?, qué quieres y, para una funcionalidad, si empezar por <em>requisitos</em> o por el <em>diseño</em>. Un error crea <code>bugfix.md</code> en lugar de <code>requirements.md</code>, con tres secciones: comportamiento actual (el defecto), esperado (la corrección) y el que no debe cambiar (prevención de regresiones, «DEBERÁ SEGUIR …»); su lista de tareas empieza por reproducir el error.</p>
-<p>Puedes empezar con plantillas o <strong>pedírselo al agente abierto</strong>: Tutti le escribe un mensaje con tu descripción y le pide trabajar por fases (requisitos o análisis, diseño, tareas), esperando tu aprobación entre una y otra y sin escribir código todavía.</p>
+<p>Puedes empezar con plantillas o <strong>pedírselo al agente abierto</strong>: Tutti le escribe un mensaje con tu descripción y le pide trabajar por fases (requisitos o análisis, diseño, tareas), esperando tu aprobación entre una y otra y sin escribir código todavía. Con el flujo <strong>Rápida</strong> (Quick Spec de Kiro) escribe los tres archivos de una sola vez, sin esperar aprobación entre ellos.</p>
+<p>Al abrir un archivo de una spec, la barra del editor ofrece lo que se le puede pedir al agente abierto (si no hay ninguno, salen desactivadas):</p>
+<table>
+<tr><th>En…</th><th>Acción</th><th>Qué hace</th></tr>
+<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Analizar</strong></td><td>Busca inconsistencias, ambigüedades y huecos, y propone correcciones sin cambiar nada hasta que lo apruebes</td></tr>
+<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Actualizar diseño y tareas</strong></td><td>Ajusta el diseño y las tareas a lo que has cambiado, conservando las casillas ya marcadas</td></tr>
+<tr><td><code>design.md</code></td><td><strong>Actualizar tareas</strong></td><td>Ajusta las tareas al diseño que has cambiado</td></tr>
+<tr><td><code>tasks.md</code></td><td><strong>Siguiente tarea</strong> · <strong>Todas</strong></td><td>Ejecuta solo la primera tarea pendiente y espera tu visto bueno, o todas las pendientes marcando cada casilla al terminar</td></tr>
+</table>
 <h3>docs/</h3>
-<p>La documentación sigue <strong>Diátaxis</strong>: <code>tutorials</code> (aprender haciendo), <code>how-to</code> (resolver una tarea), <code>reference</code> (descripción exacta) y <code>explanation</code> (el porqué). Solo se ven las categorías que ya tienen documentos; al crear uno eliges su categoría.</p>
+<p>La documentación sigue <strong>Diátaxis</strong>: <code>tutorials</code> (aprender haciendo), <code>how-to</code> (resolver una tarea), <code>reference</code> (descripción exacta) y <code>explanation</code> (el porqué). Solo se ven las categorías que ya tienen documentos; al crear uno eliges su categoría. Si aún no hay una <code>overview.md</code> (la visión general), un botón la crea con su esqueleto y le pide al agente abierto que la rellene explorando el proyecto.</p>
 <h3>steering/</h3>
 <img src="img/steering-formulario.png" alt="El formulario para crear un steering" loading="lazy" />
 <p><code>contexto.md</code> es el contexto del proyecto (ver <a href="#contexto">Contexto del proyecto</a>). El resto son guías al estilo del <strong>steering de Kiro</strong>: una cabecera opcional (<code>---</code> … <code>---</code>) dice cuándo se entregan al agente.</p>
@@ -411,8 +419,11 @@ fileMatchPattern: ["src/components/**/*.tsx"]
 # Componentes
 Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></pre>
 <p>Las guías «solo listadas» cuestan pocos tokens: el agente ve su nombre, descripción y ruta, y abre la que le sirva. Dentro del texto puedes enlazar archivos reales con <code>#[[file:ruta]]</code>, <code>#[[file:ruta:12-28]]</code> (un rango de líneas) o <code>#[[folder:ruta]]</code>; se sustituyen por su contenido al entregarlo y nunca salen del proyecto. Los <strong>archivos base</strong> de Kiro (<code>product.md</code>, <code>tech.md</code>, <code>structure.md</code>) se crean de golpe desde el formulario, y el agente puede rellenarlos explorando el proyecto. El panel «Lo que reciben los agentes» del Contexto muestra cuánto pesa cada guía.</p>
+<p><strong>Steering global:</strong> en el formulario puedes elegir <em>Todos mis proyectos</em>. Esas guías se guardan en la configuración de Tutti (fuera de cualquier repositorio) y valen en todos tus proyectos; si el proyecto tiene un archivo con el mismo nombre, manda el del proyecto. Sus referencias <code>#[[file:…]]</code> se resuelven desde la carpeta de los globales. Aparecen en la lista con la etiqueta «Global».</p>
 <h3>hooks/</h3>
+<img src="img/hook-opciones.png" alt="El diálogo para elegir cómo crear un hook" loading="lazy" />
 <img src="img/hook-formulario.png" alt="El formulario para crear un hook" loading="lazy" />
+<p>El <strong>+</strong> abre un diálogo con dos opciones, como el de Kiro: <strong>Crear un hook</strong> (un formulario guiado, en una pestaña del editor, con nombre, evento, filtro y acción) o <strong>Pedírselo al agente</strong> (describes el hook con tus palabras y el agente abierto escribe el JSON: te lo enseña y lo guarda apagado hasta que lo apruebes). El lápiz de cada hook lo abre en el mismo formulario para <strong>editarlo</strong> sin tocar el JSON; el resto de hooks del archivo y su interruptor se respetan.</p>
 <p>Un hook es un archivo <code>.tutti/hooks/&lt;nombre&gt;.json</code> en el <strong>formato de Kiro</strong>: <code>version</code>, una lista <code>hooks</code> y, en cada uno, <code>name</code>, <code>description</code>, <code>trigger</code>, <code>matcher</code> (expresión regular sobre la ruta), <code>action</code> (<code>command</code> o <code>agent</code>), <code>timeout</code> (segundos, 60 por defecto) y <code>enabled</code>. Un archivo puede tener varios.</p>
 <pre><code>{ "version": "v1", "hooks": [{
     "name": "Lint al guardar", "trigger": "PostFileSave", "matcher": "\\\\.(ts|tsx)$",
@@ -424,7 +435,8 @@ Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></
 <li>Como un hook ejecuta comandos del repositorio, <strong>no corre hasta que pulsas «Permitir hooks en este proyecto»</strong>; hasta entonces solo se listan. Cada hook tiene su interruptor, y un hook que reescribe el archivo no se vuelve a disparar en bucle.</li>
 </ul>
 <h3>skills/</h3>
-<p>Una skill es una carpeta con un <code>SKILL.md</code> que empieza con una cabecera (<code>name</code> y <code>description</code>) y sigue con las instrucciones. Al crearla desde la pestaña se genera con esa plantilla y se abre.</p>
+<img src="img/skill-formulario.png" alt="El formulario para crear una skill" loading="lazy" />
+<p>Una skill es una carpeta con un <code>SKILL.md</code> que empieza con una cabecera (<code>name</code> y <code>description</code>) y sigue con las instrucciones. El formulario pide el <strong>nombre</strong> (la carpeta, en minúsculas con guiones), <strong>qué hace y cuándo usarla</strong> (la descripción, por la que el agente la elige; es obligatoria) y, si quieres, las <strong>instrucciones</strong>; vacías, se crea un esqueleto corto (cuándo usarla, pasos y notas). También puedes pedirle al agente abierto que las redacte, o <strong>importar una skill que ya tengas</strong> (una carpeta con su <code>SKILL.md</code>): se copia entera a <code>.tutti/skills</code>, sin pisar ninguna y sin <code>.git</code> ni <code>node_modules</code>.</p>
 ''', '''
 <p>Tutti creates a <code>.tutti</code> folder in every project you open, with a <code>README.md</code> that explains its contents. It is plain text (Markdown and JSON): it is versioned with git, reviewed like any other change and shared by the whole team. Nothing leaves your computer.</p>
 <pre><code>.tutti/
@@ -439,9 +451,17 @@ Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></
 <img src="img/spec-formulario.png" alt="The form to create a spec" loading="lazy" />
 <p>A spec is a folder with three files, as in Kiro: <code>requirements.md</code> (user story and criteria in EARS format: “WHEN … THE SYSTEM SHALL …”), <code>design.md</code> (architecture, components, data, errors and tests) and <code>tasks.md</code> (<code>- [ ]</code> checkboxes, also nested). In the list you see each one's progress, for example <code>2/5</code>.</p>
 <p>The guided form asks the same as Kiro: a <em>feature</em> or <em>fixing a bug</em>?, what you want and, for a feature, whether to start with <em>requirements</em> or with the <em>design</em>. A bug creates <code>bugfix.md</code> instead of <code>requirements.md</code>, with three sections: current behavior (the defect), expected behavior (the fix) and unchanged behavior (regression prevention, “SHALL CONTINUE TO …”); its task list starts by reproducing the bug.</p>
-<p>You can start with templates or <strong>ask the open agent</strong>: Tutti writes it a message with your description and asks it to work in phases (requirements or analysis, design, tasks), waiting for your approval between them and without writing code yet.</p>
+<p>You can start with templates or <strong>ask the open agent</strong>: Tutti writes it a message with your description and asks it to work in phases (requirements or analysis, design, tasks), waiting for your approval between them and without writing code yet. With the <strong>Quick</strong> flow (Kiro's Quick Spec) it writes the three files in one go, without waiting for approval between them.</p>
+<p>When you open a spec file, the editor bar offers what you can ask the open agent (disabled if none is open):</p>
+<table>
+<tr><th>In…</th><th>Action</th><th>What it does</th></tr>
+<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Analyze</strong></td><td>Looks for inconsistencies, ambiguities and gaps, and proposes fixes without changing anything until you approve</td></tr>
+<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Update design and tasks</strong></td><td>Adjusts the design and the tasks to what you changed, keeping the checkboxes already ticked</td></tr>
+<tr><td><code>design.md</code></td><td><strong>Update tasks</strong></td><td>Adjusts the tasks to the design you changed</td></tr>
+<tr><td><code>tasks.md</code></td><td><strong>Next task</strong> · <strong>All</strong></td><td>Runs only the first pending task and waits for your go-ahead, or all the pending ones ticking each checkbox as it finishes</td></tr>
+</table>
 <h3>docs/</h3>
-<p>Documentation follows <strong>Diátaxis</strong>: <code>tutorials</code> (learn by doing), <code>how-to</code> (solve a task), <code>reference</code> (exact description) and <code>explanation</code> (the why). Only categories that already have documents are shown; when you create one you choose its category.</p>
+<p>Documentation follows <strong>Diátaxis</strong>: <code>tutorials</code> (learn by doing), <code>how-to</code> (solve a task), <code>reference</code> (exact description) and <code>explanation</code> (the why). Only categories that already have documents are shown; when you create one you choose its category. If there is no <code>overview.md</code> yet (the general overview), a button creates it with its skeleton and asks the open agent to fill it in by exploring the project.</p>
 <h3>steering/</h3>
 <img src="img/steering-formulario.png" alt="The form to create a steering file" loading="lazy" />
 <p><code>contexto.md</code> is the project context (see <a href="#contexto">Project context</a>). The rest are guides in the style of <strong>Kiro's steering</strong>: an optional header (<code>---</code> … <code>---</code>) says when they are handed to the agent.</p>
@@ -460,8 +480,11 @@ fileMatchPattern: ["src/components/**/*.tsx"]
 # Components
 Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <p>“Only listed” guides cost few tokens: the agent sees their name, description and path, and opens the one it needs. Inside the text you can link real files with <code>#[[file:path]]</code>, <code>#[[file:path:12-28]]</code> (a line range) or <code>#[[folder:path]]</code>; they are replaced with their content when handed over and never leave the project. Kiro's <strong>foundation files</strong> (<code>product.md</code>, <code>tech.md</code>, <code>structure.md</code>) are created in one go from the form, and the agent can fill them in by exploring the project. The “What agents receive” panel in Context shows how much each guide weighs.</p>
+<p><strong>Global steering:</strong> in the form you can choose <em>All my projects</em>. Those guides are saved in Tutti's configuration (outside any repository) and apply to all your projects; if the project has a file with the same name, the project's wins. Their <code>#[[file:…]]</code> references are resolved from the folder of the global ones. They show in the list with the “Global” tag.</p>
 <h3>hooks/</h3>
+<img src="img/hook-opciones.png" alt="The dialog to choose how to create a hook" loading="lazy" />
 <img src="img/hook-formulario.png" alt="The form to create a hook" loading="lazy" />
+<p>The <strong>+</strong> opens a dialog with two options, like Kiro's: <strong>Create a hook</strong> (a guided form, in an editor tab, with name, event, filter and action) or <strong>Ask the agent</strong> (you describe the hook in your own words and the open agent writes the JSON: it shows it to you and saves it switched off until you approve). The pencil on each hook opens it in the same form so you can <strong>edit</strong> it without touching the JSON; the other hooks in the file and its switch are kept.</p>
 <p>A hook is a <code>.tutti/hooks/&lt;name&gt;.json</code> file in <strong>Kiro's format</strong>: <code>version</code>, a <code>hooks</code> list and, in each one, <code>name</code>, <code>description</code>, <code>trigger</code>, <code>matcher</code> (a regular expression on the path), <code>action</code> (<code>command</code> or <code>agent</code>), <code>timeout</code> (seconds, 60 by default) and <code>enabled</code>. One file can hold several.</p>
 <pre><code>{ "version": "v1", "hooks": [{
     "name": "Lint on save", "trigger": "PostFileSave", "matcher": "\\\\.(ts|tsx)$",
@@ -473,7 +496,8 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <li>Because a hook runs commands from the repository, <strong>it does not run until you press “Allow hooks in this project”</strong>; until then they are only listed. Each hook has its own switch, and a hook that rewrites the file does not fire again in a loop.</li>
 </ul>
 <h3>skills/</h3>
-<p>A skill is a folder with a <code>SKILL.md</code> that starts with a header (<code>name</code> and <code>description</code>) followed by the instructions. Creating it from the tab generates it with that template and opens it.</p>
+<img src="img/skill-formulario.png" alt="The form to create a skill" loading="lazy" />
+<p>A skill is a folder with a <code>SKILL.md</code> that starts with a header (<code>name</code> and <code>description</code>) followed by the instructions. The form asks for the <strong>name</strong> (the folder, lowercase with hyphens), <strong>what it does and when to use it</strong> (the description, which the agent picks the skill by; it is required) and, if you want, the <strong>instructions</strong>; left empty, a short skeleton (when to use it, steps and notes) is created. You can also ask the open agent to write them, or <strong>import a skill you already have</strong> (a folder with its <code>SKILL.md</code>): it is copied whole into <code>.tutti/skills</code>, overwriting none and leaving out <code>.git</code> and <code>node_modules</code>.</p>
 ''')
 
 sec('mcp', 'Servidores MCP y tienda', 'MCP servers and store', '''

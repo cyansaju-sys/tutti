@@ -39,9 +39,10 @@ export interface DocsSlice {
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
+  openSkillForm: () => void                           // el formulario de una skill nueva
   openSteeringForm: () => void                        // el formulario de un steering nuevo
   openSpecForm: () => void                            // el formulario guiado de una spec nueva
-  openHookForm: () => void                            // el formulario para crear un hook, como una pestaña más del editor
+  openHookForm: (edit?: { file: string; index: number; name?: string }) => void      // el formulario para crear un hook (o editar uno), como una pestaña más del editor
   openCommitDiff: (hash: string, parent: string | null, path: string, label: string) => Promise<void>
   renameDocs: (from: string, to: string) => void      // un archivo o carpeta cambió de nombre: sus pestañas lo siguen
   dropDocs: (path: string) => void                    // se borró: se cierran sus pestañas
@@ -57,7 +58,7 @@ export interface PanesSlice {
   shellActive: string | null
   shellMax: boolean
   activePane: string | null
-  openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string }) => Promise<void>
+  openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string; prompt?: string }) => Promise<void>
   addPane: (pane: Pane) => void
   toggleShell: () => Promise<void>
   addShell: () => Promise<void>

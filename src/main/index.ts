@@ -2,13 +2,14 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electr
 import { spawn } from 'node:child_process'
 import { join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
-import { ensureGlobalContext, contextSources, ensureProjectDir, openProjectContext } from './services/context/context'
+import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
 import { createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
 import { loadSteering } from './services/context/steering'
+import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
@@ -90,7 +91,10 @@ function registerIpc(): void {
   ipcMain.handle('hooks:trust', (_e, project: string, on: boolean) => { setTrusted(project, on); if (on) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('hooks:watch', (_e, project: string | null) => { if (process.env.TUTTI_CAPTURE) return; if (project) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('context:init', (_e, project: string, sub?: string) => (process.env.TUTTI_CAPTURE ? join(project, '.tutti', sub ?? '') : ensureProjectDir(project, sub)))      // en las capturas no se escribe en el proyecto fotografiado
-  ipcMain.handle('context:steering', (_e, project: string) => loadSteering(project).map(({ body: _body, ...info }) => info))
+  ipcMain.handle('context:steering', (_e, project: string) => loadSteering(project, { globalDir: globalSteeringDir() }).map(({ body: _body, ...info }) => info))
+  ipcMain.handle('skills:import', (_e, project: string, source: string) => importSkill(project, source))
+  ipcMain.handle('context:global-steering', () => ensureGlobalSteeringDir())
+  ipcMain.handle('context:working', (_e, project: string, files: string[]) => setWorkingFiles(project, files))
   ipcMain.handle('context:sources', (_e, project: string) => contextSources(project))
   ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
   ipcMain.handle('context:ensure-global', () => ensureGlobalContext())

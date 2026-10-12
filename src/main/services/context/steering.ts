@@ -13,7 +13,7 @@ import { extendedPath } from '../../utils/shellpath'
 import { globsToRegex } from '../search'
 
 export type Inclusion = 'always' | 'fileMatch' | 'manual' | 'auto'
-export interface Steering { file: string; base: string; name: string; inclusion: Inclusion; patterns: string[]; description: string; body: string }
+export interface Steering { file: string; base: string; name: string; inclusion: Inclusion; patterns: string[]; description: string; body: string; scope: 'project' | 'global' }
 
 const FRONT = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
 const MAX_REF_CHARS = 20_000
@@ -21,7 +21,7 @@ const MAX_REF_CHARS = 20_000
 const unquote = (v: string): string => v.trim().replace(/^(['"])(.*)\1$/, '$2')
 
 /** La cabecera (YAML sencillo: `clave: valor`, con `fileMatchPattern` como texto o como lista) y el cuerpo del archivo. */
-export function parseSteering(file: string, raw: string): Steering {
+export function parseSteering(file: string, raw: string, scope: 'project' | 'global' = 'project'): Steering {
   const base = basename(file)
   const m = FRONT.exec(raw)
   const fields: Record<string, string> = {}
@@ -32,17 +32,27 @@ export function parseSteering(file: string, raw: string): Steering {
   const pat = (fields.fileMatchPattern ?? '').trim()
   if (pat.startsWith('[')) { try { patterns = (JSON.parse(pat.replace(/'/g, '"')) as unknown[]).filter((p): p is string => typeof p === 'string') } catch { patterns = [] } }
   else if (pat) patterns = [unquote(pat)]
-  return { file, base, name: unquote(fields.name ?? '') || base.replace(/\.md$/i, ''), inclusion, patterns, description: unquote(fields.description ?? ''), body: (m ? raw.slice(m[0].length) : raw).trim() }
+  return { file, base, name: unquote(fields.name ?? '') || base.replace(/\.md$/i, ''), inclusion, patterns, description: unquote(fields.description ?? ''), body: (m ? raw.slice(m[0].length) : raw).trim(), scope }
 }
 
-/** Los archivos de steering del proyecto (todos los .md de .tutti/steering menos el contexto del proyecto, que va aparte). */
-export function loadSteering(project: string, skip = 'contexto.md'): Steering[] {
-  const dir = join(project, '.tutti', 'steering')
+/** Los .md de una carpeta de steering (menos `skip`), con el alcance que se indique. */
+function readSteeringDir(dir: string, scope: 'project' | 'global', skip = ''): Steering[] {
   let names: string[] = []
   try { names = readdirSync(dir).filter((n) => n.toLowerCase().endsWith('.md') && n !== skip).sort() } catch { return [] }
   const out: Steering[] = []
-  for (const n of names) { try { out.push(parseSteering(join(dir, n), readFileSync(join(dir, n), 'utf8'))) } catch { /* ilegible: se omite */ } }
+  for (const n of names) { try { out.push(parseSteering(join(dir, n), readFileSync(join(dir, n), 'utf8'), scope)) } catch { /* ilegible: se omite */ } }
   return out
+}
+
+/**
+ * Los steering que valen para un proyecto: los de .tutti/steering (menos el contexto del proyecto, que va aparte) y, si se indica `globalDir`, los
+ * globales (los de todos tus proyectos). Si un archivo del proyecto y uno global se llaman igual, manda el del proyecto, como en Kiro.
+ */
+export function loadSteering(project: string, opts: { skip?: string; globalDir?: string } = {}): Steering[] {
+  const mine = readSteeringDir(join(project, '.tutti', 'steering'), 'project', opts.skip ?? 'contexto.md')
+  const names = new Set(mine.map((d) => d.base))
+  const global = opts.globalDir ? readSteeringDir(opts.globalDir, 'global').filter((d) => !names.has(d.base)) : []
+  return [...mine, ...global]
 }
 
 /** Los archivos con cambios sin guardar en git (modificados o nuevos): «los archivos en los que se está trabajando». */
@@ -54,7 +64,7 @@ export function changedFiles(project: string): string[] {
 }
 
 /** Sustituye `#[[file:…]]` y `#[[folder:…]]` por lo que hay en el proyecto; lo que no se puede leer queda marcado, no se esconde. */
-export function resolveRefs(text: string, project: string): string {
+export function resolveRefs(text: string, project: string): string {          // `project`: la carpeta desde la que se resuelven (la del proyecto; para un steering global, la de los globales)
   const root = resolve(project)
   return text.replace(/#\[\[(file|folder):([^\]]+)\]\]/g, (_all, kind: string, spec: string) => {
     const range = kind === 'file' ? /^(.*):(\d+)(?:-(\d+))?$/.exec(spec) : null
@@ -76,18 +86,18 @@ export function resolveRefs(text: string, project: string): string {
 export interface SteeringPart { doc: Steering; delivered: 'full' | 'index'; chars: number }
 
 /** Qué parte de cada archivo se entrega y el texto resultante: los completos, y debajo la lista de guías disponibles. */
-export function assembleSteering(project: string, docs: Steering[], changed: string[]): { text: string; parts: SteeringPart[] } {
+export function assembleSteering(project: string, docs: Steering[], changed: string[], globalDir = ''): { text: string; parts: SteeringPart[] } {
   const full: string[] = []
   const index: Array<{ doc: Steering; line: string }> = []
   const parts: SteeringPart[] = []
   for (const doc of docs) {
     const matched = doc.inclusion === 'fileMatch' && doc.patterns.length > 0 && globsToRegex(doc.patterns.join(',')).some((re) => changed.some((f) => re.test(f.split(sep).join('/'))))
     if (doc.inclusion === 'always' || matched) {
-      const body = resolveRefs(doc.body, project)
+      const body = resolveRefs(doc.body, doc.scope === 'global' && globalDir ? globalDir : project)
       if (!body) continue
       full.push(body); parts.push({ doc, delivered: 'full', chars: body.length })
     } else {
-      const where = relative(project, doc.file).split(sep).join('/')
+      const where = doc.scope === 'global' ? doc.file : relative(project, doc.file).split(sep).join('/')
       const note = doc.inclusion === 'fileMatch' ? ` [${doc.patterns.join(', ')}]` : ''
       const line = `- ${doc.name}${doc.description ? `: ${doc.description}` : ''}${note} (${where})`
       index.push({ doc, line }); parts.push({ doc, delivered: 'index', chars: line.length })

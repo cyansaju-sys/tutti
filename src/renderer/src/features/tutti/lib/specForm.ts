@@ -3,7 +3,7 @@ import { specTemplates } from './spec'
 
 /** El formulario de una spec nueva, como el flujo guiado de Kiro: ¿funcionalidad o error?, ¿qué quieres?, ¿empezar por requisitos o por diseño? */
 export type SpecType = 'feature' | 'bugfix'
-export type SpecFlow = 'requirements-first' | 'design-first'
+export type SpecFlow = 'requirements-first' | 'design-first' | 'quick'
 export interface SpecForm { name: string; type: SpecType; flow: SpecFlow; description: string; useAgent: boolean }
 export const EMPTY_SPEC_FORM: SpecForm = { name: '', type: 'feature', flow: 'requirements-first', description: '', useAgent: false }
 
@@ -49,7 +49,7 @@ export const firstSpecFile = (f: SpecForm): string => (f.type === 'bugfix' ? 'bu
 /** El orden de las fases (como en Kiro): requisitos o análisis → diseño → tareas; con «diseño primero», el diseño va antes. */
 export function specPhases(f: SpecForm): string[] {
   if (f.type === 'bugfix') return ['bugfix.md', 'design.md', 'tasks.md']
-  return f.flow === 'design-first' ? ['design.md', 'requirements.md', 'tasks.md'] : ['requirements.md', 'design.md', 'tasks.md']
+  return f.flow === 'design-first' ? ['design.md', 'requirements.md', 'tasks.md'] : ['requirements.md', 'design.md', 'tasks.md']      // «rápida» sigue el orden de requisitos primero
 }
 
 const PHASE = {
@@ -74,7 +74,13 @@ export function specAgentPrompt(lang: Lang, f: SpecForm, dir: string): string {
   const en = lang === 'en'
   const p = PHASE[en ? 'en' : 'es']
   const phases = specPhases(f).map((file, i) => `${i + 1}. ${file}: ${p[(file === 'design.md' ? `design.md-${f.type === 'bugfix' ? 'bugfix' : 'feature'}` : file) as keyof typeof p]}.`)
-  const kind = en ? (f.type === 'bugfix' ? 'bug fix' : `feature, ${f.flow}`) : (f.type === 'bugfix' ? 'corrección de un error' : `funcionalidad, ${f.flow === 'design-first' ? 'diseño primero' : 'requisitos primero'}`)
+  const kind = en ? (f.type === 'bugfix' ? 'bug fix' : `feature, ${f.flow}`) : (f.type === 'bugfix' ? 'corrección de un error' : `funcionalidad, ${f.flow === 'design-first' ? 'diseño primero' : f.flow === 'quick' ? 'rápida' : 'requisitos primero'}`)
+  if (f.flow === 'quick' && f.type === 'feature') {          // Quick Spec: los tres archivos de una vez, sin pasos de aprobación
+    const files = specPhases(f).join(', ')
+    return en
+      ? `Let's write a quick spec (${kind}) in ${dir}. The files already exist with a template: edit them, do not recreate them.\nWhat I want: ${f.description.trim()}\nFill in ${files} in one pass, without waiting for my approval between files: ${phases.map((p) => p.replace(/^\d+\. /, '')).join(' ')}\nDo not write code yet.`
+      : `Vamos a redactar una spec rápida (${kind}) en ${dir}. Los archivos ya existen con una plantilla: edítalos, no los recrees.\nLo que quiero: ${f.description.trim()}\nRellena ${files} de una sola vez, sin esperar mi aprobación entre archivos: ${phases.map((p) => p.replace(/^\d+\. /, '')).join(' ')}\nNo escribas código todavía.`
+  }
   return en
     ? `Let's write a spec (${kind}) in ${dir}. The files already exist with a template: edit them, do not recreate them.\nWhat I want: ${f.description.trim()}\nWork in phases and wait for my approval before moving to the next one:\n${phases.join('\n')}\nDo not write code yet.`
     : `Vamos a redactar una spec (${kind}) en ${dir}. Los archivos ya existen con una plantilla: edítalos, no los recrees.\nLo que quiero: ${f.description.trim()}\nTrabaja por fases y espera mi aprobación antes de pasar a la siguiente:\n${phases.join('\n')}\nNo escribas código todavía.`

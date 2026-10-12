@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildHookFile, EMPTY_HOOK_FORM, hookFormError, slug, specTemplates, taskProgress, withEnabled } from '../../../../src/renderer/src/features/tutti/lib/spec'
+import { overviewAgentPrompt, overviewTemplate, skillTemplate, buildHookFile, EMPTY_HOOK_FORM, hookFormError, slug, specTemplates, taskProgress, withEnabled } from '../../../../src/renderer/src/features/tutti/lib/spec'
 
 describe('specs de .tutti', () => {
   it('el nombre se vuelve una carpeta segura', () => {
@@ -44,5 +44,24 @@ describe('specs de .tutti', () => {
     expect(JSON.parse(withEnabled(text, 0, true)!).hooks.map((h: { enabled: boolean }) => h.enabled)).toEqual([true, true])
     expect(withEnabled(text, 5, true)).toBeNull()
     expect(withEnabled('no es json', 0, true)).toBeNull()
+  })
+
+  it('la plantilla de una skill lleva nombre en minúsculas con guiones, descripción y un esqueleto corto', () => {
+    const es = skillTemplate('es', 'Revisar PR')
+    expect(es).toContain('name: revisar-pr')
+    expect(es).toMatch(/^---\nname: revisar-pr\ndescription: .+\n---\n/)
+    expect(es).toContain('# Revisar PR')
+    expect(es).toContain('## Cuándo usarla')
+    expect(skillTemplate('en', 'Revisar PR')).toContain('## When to use it')
+    expect(skillTemplate('es', '   ')).toContain('name: skill')
+  })
+
+  it('la visión general nace con un esqueleto y al agente se le pide editarlo, sin inventar', () => {
+    expect(overviewTemplate('es')).toContain('## Qué es')
+    expect(overviewTemplate('en')).toContain('## What it is')
+    const prompt = overviewAgentPrompt('es', '.tutti/docs')
+    expect(prompt).toContain('.tutti/docs/overview.md')
+    expect(prompt).toContain('no lo recrees')
+    expect(prompt).toContain('en lugar de inventarlo')
   })
 })

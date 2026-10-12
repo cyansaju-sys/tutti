@@ -3,8 +3,8 @@ import type { Lang } from '@shared/i18n'
 /** Cuándo se entrega un steering al agente (los cuatro modos de Kiro). */
 export type Inclusion = 'always' | 'fileMatch' | 'manual' | 'auto'
 export const INCLUSIONS: Inclusion[] = ['always', 'fileMatch', 'manual', 'auto']
-export interface SteeringForm { name: string; inclusion: Inclusion; patterns: string; description: string }
-export const EMPTY_STEERING_FORM: SteeringForm = { name: '', inclusion: 'always', patterns: '', description: '' }
+export interface SteeringForm { name: string; inclusion: Inclusion; patterns: string; description: string; scope: 'project' | 'global' }
+export const EMPTY_STEERING_FORM: SteeringForm = { name: '', inclusion: 'always', patterns: '', description: '', scope: 'project' }
 
 /** Los patrones que escribió el usuario («src/**\/*.tsx, **\/*.ts»), uno por elemento. */
 export const patternList = (text: string): string[] => text.split(',').map((p) => p.trim()).filter(Boolean)

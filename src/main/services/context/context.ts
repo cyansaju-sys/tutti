@@ -98,10 +98,18 @@ export function ensureGlobalContext(): string {
 
 /** El steering que entra ahora mismo: los de siempre, los que coinciden con los archivos con cambios y la lista de guías disponibles. */
 function steeringNow(project: string): ReturnType<typeof assembleSteering> | null {
-  const docs = loadSteering(project)
+  const docs = loadSteering(project, { globalDir: globalSteeringDir() })
   if (!docs.length) return null
-  return assembleSteering(project, docs, docs.some((d) => d.inclusion === 'fileMatch') ? changedFiles(project) : [])
+  return assembleSteering(project, docs, docs.some((d) => d.inclusion === 'fileMatch') ? [...new Set([...changedFiles(project), ...(working.get(project) ?? [])])] : [], globalSteeringDir())
 }
+
+/** La carpeta de los steering globales (los de todos tus proyectos), en la configuración de Tutti y fuera de cualquier repositorio. */
+export const globalSteeringDir = (): string => join(configDir(), 'steering')
+export function ensureGlobalSteeringDir(): string { const dir = globalSteeringDir(); try { mkdirSync(dir, { recursive: true }) } catch { /* sin permiso */ } return dir }
+
+/** Los archivos que el usuario tiene abiertos en el editor (rutas relativas): para el modo `fileMatch`, además de los que tienen cambios en git. */
+const working = new Map<string, string[]>()
+export const setWorkingFiles = (project: string, files: string[]): void => { working.set(project, files.slice(0, 200)) }
 
 /** El steering ya ensamblado se escribe en la configuración de Tutti para pasárselo a OpenCode como un solo archivo de instrucciones. */
 function steeringFile(project: string, text: string): string {

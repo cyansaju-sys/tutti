@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ensureGlobalContext, globalContextFile, legacyContextFile, contextSources, ensureProjectDir, openProjectContext, projectContextFile, readContext, tuttiDir } from '../../../../src/main/services/context/context'
+import { ensureGlobalContext, globalContextFile, legacyContextFile, contextSources, ensureGlobalSteeringDir, ensureProjectDir, setWorkingFiles, openProjectContext, projectContextFile, readContext, tuttiDir } from '../../../../src/main/services/context/context'
 
 let base = ''
 let project = ''
@@ -150,6 +150,39 @@ describe('steering al estilo de Kiro', () => {
     expect(text).toContain('está fuera del proyecto')
     expect(text).toContain('no se encontró nada.md')
     expect(text).not.toContain('#[[')
+  })
+
+  it('los steering globales valen en todos los proyectos y, si el proyecto tiene uno con el mismo nombre, manda el del proyecto', () => {
+    const dir = ensureGlobalSteeringDir()
+    writeFileSync(join(dir, 'estilo.md'), '# Estilo global\n\nTabs.\n')
+    writeFileSync(join(dir, 'general.md'), '# General\n\nSiempre en español.\n')
+    writeFileSync(join(dir, 'api.md'), '---\ninclusion: manual\n---\n# API global\n')
+    steering('contexto.md', '# Mi app\n'); steering('estilo.md', '# Estilo del proyecto\n\nEspacios.\n')
+    const text = readContext(project)!.text
+    expect(text).toContain('Siempre en español.')
+    expect(text).toContain('Espacios.')
+    expect(text).not.toContain('Tabs.')                                              // el global «estilo» queda tapado
+    expect(text).toContain(`- api (${join(dir, 'api.md')})`)                          // las guías globales se listan con su ruta completa
+    expect(contextSources(project).map((r) => r.name)).toEqual(expect.arrayContaining(['estilo.md', 'general.md', 'api.md']))
+  })
+
+  it('las referencias de un steering global se resuelven desde su carpeta, no desde el proyecto', () => {
+    const dir = ensureGlobalSteeringDir()
+    writeFileSync(join(dir, 'datos.txt'), 'dato global')
+    writeFileSync(join(project, 'datos.txt'), 'dato del proyecto')
+    writeFileSync(join(dir, 'ref.md'), 'Valor: #[[file:datos.txt]]\n')
+    expect(readContext(project)!.text).toContain('dato global')
+    expect(readContext(project)!.text).not.toContain('dato del proyecto')
+  })
+
+  it('fileMatch también cuenta los archivos abiertos en el editor, no solo los que tienen cambios en git', () => {
+    steering('contexto.md', '# Mi app\n')
+    steering('react.md', '---\ninclusion: fileMatch\nfileMatchPattern: "src/**/*.tsx"\n---\n\n# React\nComponentes de función.\n')
+    expect(readContext(project)!.text).not.toContain('Componentes de función')
+    setWorkingFiles(project, ['src/App.tsx'])
+    expect(readContext(project)!.text).toContain('Componentes de función')
+    setWorkingFiles(project, [])
+    expect(readContext(project)!.text).not.toContain('Componentes de función')
   })
 
   it('las fuentes enumeran cada parte con su modo y si va entera o solo listada', () => {

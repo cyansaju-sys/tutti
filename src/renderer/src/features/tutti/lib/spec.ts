@@ -73,3 +73,24 @@ export function withEnabled(text: string, index: number, enabled: boolean): stri
     return JSON.stringify(data, null, 2) + '\n'
   } catch { return null }
 }
+
+/** Una skill nueva: cabecera con su nombre (en minúsculas y con guiones) y una descripción de cuándo usarla, y un esqueleto corto para rellenar. */
+export function skillTemplate(lang: Lang, name: string): string {
+  const id = slug(name) || 'skill'
+  return lang === 'en'
+    ? `---\nname: ${id}\ndescription: What it does and when to use it (the agent picks the skill from this description).\n---\n\n# ${name.trim() || id}\n\n## When to use it\n\n- \n\n## Steps\n\n1. \n2. \n\n## Notes\n\n- \n`
+    : `---\nname: ${id}\ndescription: Qué hace y cuándo usarla (el agente elige la skill por esta descripción).\n---\n\n# ${name.trim() || id}\n\n## Cuándo usarla\n\n- \n\n## Pasos\n\n1. \n2. \n\n## Notas\n\n- \n`
+}
+
+/** La visión general de la documentación (lo general del proyecto): se crea con un esqueleto que el agente puede rellenar. */
+export const OVERVIEW_FILE = 'overview.md'
+export function overviewTemplate(lang: Lang): string {
+  return lang === 'en'
+    ? '# Overview\n\n## What it is\n\n## Who it is for\n\n## Technologies\n\n## How to run and test it\n'
+    : '# Visión general\n\n## Qué es\n\n## Para quién\n\n## Tecnologías\n\n## Cómo se ejecuta y se prueba\n'
+}
+export function overviewAgentPrompt(lang: Lang, dir: string): string {
+  return lang === 'en'
+    ? `Explore this project and fill in ${dir}/overview.md: what it is, who it is for, the technologies and how to run and test it. It already exists with a template: edit it, do not recreate it. Base it on what you see in the code and keep it short; if something cannot be known, leave a note instead of inventing it.`
+    : `Explora este proyecto y rellena ${dir}/overview.md: qué es, para quién, las tecnologías y cómo se ejecuta y se prueba. Ya existe con una plantilla: edítalo, no lo recrees. Básate en lo que veas en el código y sé breve; si algo no se puede saber, deja una nota en lugar de inventarlo.`
+}

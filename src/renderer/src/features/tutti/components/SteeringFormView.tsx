@@ -31,7 +31,7 @@ export function SteeringFormView() {
   const create = async (): Promise<void> => {
     setTried(true)
     if (error || !project) return
-    const dir = await window.api.context.init(project, 'steering')
+    const dir = form.scope === 'global' ? await window.api.context.globalSteeringDir() : await window.api.context.init(project, 'steering')       // el global vive en la configuración de Tutti, fuera de los repositorios
     const made = await window.api.fs.create(dir, `${slug(form.name) || 'steering'}.md`, false)
     if (!made.ok) { toast(made.message, 'error'); return }
     await window.api.fs.write(made.message, buildSteeringFile(form), false)
@@ -66,7 +66,16 @@ export function SteeringFormView() {
 
         <Label k="stf.name" />
         <input autoFocus value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder={t('stf.namePh')} spellCheck={false} className={clsx(FIELD, bad('name'))} />
-        <p className="mt-1 text-[10px] text-muted">.tutti/steering/{slug(form.name) || '…'}.md</p>
+        <p className="mt-1 text-[10px] text-muted">{form.scope === 'global' ? '…/tutti/steering/' : '.tutti/steering/'}{slug(form.name) || '…'}.md</p>
+
+        <Label k="stf.scope" />
+        <div className="flex gap-1 rounded-lg border border-line p-0.5" role="radiogroup" aria-label={t('stf.scope')}>
+          {(['project', 'global'] as const).map((sc) => (
+            <button key={sc} role="radio" aria-checked={form.scope === sc} onClick={() => set({ scope: sc })}
+              className={clsx('flex-1 rounded-md px-2 py-1 text-[12px] transition-colors', form.scope === sc ? 'bg-accent-bg font-medium text-accent' : 'text-muted hover:text-text')}>{t(`stf.s.${sc}` as MsgKey)}</button>
+          ))}
+        </div>
+        <p className="mt-1 text-[10px] leading-snug text-muted">{t(`stf.sh.${form.scope}` as MsgKey)}</p>
 
         <Label k="stf.when" />
         <div className="flex gap-1 rounded-lg border border-line p-0.5" role="radiogroup" aria-label={t('stf.when')}>

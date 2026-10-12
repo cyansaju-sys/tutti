@@ -75,8 +75,8 @@ export function SpecFormView() {
           <>
             <Label k="sf.flow" />
             <Choice label={t('sf.flow')} value={form.flow} onChange={(v) => set({ flow: v })}
-              options={[{ id: 'requirements-first', text: t('sf.reqFirst') }, { id: 'design-first', text: t('sf.designFirst') }]} />
-            <p className="mt-1 text-[10px] leading-snug text-muted">{t(form.flow === 'design-first' ? 'sf.designFirstHint' : 'sf.reqFirstHint')}</p>
+              options={[{ id: 'requirements-first', text: t('sf.reqFirst') }, { id: 'design-first', text: t('sf.designFirst') }, { id: 'quick', text: t('sf.quick') }]} />
+            <p className="mt-1 text-[10px] leading-snug text-muted">{t(form.flow === 'design-first' ? 'sf.designFirstHint' : form.flow === 'quick' ? 'sf.quickHint' : 'sf.reqFirstHint')}</p>
           </>
         )}
 
