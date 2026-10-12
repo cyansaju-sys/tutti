@@ -53,6 +53,10 @@ export function App() {
   }, [])
 
   // con «Automático», el tema sigue al del sistema
+  // cada proyecto que se abre recibe .tutti con su README; las subcarpetas (specs, docs…) solo aparecen al añadir algo
+  const project = useStore((s) => s.project)
+  useEffect(() => { if (project) void window.api.context.init(project) }, [project])
+
   useEffect(() => {
     const query = window.matchMedia('(prefers-color-scheme: light)')
     const onChange = (): void => {

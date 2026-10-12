@@ -1,17 +1,20 @@
 import { clsx } from 'clsx'
 import { useEffect, useRef, useState } from 'react'
-import { MdAutoAwesome, MdEdit, MdSave, MdVisibility } from 'react-icons/md'
+import { MdAutoAwesome, MdChevronRight, MdEdit, MdSave, MdVisibility } from 'react-icons/md'
+import type { ContextSource } from '@shared/types'
 import { Markdown } from '@/features/files/components/Markdown'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 
 const SAVE_MS = 600
+const BIG_TOKENS = 3000        // a partir de aquí se avisa: cada agente lo lee entero al empezar
+const tokensOf = (chars: number): number => Math.ceil(chars / 4)
 type Scope = 'project' | 'global'
 /** Las plantillas sin tocar: si es lo que hay, se abre directamente en modo edición. */
 const IS_TEMPLATE = /Lo que escribas aquí lo leen|What you write here is read by|las leen todos los agentes|read by every agent/
 
 /**
- * Contexto para los agentes, en dos capas: el del proyecto (AGENTS.md en su carpeta) y el global (tus preferencias en todos los
+ * Contexto para los agentes, en dos capas: el del proyecto (AGENTS.md si el proyecto ya lo tiene, y si no .tutti/steering/contexto.md) y el global (tus preferencias en todos los
  * proyectos). Se ve como Markdown y se edita al pulsar «Editar» o con doble clic.
  */
 export function ContextView() {
@@ -24,6 +27,8 @@ export function ContextView() {
   const [text, setText] = useState('')
   const [writing, setWriting] = useState('')
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [sources, setSources] = useState<ContextSource[]>([])
+  const [showSources, setShowSources] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const pending = useRef<{ file: string; value: string } | null>(null)
   const active: Scope = project ? scope : 'global'          // sin proyecto abierto solo hay contexto global
@@ -33,7 +38,9 @@ export function ContextView() {
     clearTimeout(timer.current)
     const p = pending.current
     pending.current = null
-    return p ? window.api.fs.write(p.file, p.value, false).then(() => undefined) : Promise.resolve()
+    if (!p) return Promise.resolve()
+    const prepare = active === 'project' && project && p.file.includes('.tutti') ? window.api.context.init(project, 'steering') : Promise.resolve('')      // en .tutti, la primera vez crea la carpeta
+    return prepare.then(() => window.api.fs.write(p.file, p.value, false)).then(() => undefined)
   }
 
   useEffect(() => {
@@ -45,6 +52,14 @@ export function ContextView() {
     void load.then((c) => { if (live) { setFile(c.file); setText(c.text); setMode(!c.text.trim() || IS_TEMPLATE.test(c.text) ? 'edit' : 'view') } })
     return () => { live = false; void flush() }
   }, [project, active])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // lo que recibirán los agentes y cuánto pesa: se recalcula al abrir y tras cada guardado
+  useEffect(() => {
+    if (!project) { setSources([]); return }
+    let live = true
+    void window.api.context.sources(project).then((s) => { if (live) setSources(s) })
+    return () => { live = false }
+  }, [project, state === 'saved', file])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // al salir del apartado se deja de redactar
   useEffect(() => () => { void window.api.ai.cancel('context') }, [])
@@ -75,6 +90,8 @@ export function ContextView() {
     if (res.ok && res.text) { change(res.text); setMode('view'); toast(t('ctx.generated', { agent: res.agent ? t('ctx.with', { agent: res.agent }) : '' }), 'ok') }
     else toast(res.message || t('ctx.failed'), 'error')
   }
+
+  const total = sources.reduce((n, s) => n + tokensOf(s.chars), 0)
 
   const Tab = ({ id, label }: { id: Scope; label: string }) => (
     <button onClick={() => { void flush().then(() => setScope(id)) }} disabled={!project}
@@ -111,6 +128,28 @@ export function ContextView() {
       ) : (
         <div onDoubleClick={() => setMode('edit')} title={t('ctx.edit')} className="selectable min-h-0 flex-1 cursor-text overflow-y-auto rounded-md bg-ov/[0.04] p-3">
           {text.trim() ? <Markdown text={text} /> : <p className="text-[12px] text-muted">{t('ctx.emptyView')}</p>}
+        </div>
+      )}
+      {project && (
+        <div className="rounded-md border border-line">
+          <button onClick={() => setShowSources((o) => !o)} aria-expanded={showSources} className="flex w-full items-center gap-1 px-2 py-1.5 text-left text-[11px] text-muted transition-colors hover:text-text">
+            <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', showSources && 'rotate-90')} />
+            <span className="min-w-0 flex-1 truncate">{t('ctx.receives')}</span>
+            <span className={clsx('shrink-0 font-medium', total > BIG_TOKENS ? 'text-danger' : 'text-accent')}>{t('ctx.tokens', { n: total })}</span>
+          </button>
+          {showSources && (
+            <div className="border-t border-line px-2 py-1.5">
+              {sources.length === 0 && <p className="text-[11px] text-muted">{t('ctx.nothing')}</p>}
+              {sources.map((s) => (
+                <p key={s.file} title={s.file} className="flex items-center gap-2 py-0.5 text-[11px]">
+                  <span className="min-w-0 flex-1 truncate">{s.kind === 'global' ? t('ctx.tabGlobal') : s.name}</span>
+                  <span className="shrink-0 text-muted">{t('ctx.tokens', { n: tokensOf(s.chars) })}</span>
+                </p>
+              ))}
+              {total > BIG_TOKENS && <p className="pt-1 text-[10px] leading-snug text-danger">{t('ctx.big')}</p>}
+              <p className="pt-1 text-[10px] leading-snug text-muted">{t('ctx.steeringHint')}</p>
+            </div>
+          )}
         </div>
       )}
       <div className="flex items-center justify-between px-1 text-[10px] text-muted">

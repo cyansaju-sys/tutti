@@ -9,17 +9,19 @@ import { useStore, type SidebarTab } from '@/shared/store'
 import { AgentsView } from '@/features/agents/views/AgentsView'
 import { FilesView } from '@/features/files/views/FilesView'
 import { GitView } from '@/features/git/views/GitView'
-import { ContextView } from '@/features/context/views/ContextView'
 import { SearchView } from '@/features/search/views/SearchView'
+import { ContextView } from '@/features/context/views/ContextView'
+import { TuttiView } from '@/features/tutti/views/TuttiView'
 import { McpView } from '@/features/mcp/views/McpView'
 import { UsageView } from '@/features/usage/views/UsageView'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
   { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
-  { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
-  { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
-  { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
+  { id: 'tutti', icon: 'tutti', titleKey: 'tab.tutti', key: 'J' },
   { id: 'context', icon: 'context', titleKey: 'tab.context', key: 'K' },
+  { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
+  { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
+  { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
   { id: 'mcp', icon: 'mcp', titleKey: 'tab.mcp', key: 'X' },
   { id: 'ai', icon: 'ai', titleKey: 'tab.ai', key: 'U' }
 ]
@@ -78,14 +80,18 @@ export function Sidebar() {
           ] }
         ]} />
       )}
-      {open && <div className="min-w-0 flex-1 overflow-hidden pt-1.5">
+      {open && <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-1.5">
+        <h3 className="truncate px-3.5 pb-2 pt-0.5 text-[12px] font-medium text-muted/75">{t(`tt.${tab}` as MsgKey)}</h3>
+        <div className="min-h-0 flex-1">
         {tab === 'files' && <FilesView />}
         {tab === 'search' && <SearchView />}
         {tab === 'agents' && <AgentsView />}
         {tab === 'git' && <GitView />}
+        {tab === 'tutti' && <TuttiView />}
         {tab === 'context' && <ContextView />}
         {tab === 'mcp' && <McpView />}
         {tab === 'ai' && <UsageView />}
+        </div>
       </div>}
     </div>
   )

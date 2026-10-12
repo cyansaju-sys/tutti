@@ -47,6 +47,8 @@ export interface McpServer {
   config: Record<string, unknown>      // entrada original de la configuración
   source: string                       // archivo donde está guardada
 }
+/** Una parte de lo que reciben los agentes: el contexto global, el del proyecto o un archivo de steering con `inclusion: always`. */
+export interface ContextSource { kind: 'global' | 'project' | 'steering'; name: string; file: string; chars: number }
 /** El servidor MCP de la propia app y los agentes a los que se aplica. */
 export interface AppMcpInfo {
   running: boolean; tools: string[]
@@ -103,6 +105,8 @@ export interface Api {
   dialog: { chooseFolder(start?: string): Promise<string | null> }
   ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
   context: {
+    sources(project: string): Promise<ContextSource[]>                                   // qué recibirán los agentes y cuánto pesa
+    init(project: string, sub?: string): Promise<string>                                 // crea .tutti (y su subcarpeta) al añadir algo; devuelve la ruta
     open(project: string): Promise<{ file: string; text: string; exists: boolean }>      // no crea el archivo: se crea al guardar
     ensureGlobal(): Promise<string>
     generate(project: string): Promise<McpResult & { text?: string; agent?: string }>

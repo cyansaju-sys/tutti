@@ -25,7 +25,7 @@ const api: Api = {
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
   context: {
-    open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
+    sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
     onAgent: (cb) => subscribe<[string]>('context:agent', cb)
   },
   agents: {

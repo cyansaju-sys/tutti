@@ -32,8 +32,13 @@ const Tag = ({ children }: { children: React.ReactNode }) => (
   <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-medium text-accent">{children}</span>
 )
 
-/** Servidores MCP de cada agente instalado, con + para añadir uno y papelera para quitarlo. */
-export function McpView() {
+/**
+ * Servidores MCP de cada agente instalado, con + para añadir uno y papelera para quitarlo.
+ * `compact`: sin título y con sangría, para incrustarla como sección de otra vista; `part` muestra solo los instalados o solo la tienda; `addSignal` abre el diálogo de añadir al cambiar.
+ */
+export function McpView({ compact = false, part = 'all', addSignal = 0 }: { compact?: boolean; part?: 'all' | 'installed' | 'store'; addSignal?: number }) {
+  const showInstalled = part !== 'store'
+  const showStore = part !== 'installed'
   const t = useT()
   const project = useStore((s) => s.project)
   const agents = useStore((s) => s.agents)
@@ -56,6 +61,7 @@ export function McpView() {
     setApp((prev) => (JSON.stringify(prev) === JSON.stringify(info) ? prev : info))
   }, [project])
 
+  useEffect(() => { if (addSignal > 0) setAdding(true) }, [addSignal])
   useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })) }, [set])
   useEffect(() => { void refresh(); const t = setInterval(() => void refresh(), REFRESH_MS); return () => clearInterval(t) }, [refresh])
 
@@ -78,25 +84,26 @@ export function McpView() {
   }
 
   return (
-    <div className="flex h-full flex-col px-2">
-      <div className="flex items-center justify-between px-1.5 pb-2">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted">{t('mcp.title')}</h3>
+    <div className={clsx('flex flex-col', compact ? 'pl-3' : 'h-full px-2')}>
+      {!compact && <div className="flex items-center justify-end px-1.5 pb-2">
         <button title={t('mcp.addTip')} disabled={!installed.length} onClick={() => setAdding(true)}
           className="grid size-6 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent disabled:opacity-40">
           <MdAdd size={17} />
         </button>
-      </div>
-      <div className="px-1.5 pb-2">
+      </div>}
+      {showStore && <div className="px-1.5 pb-2">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('st.search')} spellCheck={false}
           onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }} className={FIELD_SLIM} />
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto pb-2">
-        {!query.trim() && (
+      </div>}
+      <div className={clsx(!compact && 'min-h-0 flex-1 overflow-y-auto pb-2')}>
+        {showInstalled && !query.trim() && (
           <>
         {app && <AppSection info={app} />}
         {servers === null && <p className="px-2 text-[11px] text-muted">{t('mcp.reading')}</p>}
         {servers && installed.length === 0 && <p className="px-2 text-[11px] text-muted">{t('mcp.noneSupported')}</p>}
-        {servers && installed.length > 0 && visible.length === 0 && <p className="px-2 text-[11px] text-muted">{t('mcp.empty')}</p>}
+        {servers && installed.length > 0 && visible.length === 0 && (compact
+          ? <div className="px-1"><button onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-2 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent"><MdAdd size={15} /> {t('mcp.addTip')}</button></div>
+          : <p className="px-2 text-[11px] text-muted">{t('mcp.empty')}</p>)}
         {groups.length > 0 && <Fold id="installed" title={t('st.installed')} count={groups.length}>
         {groups.map((g) => {
           const first = g[0]
@@ -122,14 +129,14 @@ export function McpView() {
         </Fold>}
           </>
         )}
-        {!query.trim() && (
+        {showStore && !query.trim() && (
           <Fold id="featured" title={t('st.featured')}>
             <McpStoreList featured query="" installedNames={installedNames} onOpen={setStoreItem} />
           </Fold>
         )}
-        <Fold id={query.trim() ? 'results' : 'available'} title={query.trim() ? t('st.results') : t('st.available')}>
+        {showStore && <Fold id={query.trim() ? 'results' : 'available'} title={query.trim() ? t('st.results') : t('st.available')}>
           <McpStoreList query={query.trim()} installedNames={installedNames} onOpen={setStoreItem} />
-        </Fold>
+        </Fold>}
       </div>
 
       {storeItem && <McpStoreDetail server={storeItem} onClose={() => setStoreItem(null)} onInstall={(option) => { setPrefill(prefillFrom(storeItem, option)); setStoreItem(null) }} />}

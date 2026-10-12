@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electr
 import { spawn } from 'node:child_process'
 import { join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
-import { ensureGlobalContext, openProjectContext } from './services/context/context'
+import { ensureGlobalContext, contextSources, ensureProjectDir, openProjectContext } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
 import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './services/files'
@@ -75,6 +75,8 @@ function registerIpc(): void {
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
   ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
+  ipcMain.handle('context:init', (_e, project: string, sub?: string) => ensureProjectDir(project, sub))
+  ipcMain.handle('context:sources', (_e, project: string) => contextSources(project))
   ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
   ipcMain.handle('context:ensure-global', () => ensureGlobalContext())
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))

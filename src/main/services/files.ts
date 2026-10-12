@@ -51,6 +51,7 @@ export async function readFileData(path: string): Promise<FileData> {
 
 /** Guarda conservando los fines de línea originales; devuelve la fecha de modificación nueva. */
 export async function writeFileData(path: string, text: string, crlf: boolean): Promise<number> {
+  await mkdir(dirname(path), { recursive: true })                                  // p. ej. el contexto de un proyecto aún sin .tutti
   await writeFile(path, crlf ? text.replace(/\n/g, '\r\n') : text, 'utf8')       // en el mismo archivo: conserva permisos
   return (await stat(path)).mtimeMs
 }
