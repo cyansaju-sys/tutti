@@ -8,11 +8,12 @@
  */
 import { app } from 'electron'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { translate, type Lang } from '../../../shared/i18n'
 import type { ContextSource } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
+import { assembleSteering, changedFiles, loadSteering } from './steering'
 
 /** Carpeta de Tutti dentro de cada proyecto y el archivo de contexto que contiene. */
 export const TUTTI_DIR = '.tutti'
@@ -95,24 +96,19 @@ export function ensureGlobalContext(): string {
   return file
 }
 
-/** Cabecera tipo Kiro de un archivo de steering: `inclusion: always` lo entrega siempre a los agentes (sin ella, solo se consulta a mano). */
-const FRONT = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
-const alwaysIncluded = (raw: string): boolean => { const m = FRONT.exec(raw); return !!m && /^inclusion:\s*always\s*$/m.test(m[1]) }
+/** El steering que entra ahora mismo: los de siempre, los que coinciden con los archivos con cambios y la lista de guías disponibles. */
+function steeringNow(project: string): ReturnType<typeof assembleSteering> | null {
+  const docs = loadSteering(project)
+  if (!docs.length) return null
+  return assembleSteering(project, docs, docs.some((d) => d.inclusion === 'fileMatch') ? changedFiles(project) : [])
+}
 
-/** Los archivos de .tutti/steering (menos el contexto del proyecto) que piden entregarse siempre, sin su cabecera. */
-function steeringFiles(project: string): Array<{ file: string; name: string; text: string }> {
-  const dir = join(tuttiDir(project), 'steering')
-  let names: string[] = []
-  try { names = readdirSync(dir).filter((n) => n.toLowerCase().endsWith('.md') && n !== PROJECT_FILE).sort() } catch { return [] }
-  const out: Array<{ file: string; name: string; text: string }> = []
-  for (const name of names) {
-    try {
-      const raw = readFileSync(join(dir, name), 'utf8')
-      const text = raw.replace(FRONT, '').trim()
-      if (alwaysIncluded(raw) && text) out.push({ file: join(dir, name), name, text })
-    } catch { /* ilegible: se omite */ }
-  }
-  return out
+/** El steering ya ensamblado se escribe en la configuración de Tutti para pasárselo a OpenCode como un solo archivo de instrucciones. */
+function steeringFile(project: string, text: string): string {
+  const name = `${basename(project).replace(/[^\w.-]+/g, '_') || 'proyecto'}-${createHash('sha1').update(project).digest('hex').slice(0, 8)}`
+  const file = join(configDir(), name, 'steering.md')
+  try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, text, 'utf8') } catch { /* sin permiso: sigue entregándose por texto */ }
+  return file
 }
 
 /** De dónde sale lo que reciben los agentes, con su tamaño: así se ve cuánto pesa cada parte. */
@@ -124,23 +120,24 @@ export function contextSources(project: string): ContextSource[] {
   const rows: ContextSource[] = []
   if (globalText) rows.push({ kind: 'global', name: 'global', file: globalContextFile(), chars: globalText.length })
   if (projectText || legacy) rows.push({ kind: 'project', name: basename(projectText ? mine : legacyContextFile(project)), file: projectText ? mine : legacyContextFile(project), chars: (projectText || legacy).length })
-  for (const f of steeringFiles(project)) rows.push({ kind: 'steering', name: f.name, file: f.file, chars: f.text.length })
+  for (const p of steeringNow(project)?.parts ?? []) rows.push({ kind: 'steering', name: p.doc.base, file: p.doc.file, chars: p.chars, mode: p.doc.inclusion, delivered: p.delivered })
   return rows
 }
 
 /**
- * Lo que reciben los agentes de un proyecto: el contexto global, el del proyecto y los archivos de steering marcados `inclusion: always`
- * (los que tengan algo escrito), o null si no hay nada.
+ * Lo que reciben los agentes de un proyecto: el contexto global, el del proyecto y el steering (los de siempre completos y las demás guías
+ * listadas con su ruta), o null si no hay nada.
  * `files` son los archivos que OpenCode debe cargar como instrucciones; AGENTS.md no va: OpenCode ya lo lee por su cuenta y saldría repetido.
  */
 export function readContext(project: string): { files: string[]; text: string } | null {
   const mine = projectContextFile(project)
   const projectText = readOne(mine)
   const configText = projectText ? '' : readOne(legacyContextFile(project))          // aún sin guardar en el repositorio: se usa el anterior
+  const steering = steeringNow(project)
   const parts = [
     { file: globalContextFile(), text: readOne(globalContextFile()), native: false },
     { file: projectText ? mine : legacyContextFile(project), text: projectText || configText, native: mine === agentsFile(project) && !!projectText },
-    ...steeringFiles(project).map((f) => ({ file: f.file, text: f.text, native: false }))
+    ...(steering?.text ? [{ file: steeringFile(project, steering.text), text: steering.text, native: false }] : [])
   ].filter((p) => p.text)
   return parts.length ? { files: parts.filter((p) => !p.native).map((p) => p.file), text: parts.map((p) => p.text).join('\n\n') } : null
 }

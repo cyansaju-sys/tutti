@@ -34,3 +34,42 @@ export const specTemplates = (lang: Lang, name: string): Record<(typeof SPEC_FIL
   const t = T[lang === 'en' ? 'en' : 'es']
   return { 'requirements.md': t.requirements(name), 'design.md': t.design(name), 'tasks.md': t.tasks(name) }
 }
+
+/** Los eventos de un hook (como en Kiro) y cuáles ejecuta Tutti. */
+export const HOOK_TRIGGERS = [
+  { id: 'PostFileSave', runs: true }, { id: 'PreToolUse', runs: false }, { id: 'PostToolUse', runs: false }, { id: 'Stop', runs: false }
+] as const
+
+export interface HookForm { name: string; description: string; trigger: string; matcher: string; action: 'command' | 'agent'; command: string; prompt: string; timeout: string }
+export const EMPTY_HOOK_FORM: HookForm = { name: '', description: '', trigger: 'PostFileSave', matcher: '', action: 'agent', command: '', prompt: '', timeout: '60' }
+
+/** Qué falta o está mal en el formulario de un hook (clave de texto), o null si se puede crear. */
+export function hookFormError(f: HookForm): 'name' | 'command' | 'prompt' | 'matcher' | 'timeout' | null {
+  if (!f.name.trim()) return 'name'
+  if (f.action === 'command' && !f.command.trim()) return 'command'
+  if (f.action === 'agent' && !f.prompt.trim()) return 'prompt'
+  if (f.matcher.trim()) { try { new RegExp(f.matcher) } catch { return 'matcher' } }
+  if (f.action === 'command' && (!/^\d+$/.test(f.timeout.trim()) || Number(f.timeout) > 3600)) return 'timeout'
+  return null
+}
+
+/** El archivo JSON de un hook, en el formato de Kiro: solo lleva los campos que se rellenaron. */
+export function buildHookFile(f: HookForm): string {
+  const timeout = Number(f.timeout)
+  const hook = {
+    name: f.name.trim(), ...(f.description.trim() && { description: f.description.trim() }), trigger: f.trigger, ...(f.matcher.trim() && { matcher: f.matcher.trim() }),
+    action: f.action === 'command' ? { type: 'command', command: f.command.trim() } : { type: 'agent', prompt: f.prompt.trim() },
+    ...(f.action === 'command' && timeout !== 60 && { timeout }), enabled: true
+  }
+  return JSON.stringify({ version: 'v1', hooks: [hook] }, null, 2) + '\n'
+}
+
+/** Cambia `enabled` del hook número `index` de un archivo de hooks; devuelve el JSON nuevo, o null si no se puede leer. */
+export function withEnabled(text: string, index: number, enabled: boolean): string | null {
+  try {
+    const data = JSON.parse(text) as { hooks?: Array<Record<string, unknown>> }
+    if (!data.hooks?.[index]) return null
+    data.hooks[index].enabled = enabled
+    return JSON.stringify(data, null, 2) + '\n'
+  } catch { return null }
+}

@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdAdd, MdChevronRight } from 'react-icons/md'
+import { MdAdd, MdChevronRight, MdExplore } from 'react-icons/md'
 import type { MsgKey } from '@shared/i18n'
-import type { DirEntry } from '@shared/types'
+import type { DirEntry, HookInfo, SteeringInfo } from '@shared/types'
 import { FIELD_SLIM } from '@/shared/components/ui'
 import { McpView } from '@/features/mcp/views/McpView'
-import { DOC_CATEGORIES, slug, specTemplates, SPEC_FILES, taskProgress } from '@/features/tutti/lib/spec'
+import { DOC_CATEGORIES, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
 import { iconFor } from '@/shared/lib/icons'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -14,12 +14,10 @@ const REFRESH_MS = 5000
 /** El botón que ocupa todo el ancho donde no hay nada todavía. */
 const EMPTY_BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent'
 type Kind = 'specs' | 'hooks' | 'steering' | 'skills' | 'docs'
-/** Un archivo de steering nuevo: `inclusion: manual` no gasta tokens; cámbialo a `always` para que Tutti lo entregue a cada agente. */
-const STEERING_TEMPLATE = (name: string): string => `---\ninclusion: manual\n---\n\n# ${name}\n`
 const SKILL_TEMPLATE = (name: string): string => `---\nname: ${name}\ndescription: \n---\n\n# ${name}\n`
 
-/** Sección plegable: el título con una flecha; se recuerda si estaba cerrada. */
-function Fold({ id, title, count, children }: { id: string; title: string; count?: number; children: React.ReactNode }) {
+/** Sección plegable: el título con una flecha y, a la derecha, el botón + para añadir; se recuerda si estaba cerrada. */
+function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title: string; count?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
   const key = `tutti.tutti.${id}.collapsed`
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
   const toggle = (): void => setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })
@@ -31,6 +29,12 @@ function Fold({ id, title, count, children }: { id: string; title: string; count
           <h4 className="truncate text-[12px] font-semibold">{title}</h4>
           {count !== undefined && <span className="ml-1 rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
         </button>
+        {onAdd && (
+          <button title={addTip} onClick={() => { setCollapsed(false); try { localStorage.setItem(key, '0') } catch { /* sin almacenamiento */ } onAdd() }}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
+            <MdAdd size={16} />
+          </button>
+        )}
       </div>
       {!collapsed && children}
     </section>
@@ -43,8 +47,14 @@ export function TuttiView() {
   const project = useStore((s) => s.project)
   const openDoc = useStore((s) => s.openDoc)
   const toast = useStore((s) => s.toast)
+  const openHookForm = useStore((s) => s.openHookForm)
+  const openSpecForm = useStore((s) => s.openSpecForm)
+  const openSteeringForm = useStore((s) => s.openSteeringForm)
   const lang = useStore((s) => s.lang)
   const [lists, setLists] = useState<Record<Kind, DirEntry[]>>({ specs: [], hooks: [], steering: [], skills: [], docs: [] })
+  const [addMcp, setAddMcp] = useState(0)
+  const [steeringInfo, setSteeringInfo] = useState<Record<string, SteeringInfo>>({})
+  const [hooks, setHooks] = useState<{ list: HookInfo[]; trusted: boolean }>({ list: [], trusted: false })
   const [specInfo, setSpecs] = useState<Record<string, { files: DirEntry[]; done: number; total: number }>>({})   // por carpeta de spec
   const [openSpecs, setOpenSpecs] = useState<Set<string>>(new Set())
   const [creating, setCreating] = useState<Kind | null>(null)
@@ -69,6 +79,11 @@ export function TuttiView() {
       info[sp.path] = { files, ...taskProgress(text) }
     }
     setSpecs((prev) => (JSON.stringify(prev) === JSON.stringify(info) ? prev : info))
+    const st = await window.api.context.steering(project).catch(() => [] as SteeringInfo[])
+    const stMap = Object.fromEntries(st.map((x) => [x.file, x]))
+    setSteeringInfo((prev) => (JSON.stringify(prev) === JSON.stringify(stMap) ? prev : stMap))
+    const h = await window.api.hooks.list(project).catch(() => ({ hooks: [] as HookInfo[], trusted: false }))
+    setHooks((prev) => (JSON.stringify(prev) === JSON.stringify({ list: h.hooks, trusted: h.trusted }) ? prev : { list: h.hooks, trusted: h.trusted }))
   }, [project])
 
   useEffect(() => { void refresh(); const i = setInterval(() => void refresh(), REFRESH_MS); return () => clearInterval(i) }, [refresh])
@@ -84,17 +99,6 @@ export function TuttiView() {
     if (!kind || !raw) return
     const sub = where ? where.slice(root.length + 1) : kind === 'docs' ? `docs/${docCat}` : kind          // carpeta de .tutti donde va lo nuevo
     const dir = await window.api.context.init(project, sub)        // la primera vez crea .tutti y esa carpeta
-    if (kind === 'specs') {                                       // una spec es una carpeta con requisitos, diseño y tareas
-      const folder = slug(raw)
-      if (!folder) return
-      const made = await window.api.fs.create(dir, folder, true)
-      if (!made.ok) { toast(made.message, 'error'); return }
-      const docs = specTemplates(lang, raw)
-      for (const f of SPEC_FILES) await window.api.fs.write(`${made.message}/${f}`, docs[f], false)
-      setOpenSpecs((s) => new Set(s).add(made.message))
-      void refresh(); void openDoc(`${made.message}/requirements.md`)
-      return
-    }
     if (kind === 'skills') {                                      // una skill es una carpeta con su SKILL.md
       const made = await window.api.fs.create(dir, raw, true)
       if (!made.ok) { toast(made.message, 'error'); return }
@@ -105,7 +109,6 @@ export function TuttiView() {
     }
     const made = await window.api.fs.create(dir, /\.\w+$/.test(raw) ? raw : `${raw}.md`, false)
     if (!made.ok) { toast(made.message, 'error'); return }
-    if (kind === 'steering') await window.api.fs.write(made.message, STEERING_TEMPLATE(raw.replace(/\.md$/i, '')), false)
     void refresh(); void openDoc(made.message)
   }
   const open = (e: DirEntry): void => {
@@ -123,12 +126,65 @@ export function TuttiView() {
       className={clsx(FIELD_SLIM, 'mx-1 mb-1 w-[calc(100%-0.5rem)]')} />
   )
 
+  const toggleHook = async (h: HookInfo, index: number): Promise<void> => {
+    const text = await window.api.fs.read(h.file).then((d) => d.text, () => null)
+    const next = text === null ? null : withEnabled(text, index, !h.enabled)
+    if (next === null) { toast(t('tutti.hookEditFail'), 'error'); return }
+    await window.api.fs.write(h.file, next, false)
+    void refresh()
+  }
+  const trust = async (on: boolean): Promise<void> => { if (project) { await window.api.hooks.trust(project, on); void refresh() } }
+
+  /** Los hooks: cada uno con su evento y un interruptor; y la autorización del proyecto, porque ejecutan comandos del repositorio. */
+  const HooksSection = () => {
+    const perFile = new Map<string, number>()
+    return (
+      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} onAdd={openHookForm} addTip={t('tutti.add.hooks')}>
+        {hooks.list.length > 0 && (
+          <div className={clsx('mx-1 mb-1.5 rounded-md border px-2.5 py-1.5 text-[11px] leading-snug', hooks.trusted ? 'border-line text-muted' : 'border-warn/40 bg-warn/[0.08] text-text')}>
+            {hooks.trusted
+              ? <span>{t('tutti.hookOn')} <button onClick={() => void trust(false)} className="underline hover:text-text">{t('tutti.hookUntrust')}</button></span>
+              : <><span>{t('tutti.hookWarn')}</span> <button onClick={() => void trust(true)} className="mt-1 block rounded bg-accent px-2 py-0.5 font-medium text-bg hover:brightness-110">{t('tutti.hookTrust')}</button></>}
+          </div>
+        )}
+        <ul>
+          {hooks.list.map((h) => {
+            const index = perFile.get(h.file) ?? 0
+            perFile.set(h.file, index + 1)
+            return (
+              <li key={`${h.file}:${index}`} className="group flex items-center gap-1 rounded transition-colors hover:bg-accent-bg">
+                <button onClick={() => void openDoc(h.file)} title={h.error ?? h.description ?? h.file} className="flex min-w-0 flex-1 flex-col px-2 py-1 pl-5 text-left">
+                  <span className="flex items-center gap-1.5">
+                    <span className="min-w-0 truncate text-[12px]">{h.name}</span>
+                    {h.trigger && <span className={clsx('shrink-0 rounded px-1.5 py-px text-[9px] font-medium', h.supported ? 'bg-ov/[0.07] text-muted' : 'bg-warn/15 text-warn')} title={h.supported ? undefined : t('tutti.hookNoRun')}>{h.trigger}</span>}
+                  </span>
+                  <span className={clsx('truncate text-[10px]', h.error ? 'text-danger' : 'text-muted')}>{h.error ?? (h.matcher ? `${h.actionType} · ${h.matcher}` : h.actionType)}</span>
+                </button>
+                {!h.error && (
+                  <button role="switch" aria-checked={h.enabled} title={t('tutti.hookToggle')} onClick={() => void toggleHook(h, index)}
+                    className={clsx('mr-1.5 h-4 w-7 shrink-0 rounded-full p-0.5 transition-colors', h.enabled ? 'bg-accent' : 'bg-ov/[0.15]')}>
+                    <span className={clsx('block size-3 rounded-full bg-white transition-transform', h.enabled && 'translate-x-3')} />
+                  </button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+        {creating !== 'hooks' && hooks.list.length === 0 && (
+          <div className="px-1 pt-1">
+            <button onClick={openHookForm} className={EMPTY_BUTTON}><MdAdd size={15} /> {t('tutti.add.hooks')}</button>
+          </div>
+        )}
+      </Fold>
+    )
+  }
+
   const Section = ({ kind, title }: { kind: Kind; title: string }) => {
     // en la documentación solo se ven las categorías que ya tienen documentos; la categoría se elige al crear uno
     const items: DirEntry[] = kind === 'docs' ? lists.docs.filter((e) => !e.isDir || specInfo[e.path]?.files.length) : lists[kind]
     const nothingYet = kind === 'docs' || items.length === 0
     return (
-    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length}>
+    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} onAdd={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
       {creating === kind && !target && NameInput(kind)}
       {creating === 'docs' && kind === 'docs' && !target && (
         <div className="mx-1 mb-1.5 flex flex-wrap gap-1" role="radiogroup" aria-label={t('tutti.category')}>
@@ -147,6 +203,7 @@ export function TuttiView() {
               className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1 pl-3 text-left text-[12px]">
               <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', openSpecs.has(e.path) && 'rotate-90')} />
               <span className="min-w-0 flex-1 truncate font-medium">{kind === 'docs' ? t(`tutti.cat.${e.name}` as MsgKey) : e.name}</span>
+              {kind === 'specs' && specInfo[e.path]?.files.some((f) => f.name === 'bugfix.md') && <span className="shrink-0 rounded bg-danger/15 px-1.5 py-px text-[9px] font-medium text-danger">{t('tutti.bug')}</span>}
               {kind === 'specs' && specInfo[e.path]?.total ? <span className="shrink-0 rounded-full bg-ov/[0.07] px-1.5 text-[9px] font-medium text-muted" title={t('tutti.tasks')}>{specInfo[e.path].done}/{specInfo[e.path].total}</span> : null}
               {kind === 'docs' && specInfo[e.path]?.files.length ? <span className="shrink-0 rounded-full bg-ov/[0.07] px-1.5 text-[9px] font-medium text-muted">{specInfo[e.path].files.length}</span> : null}
             </button>
@@ -162,14 +219,17 @@ export function TuttiView() {
       ) : (
         <li key={e.path}>
           <button onClick={() => open(e)} className="flex w-full items-center gap-2 rounded px-2 py-1 pl-5 text-left text-[12px] transition-colors hover:bg-accent-bg">
-            <img src={iconFor(e.name, e.isDir)} alt="" className="size-4 shrink-0" draggable={false} />
-            <span className="truncate">{e.name}</span>
+            {kind === 'steering' && !e.isDir
+              ? <MdExplore size={15} className="shrink-0 text-accent" aria-hidden />          // las guías de steering llevan una brújula en lugar del icono de Markdown
+              : <img src={iconFor(e.name, e.isDir)} alt="" className="size-4 shrink-0" draggable={false} />}
+            <span className="min-w-0 flex-1 truncate">{kind === 'steering' && !e.isDir ? e.name.replace(/\.md$/i, '') : e.name}</span>
+            {kind === 'steering' && steeringInfo[e.path] && <span className="shrink-0 rounded bg-ov/[0.07] px-1.5 py-px text-[9px] font-medium text-muted" title={steeringInfo[e.path].patterns.join(', ') || steeringInfo[e.path].description || undefined}>{t(`stf.m.${steeringInfo[e.path].inclusion}` as MsgKey)}</span>}
           </button>
         </li>
       ))}</ul>
       {creating !== kind && nothingYet && (
         <div className="px-1 pt-1">
-          <button onClick={() => start(kind)} className={EMPTY_BUTTON}><MdAdd size={15} /> {t(`tutti.add.${kind}` as MsgKey)}</button>
+          <button onClick={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : start(kind))} className={EMPTY_BUTTON}><MdAdd size={15} /> {t(`tutti.add.${kind}` as MsgKey)}</button>
         </div>
       )}
     </Fold>
@@ -180,11 +240,11 @@ export function TuttiView() {
     <div className="h-full overflow-y-auto px-2 pb-2">
       <Section kind="docs" title={t('tutti.docs')} />
       <Section kind="specs" title={t('tutti.specs')} />
-      <Section kind="hooks" title={t('tutti.hooks')} />
+      {HooksSection()}
       <Section kind="steering" title={t('tutti.steering')} />
       <Section kind="skills" title={t('tutti.skills')} />
-      <Fold id="mcp" title={t('tutti.mcp')}>
-        <McpView compact part="installed" />
+      <Fold id="mcp" title={t('tutti.mcp')} onAdd={() => setAddMcp((n) => n + 1)} addTip={t('mcp.addTip')}>
+        <McpView compact part="installed" addSignal={addMcp} />
       </Fold>
     </div>
   )

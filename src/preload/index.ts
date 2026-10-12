@@ -24,8 +24,12 @@ const api: Api = {
     createBranch: (r, n, b, s) => ipcRenderer.invoke('git:createBranch', r, n, b, s), marks: (f) => ipcRenderer.invoke('git:marks', f), op: (r, o, h, a, m) => ipcRenderer.invoke('git:op', r, o, h, a, m), commitFiles: (r, h, p) => ipcRenderer.invoke('git:commitFiles', r, h, p), log: (r, n) => ipcRenderer.invoke('git:log', r, n), pull: (r) => ipcRenderer.invoke('git:pull', r), fetch: (r) => ipcRenderer.invoke('git:fetch', r), suggestCommit: (r) => ipcRenderer.invoke('git:suggestCommit', r), onCommitAgent: (cb) => subscribe<[string]>('git:commitAgent', cb), show: (r, rev, p) => ipcRenderer.invoke('git:show', r, rev, p)
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
+  hooks: {
+    list: (project) => ipcRenderer.invoke('hooks:list', project), trust: (project, on) => ipcRenderer.invoke('hooks:trust', project, on), watch: (project) => ipcRenderer.invoke('hooks:watch', project),
+    onRan: (cb) => subscribe<[{ name: string; ok: boolean; message: string }]>('hooks:ran', cb)
+  },
   context: {
-    sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
+    steering: (project) => ipcRenderer.invoke('context:steering', project), sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
     onAgent: (cb) => subscribe<[string]>('context:agent', cb)
   },
   agents: {

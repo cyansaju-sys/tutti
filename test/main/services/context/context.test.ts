@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -96,26 +97,66 @@ describe('un solo archivo de contexto por proyecto', () => {
   })
 })
 
-describe('steering y lo que reciben los agentes', () => {
+describe('steering al estilo de Kiro', () => {
   const steering = (name: string, text: string): void => { ensureProjectDir(project, 'steering'); writeFileSync(join(tuttiDir(project), 'steering', name), text) }
+  const git = (...args: string[]): void => { execFileSync('git', args, { cwd: project, stdio: 'ignore' }) }
 
-  it('un archivo de steering con «inclusion: always» se entrega, sin su cabecera; uno manual no', () => {
+  it('sin cabecera un steering se entrega siempre (como Kiro), sin su cabecera; manual y auto solo se listan con su ruta', () => {
     steering('contexto.md', '# Mi app\n')
     steering('estilo.md', '---\ninclusion: always\n---\n\n# Estilo\n\nSin punto y coma.\n')
-    steering('notas.md', '---\ninclusion: manual\n---\n\n# Notas\n')
-    steering('sin-cabecera.md', '# Suelto\n')
+    steering('suelto.md', '# Suelto\n\nSe entrega.\n')
+    steering('despliegue.md', '---\ninclusion: manual\n---\n\n# Despliegue\nNo se copia.\n')
+    steering('api.md', '---\ninclusion: auto\nname: api-design\ndescription: Patrones de la API REST\n---\n\n# API\nNo se copia.\n')
     const ctx = readContext(project)!
-    expect(ctx.text).toBe('# Mi app\n\n# Estilo\n\nSin punto y coma.')
-    expect(ctx.files).toEqual([projectContextFile(project), join(tuttiDir(project), 'steering', 'estilo.md')])
+    expect(ctx.text).toContain('# Mi app')
+    expect(ctx.text).toContain('Sin punto y coma.')
+    expect(ctx.text).toContain('Se entrega.')
+    expect(ctx.text).not.toContain('inclusion:')
+    expect(ctx.text).not.toContain('No se copia')
+    expect(ctx.text).toContain('- api-design: Patrones de la API REST (.tutti/steering/api.md)')
+    expect(ctx.text).toContain('- despliegue (.tutti/steering/despliegue.md)')
   })
 
-  it('las fuentes enumeran cada parte con su tamaño', () => {
+  it('OpenCode recibe el steering ya ensamblado como un solo archivo de instrucciones', () => {
+    steering('contexto.md', '# Mi app\n'); steering('estilo.md', '# Estilo\n')
+    const ctx = readContext(project)!
+    expect(ctx.files).toHaveLength(2)
+    expect(ctx.files[0]).toBe(projectContextFile(project))
+    expect(readFileSync(ctx.files[1], 'utf8')).toContain('# Estilo')
+  })
+
+  it('fileMatch se entrega entero solo si hay cambios en archivos que coinciden con el patrón', () => {
+    git('init', '-q'); git('config', 'user.email', 'a@b.c'); git('config', 'user.name', 'x')
+    steering('react.md', '---\ninclusion: fileMatch\nfileMatchPattern: "src/components/**/*.tsx"\n---\n\n# React\nUsa componentes de función.\n')
+    steering('ts.md', '---\ninclusion: fileMatch\nfileMatchPattern: ["**/*.ts", "**/*.tsx"]\n---\n\n# TS\nTipos estrictos.\n')
+    git('add', '-A'); git('commit', '-q', '-m', 'base')
+    expect(readContext(project)!.text).not.toContain('Usa componentes de función')                 // sin cambios: solo listados
+    expect(readContext(project)!.text).toContain('- react [src/components/**/*.tsx] (.tutti/steering/react.md)')
+    mkdirSync(join(project, 'src', 'components'), { recursive: true })
+    writeFileSync(join(project, 'src', 'components', 'Boton.tsx'), 'export {}')
+    const text = readContext(project)!.text
+    expect(text).toContain('Usa componentes de función')
+    expect(text).toContain('Tipos estrictos.')                                                    // el segundo patrón (lista) también coincide
+  })
+
+  it('las referencias #[[file:…]] y #[[folder:…]] se sustituyen por el contenido real y nunca salen del proyecto', () => {
+    writeFileSync(join(project, 'openapi.yaml'), 'openapi: 3.0.0\ninfo:\n  title: API\n')
+    mkdirSync(join(project, 'config')); writeFileSync(join(project, 'config', 'a.json'), '{}')
+    steering('refs.md', 'Contrato: #[[file:openapi.yaml]]\nSolo la línea 2: #[[file:openapi.yaml:2-2]]\nConfig: #[[folder:config]]\nSecreto: #[[file:../fuera.txt]]\nNo existe: #[[file:nada.md]]\n')
+    const text = readContext(project)!.text
+    expect(text).toContain('openapi: 3.0.0')
+    expect(text).toContain('// openapi.yaml:2-2')
+    expect(text).toContain('- a.json')
+    expect(text).toContain('está fuera del proyecto')
+    expect(text).toContain('no se encontró nada.md')
+    expect(text).not.toContain('#[[')
+  })
+
+  it('las fuentes enumeran cada parte con su modo y si va entera o solo listada', () => {
     writeFileSync(ensureGlobalContext(), '# Preferencias\n\nResponde en español.\n')
-    steering('contexto.md', '# Mi app\n')
-    steering('estilo.md', '---\ninclusion: always\n---\nSin punto y coma.')
+    steering('contexto.md', '# Mi app\n'); steering('estilo.md', '# Estilo\n'); steering('manual.md', '---\ninclusion: manual\n---\n# M\n')
     const rows = contextSources(project)
-    expect(rows.map((r) => [r.kind, r.name])).toEqual([['global', 'global'], ['project', 'contexto.md'], ['steering', 'estilo.md']])
-    expect(rows[2].chars).toBe('Sin punto y coma.'.length)
+    expect(rows.map((r) => [r.kind, r.name, r.mode, r.delivered])).toEqual([['global', 'global', undefined, undefined], ['project', 'contexto.md', undefined, undefined], ['steering', 'estilo.md', 'always', 'full'], ['steering', 'manual.md', 'manual', 'index']])
     expect(contextSources(join(project, 'otro'))).toHaveLength(1)        // sin proyecto solo queda el global
   })
 })

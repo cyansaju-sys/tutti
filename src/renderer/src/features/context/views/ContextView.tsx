@@ -2,6 +2,7 @@ import { clsx } from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { MdAutoAwesome, MdChevronRight, MdEdit, MdSave, MdVisibility } from 'react-icons/md'
 import type { ContextSource } from '@shared/types'
+import type { MsgKey } from '@shared/i18n'
 import { Markdown } from '@/features/files/components/Markdown'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -143,6 +144,7 @@ export function ContextView() {
               {sources.map((s) => (
                 <p key={s.file} title={s.file} className="flex items-center gap-2 py-0.5 text-[11px]">
                   <span className="min-w-0 flex-1 truncate">{s.kind === 'global' ? t('ctx.tabGlobal') : s.name}</span>
+                  {s.mode && <span className="shrink-0 rounded bg-ov/[0.07] px-1.5 py-px text-[9px] font-medium text-muted">{t(`stf.m.${s.mode}` as MsgKey)}{s.delivered === 'index' ? ` · ${t('ctx.listed')}` : ''}</span>}
                   <span className="shrink-0 text-muted">{t('ctx.tokens', { n: tokensOf(s.chars) })}</span>
                 </p>
               ))}

@@ -8,6 +8,8 @@ import { suggestCommit } from './services/git/commitMessage'
 import { createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
+import { loadSteering } from './services/context/steering'
+import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
@@ -75,7 +77,20 @@ function registerIpc(): void {
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
   ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
+  // hooks de .tutti/hooks: se vigilan solo en proyectos autorizados; sus avisos llegan a la interfaz
+  const hooksHost = {
+    notify: (r: { name: string; ok: boolean; message: string }): void => { win?.webContents.send('hooks:ran', r) },
+    sendToAgent: (prompt: string): boolean => {
+      const leader = pty.agentSessions().filter((a) => !a.parentId).at(-1)          // el agente principal más reciente
+      if (!leader) return false
+      pty.sendPrompt(leader.id, prompt); return true
+    }
+  }
+  ipcMain.handle('hooks:list', (_e, project: string) => ({ hooks: loadHooks(project), trusted: isTrusted(project) }))
+  ipcMain.handle('hooks:trust', (_e, project: string, on: boolean) => { setTrusted(project, on); if (on) startHooks(project, hooksHost); else stopHooks() })
+  ipcMain.handle('hooks:watch', (_e, project: string | null) => { if (process.env.TUTTI_CAPTURE) return; if (project) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('context:init', (_e, project: string, sub?: string) => (process.env.TUTTI_CAPTURE ? join(project, '.tutti', sub ?? '') : ensureProjectDir(project, sub)))      // en las capturas no se escribe en el proyecto fotografiado
+  ipcMain.handle('context:steering', (_e, project: string) => loadSteering(project).map(({ body: _body, ...info }) => info))
   ipcMain.handle('context:sources', (_e, project: string) => contextSources(project))
   ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
   ipcMain.handle('context:ensure-global', () => ensureGlobalContext())
