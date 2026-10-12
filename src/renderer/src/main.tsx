@@ -2,8 +2,8 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import './styles.css'
-import { useStore } from './store'
-import { paintTheme } from './lib/theme'
+import { useStore } from './shared/store'
+import { paintTheme } from './shared/lib/theme'
 
 ;(window as unknown as { __tutti: typeof useStore }).__tutti = useStore      // para el modo captura y la depuración
 

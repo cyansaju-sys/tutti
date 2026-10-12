@@ -3,12 +3,12 @@
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, screen, type BrowserWindow } from 'electron'
-import * as pty from '../src/main/agents/pty'
+import * as pty from '../src/main/services/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { legacyContextFile } from '../src/main/context/context'
+import { legacyContextFile } from '../src/main/services/context/context'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
@@ -37,7 +37,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('terminal-sola', 2500)
     await run(`${store}.toggleShell()`)
   }
-  await open('src/main/git/git.ts')
+  await open('src/main/services/git/git.ts')
   await snap('01-archivos-y-editor', 1800)
   await open('docs/demo/Contador.tsx')
   await snap('02-sintaxis-tsx')
@@ -56,12 +56,12 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await open('docs/demo/ejemplo.sql')
   await snap('03-sql')
   // clic derecho en el editor: enviar la selección al agente, copiar, pegar…
-  await open('src/main/git/git.ts')
+  await open('src/main/services/git/git.ts')
   await run(`(() => { const c = document.querySelector('.cm-content'); const r = c.querySelector('.cm-line:nth-child(9)').getBoundingClientRect(); c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: r.left + 80, clientY: r.top + 6 })) })()`)
   await snap('03a-menu-editor', 600)
   await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
   // buscar en el archivo abierto: Ctrl+H abre el cuadro flotante con la fila de reemplazo
-  await open('src/main/git/git.ts')
+  await open('src/main/services/git/git.ts')
   await run(`(() => {
     const type = (el, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })) }
     document.querySelector('.cm-content')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }))
