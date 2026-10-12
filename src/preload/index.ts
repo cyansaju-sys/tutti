@@ -14,7 +14,7 @@ const api: Api = {
   fs: {
     list: (d) => ipcRenderer.invoke('fs:list', d), read: (p) => ipcRenderer.invoke('fs:read', p),
     write: (p, t, c) => ipcRenderer.invoke('fs:write', p, t, c), mtime: (p) => ipcRenderer.invoke('fs:mtime', p),
-    create: (d, n, dir) => ipcRenderer.invoke('fs:create', d, n, dir), rename: (p, n) => ipcRenderer.invoke('fs:rename', p, n), trash: (p) => ipcRenderer.invoke('fs:trash', p)
+    create: (d, n, dir) => ipcRenderer.invoke('fs:create', d, n, dir), rename: (p, n) => ipcRenderer.invoke('fs:rename', p, n), move: (p, d) => ipcRenderer.invoke('fs:move', p, d), trash: (p) => ipcRenderer.invoke('fs:trash', p)
   },
   git: {
     status: (r) => ipcRenderer.invoke('git:status', r), ignored: (r, p) => ipcRenderer.invoke('git:ignored', r, p),
@@ -25,7 +25,7 @@ const api: Api = {
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
   context: {
-    open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
+    sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
     onAgent: (cb) => subscribe<[string]>('context:agent', cb)
   },
   agents: {

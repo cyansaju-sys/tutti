@@ -2,6 +2,17 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.2.1
+
+- **The `.tutti` folder in every project:** Tutti creates `.tutti/` with a `README.md` when you open a project; subfolders only appear when you add something. It is versioned with git and shared by the team.
+- **Tutti tab:** shows and creates Kiro-style **specs** (`requirements.md` in EARS format, `design.md` and `tasks.md` with checkboxes and their progress), **documentation** following Diátaxis (tutorials, how-to guides, reference and explanation), **steering**, **hooks**, **skills** and the installed MCP servers. Shortcut `Ctrl+Shift+J`.
+- **`.md` files are viewed as Markdown:** a *Preview / Source* button in the editor; those in `.tutti` open already rendered, with the task checkboxes and the steering header as tags.
+- **A single context file per project:** the project's `AGENTS.md` if it already has one (edited right there, with no copies) or, if not, `.tutti/steering/contexto.md`.
+- **What agents receive:** the Context panel shows where each part comes from and how many tokens it weighs. A steering file with `inclusion: always` in its header is handed to the agents; new ones start with `inclusion: manual`.
+- **Explorer:** multiple selection (`Shift+↑/↓`, `Shift`+click, `Ctrl`+click), **drag to move** files and folders (with confirmation), renaming on the row itself, arrows to fold folders, a foldable project root and folders tinted when they hold new or modified files. The `.tutti` folder carries the Tutti logo.
+- **Tidier MCP and Usage:** every section has its own scroll and a height you can adjust by dragging; lists follow the extensions panel style, “Available” only shows up when searching and the clear-history button stays fixed. The “tutti” card is hidden from the MCP list.
+- **A title on every sidebar tab**, with the tabs reordered.
+
 ## 1.1.0
 
 - **Cleaner quick open:** the quick-open dialog no longer lists hidden files and folders.

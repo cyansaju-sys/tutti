@@ -96,6 +96,13 @@ body {
 *::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 8px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--color-accent-dim); }
 *::-webkit-scrollbar-track { background: transparent; }
+/* secciones con altura máxima y scroll propio (lista MCP): barra más fina, que solo se nota al pasar el ratón */
+.sect-scroll { scrollbar-width: thin; scrollbar-color: transparent transparent; scrollbar-gutter: stable; }
+.sect-scroll:hover { scrollbar-color: var(--color-line) transparent; }
+.sect-scroll::-webkit-scrollbar { width: 5px; }
+.sect-scroll::-webkit-scrollbar-thumb { background: transparent; }
+.sect-scroll:hover::-webkit-scrollbar-thumb { background: var(--color-line); }
+.sect-scroll:hover::-webkit-scrollbar-thumb:hover { background: var(--color-accent-dim); }
 
 /* el aro de enfoque es para teclado en botones y listas; los campos de texto marcan su enfoque de otra forma */
 *:focus-visible:not(input, textarea) { outline: 1px solid var(--color-accent); outline-offset: -1px; }

@@ -163,7 +163,7 @@
 <main id="top">
   <div class="wrap hero">
     <img class="logo" src="icon.png" alt="Tutti" />
-    <span class="pill"><b data-i="pill.a">Nuevo</b> <span data-i="pill.b">Tienda de servidores MCP integrada</span></span>
+    <span class="pill"><b data-i="pill.a">Nuevo</b> <span data-i="pill.b">Carpeta .tutti: specs, documentación y steering</span></span>
     <h1 data-i="h1">Forma tu <em>orquesta de IA</em> en la era de los agentes</h1>
     <p class="lead" data-i="lead">La IA y los agentes cambiaron la forma de programar. Tutti los reúne: Claude Code, Codex, OpenCode, Gemini CLI, Antigravity y cualquier otro, cada uno con su instrumento y tocando juntos en una sola ventana.</p>
     <div class="cta">
@@ -266,6 +266,22 @@
 
   <section class="wrap reveal">
     <div class="row flip">
+      <div class="shot"><img loading="lazy" src="img/tutti.png" alt="La carpeta .tutti: specs, documentación, steering y skills" /></div>
+      <div class="text">
+        <div class="eyebrow" data-i="f5.eyebrow">La carpeta .tutti</div>
+        <h2 data-i="f5.h">La documentación viaja con el proyecto</h2>
+        <p data-i="f5.p">Tutti crea una carpeta <code>.tutti</code> en cada proyecto para guardar lo que los agentes necesitan saber. Se versiona con git y la comparte todo el equipo. Las subcarpetas solo aparecen cuando añades algo.</p>
+        <ul>
+          <li data-i="f5.l1">Specs al estilo Kiro: requisitos en formato EARS, diseño y una lista de tareas con su avance.</li>
+          <li data-i="f5.l2">Documentación con Diátaxis: tutoriales, guías prácticas, referencia y explicación.</li>
+          <li data-i="f5.l3">Steering con <code>inclusion: always</code> para entregar a cada agente solo lo que quieres, y ves cuántos tokens pesa.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap reveal">
+    <div class="row flip">
       <div class="duo">
         <div class="shot"><img loading="lazy" src="img/ajustes.png" alt="Ajustes de tema e idioma" /></div>
         <div class="shot"><img loading="lazy" src="img/tema-claro.png" alt="Tema claro" /></div>
@@ -295,6 +311,9 @@
       <figure><div class="shot"><img loading="lazy" src="img/contexto.png" alt="" /></div><figcaption data-i="g.4">Contexto del proyecto para los agentes</figcaption></figure>
       <figure><div class="shot"><img loading="lazy" src="img/terminales.png" alt="" /></div><figcaption data-i="g.5">Terminales integradas</figcaption></figure>
       <figure><div class="shot"><img loading="lazy" src="img/comparacion.png" alt="" /></div><figcaption data-i="g.6">Comparación de cambios</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/md-vista.png" alt="" /></div><figcaption data-i="g.7">Markdown en vista, con las tareas marcadas</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/mcp.png" alt="" /></div><figcaption data-i="g.8">Servidores MCP instalados y recomendados</figcaption></figure>
+      <figure><div class="shot"><img loading="lazy" src="img/ramas.png" alt="" /></div><figcaption data-i="g.9">Selector de ramas</figcaption></figure>
     </div>
   </section>
 
@@ -331,7 +350,7 @@
 const T = {
   es: {
     'nav.why': 'Por qué', 'nav.features': 'Funciones', 'nav.install': 'Instalar', 'nav.docs': 'Documentación',
-    'pill.a': 'Nuevo', 'pill.b': 'Tienda de servidores MCP integrada',
+    'pill.a': 'Nuevo', 'pill.b': 'Carpeta .tutti: specs, documentación y steering',
     'h1': 'Forma tu <em>orquesta de IA</em> en la era de los agentes',
     'lead': 'La IA y los agentes cambiaron la forma de programar. Tutti los reúne: Claude Code, Codex, OpenCode, Gemini CLI, Antigravity y cualquier otro, cada uno con su instrumento y tocando juntos en una sola ventana.',
     'dl.linux': 'Descargar para Linux', 'dl.win': 'Descargar para Windows', 'copy': 'Copiar', 'copied': '¡Copiado!',
@@ -347,17 +366,19 @@ const T = {
     'f2.l1': 'Mensaje en Conventional Commits a partir de lo que tienes preparado.', 'f2.l2': 'Cherry-pick, revert, merge, rebase y reset con clic derecho.', 'f2.l3': 'Comparación de cambios en dos columnas y selector de ramas.',
     'f3.eyebrow': 'Servidores MCP', 'f3.h': 'Una tienda para tus agentes', 'f3.p': 'Busca en el registro oficial de MCP y añade un servidor a Claude Code, Codex, OpenCode, Gemini o Antigravity en un par de clics.',
     'f3.l1': 'Los más conocidos primero: Context7, Playwright, GitHub, Notion, Figma…', 'f3.l2': 'Ves el comando exacto antes de instalar y lo que hay que rellenar.', 'f3.l3': 'Un servidor, una tarjeta: ves en qué agentes está y lo copias a otro.',
+    'f5.eyebrow': 'La carpeta .tutti', 'f5.h': 'La documentación viaja con el proyecto', 'f5.p': 'Tutti crea una carpeta <code>.tutti</code> en cada proyecto para guardar lo que los agentes necesitan saber. Se versiona con git y la comparte todo el equipo. Las subcarpetas solo aparecen cuando añades algo.',
+    'f5.l1': 'Specs al estilo Kiro: requisitos en formato EARS, diseño y una lista de tareas con su avance.', 'f5.l2': 'Documentación con Diátaxis: tutoriales, guías prácticas, referencia y explicación.', 'f5.l3': 'Steering con <code>inclusion: always</code> para entregar a cada agente solo lo que quieres, y ves cuántos tokens pesa.',
     'f4.eyebrow': 'A tu manera', 'f4.h': 'Claro u oscuro, en español o en inglés', 'f4.p': 'El tema claro usa tonos suaves, sin blanco puro, para no cansar la vista. Cambia el idioma al instante desde la tuerca de ajustes.',
     'f4.l1': 'Tema oscuro, claro o el del sistema.', 'f4.l2': 'Interfaz, mensajes y contexto del proyecto en tu idioma.', 'f4.l3': 'Copiar y pegar como en cualquier terminal moderna.',
     'g.eyebrow': 'Un vistazo', 'g.h': 'Todo lo demás, a mano',
-    'g.1': 'Archivos y editor', 'g.2': 'Buscar y reemplazar en el proyecto', 'g.3': 'Cambios y commit', 'g.4': 'Contexto del proyecto para los agentes', 'g.5': 'Terminales integradas', 'g.6': 'Comparación de cambios',
+    'g.1': 'Archivos y editor', 'g.2': 'Buscar y reemplazar en el proyecto', 'g.3': 'Cambios y commit', 'g.4': 'Contexto del proyecto para los agentes', 'g.5': 'Terminales integradas', 'g.6': 'Comparación de cambios', 'g.7': 'Markdown en vista, con las tareas marcadas', 'g.8': 'Servidores MCP instalados y recomendados', 'g.9': 'Selector de ramas',
     'i.eyebrow': 'Empieza ahora', 'i.h': 'Instálalo en un minuto', 'i.p': 'Gratis y de código abierto. Se actualiza solo y te cuenta qué cambió en cada versión.',
     'i.note': 'En Linux no hace falta ser administrador. El instalador de Windows no está firmado: pulsa «Más información → Ejecutar de todas formas». macOS llegará más adelante.',
     'f.changes': 'Novedades', 'f.privacy': 'Privacidad', 'f.docs': 'Documentación', 'docs.btn': 'Leer la documentación', 'star.short': 'Estrella', 'star.btn': 'Dar una estrella', 'f.contrib': 'Contribuir', 'f.built': 'Hecho con la ayuda de <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic) y <a href="https://openai.com/codex" target="_blank" rel="noopener" style="text-decoration:underline">Codex</a> (OpenAI)'
   },
   en: {
     'nav.why': 'Why', 'nav.features': 'Features', 'nav.install': 'Install', 'nav.docs': 'Docs',
-    'pill.a': 'New', 'pill.b': 'Built-in MCP server store',
+    'pill.a': 'New', 'pill.b': 'The .tutti folder: specs, docs and steering',
     'h1': 'Build your <em>AI orchestra</em> for the age of agents',
     'lead': 'AI and agents changed how we code. Tutti brings them together: Claude Code, Codex, OpenCode, Gemini CLI, Antigravity and any other, each with its own instrument, playing together in a single window.',
     'dl.linux': 'Download for Linux', 'dl.win': 'Download for Windows', 'copy': 'Copy', 'copied': 'Copied!',
@@ -373,10 +394,12 @@ const T = {
     'f2.l1': 'Conventional Commits message from what you have staged.', 'f2.l2': 'Cherry-pick, revert, merge, rebase and reset with a right click.', 'f2.l3': 'Two-column diff view and a branch picker.',
     'f3.eyebrow': 'MCP servers', 'f3.h': 'A store for your agents', 'f3.p': 'Search the official MCP registry and add a server to Claude Code, Codex, OpenCode, Gemini or Antigravity in a couple of clicks.',
     'f3.l1': 'The best-known first: Context7, Playwright, GitHub, Notion, Figma…', 'f3.l2': 'You see the exact command before installing, and what you need to fill in.', 'f3.l3': 'One server, one card: see which agents have it and copy it to another.',
+    'f5.eyebrow': 'The .tutti folder', 'f5.h': 'The documentation travels with the project', 'f5.p': 'Tutti creates a <code>.tutti</code> folder in every project to keep what the agents need to know. It is versioned with git and shared by the whole team. Subfolders only appear when you add something.',
+    'f5.l1': 'Kiro-style specs: requirements in EARS format, a design and a task list with its progress.', 'f5.l2': 'Documentation with Diátaxis: tutorials, how-to guides, reference and explanation.', 'f5.l3': 'Steering with <code>inclusion: always</code> to hand each agent only what you want, and you see how many tokens it weighs.',
     'f4.eyebrow': 'Your way', 'f4.h': 'Light or dark, in English or Spanish', 'f4.p': 'The light theme uses soft tones, no pure white, to go easy on your eyes. Switch the language instantly from the settings gear.',
     'f4.l1': 'Dark theme, light theme or the system one.', 'f4.l2': 'Interface, messages and project context in your language.', 'f4.l3': 'Copy and paste like in any modern terminal.',
     'g.eyebrow': 'At a glance', 'g.h': 'Everything else, within reach',
-    'g.1': 'Files and editor', 'g.2': 'Find and replace across the project', 'g.3': 'Changes and commit', 'g.4': 'Project context for the agents', 'g.5': 'Built-in terminals', 'g.6': 'Diff view',
+    'g.1': 'Files and editor', 'g.2': 'Find and replace across the project', 'g.3': 'Changes and commit', 'g.4': 'Project context for the agents', 'g.5': 'Built-in terminals', 'g.6': 'Diff view', 'g.7': 'Markdown preview, with the tasks ticked', 'g.8': 'Installed and recommended MCP servers', 'g.9': 'Branch picker',
     'i.eyebrow': 'Get started', 'i.h': 'Install it in a minute', 'i.p': 'Free and open source. It updates itself and tells you what changed in every version.',
     'i.note': 'No admin rights needed on Linux. The Windows installer is not signed: click “More info → Run anyway”. macOS is coming later.',
     'f.changes': 'Changelog', 'f.privacy': 'Privacy', 'f.docs': 'Documentation', 'docs.btn': 'Read the documentation', 'star.short': 'Star', 'star.btn': 'Star on GitHub', 'f.contrib': 'Contribute', 'f.built': 'Built with the help of <a href="https://claude.com/claude-code" target="_blank" rel="noopener" style="text-decoration:underline">Claude</a> (Anthropic) and <a href="https://openai.com/codex" target="_blank" rel="noopener" style="text-decoration:underline">Codex</a> (OpenAI)'

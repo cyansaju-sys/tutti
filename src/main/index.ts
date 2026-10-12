@@ -1,24 +1,24 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { join, resolve, sep } from 'node:path'
-import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './agents/agents'
-import { ensureGlobalContext, openProjectContext } from './context/context'
-import { generateContext } from './context/contextGen'
-import { suggestCommit } from './git/commitMessage'
-import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './files'
-import * as git from './git/git'
-import * as pty from './agents/pty'
-import { tm } from './i18n'
-import { getSetting, migrateLegacyConfig, setSetting } from './settings'
-import { replaceInFiles, searchFiles } from './search'
+import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
+import { ensureGlobalContext, contextSources, ensureProjectDir, openProjectContext } from './services/context/context'
+import { generateContext } from './services/context/contextGen'
+import { suggestCommit } from './services/git/commitMessage'
+import { createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
+import * as git from './services/git/git'
+import * as pty from './services/agents/pty'
+import { tm } from './utils/i18n'
+import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
+import { replaceInFiles, searchFiles } from './services/search'
 import type { GitOp, PtyOptions, SearchOptions } from '../shared/types'
 import { runCapture } from '../../test/capture'
-import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './updater'
-import * as mcp from './mcp'
-import { featuredServers, searchRegistry } from './mcpRegistry'
-import { collectUsage, deleteSession, renameSession, sessionNames } from './usage/usage'
-import { runSelfTest } from './selftest'
-import { appMcpInfo, clearTasks, newId, startHub, stopHub, taskList } from './agents/hub'
+import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
+import * as mcp from './services/mcp/mcp'
+import { featuredServers, searchRegistry } from './services/mcp/registry'
+import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
+import { runSelfTest } from './utils/selftest'
+import { appMcpInfo, clearTasks, newId, startHub, stopHub, taskList } from './services/agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -75,6 +75,8 @@ function registerIpc(): void {
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
   ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
+  ipcMain.handle('context:init', (_e, project: string, sub?: string) => (process.env.TUTTI_CAPTURE ? join(project, '.tutti', sub ?? '') : ensureProjectDir(project, sub)))      // en las capturas no se escribe en el proyecto fotografiado
+  ipcMain.handle('context:sources', (_e, project: string) => contextSources(project))
   ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
   ipcMain.handle('context:ensure-global', () => ensureGlobalContext())
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))
@@ -83,6 +85,7 @@ function registerIpc(): void {
   ipcMain.handle('fs:read', (_e, path: string) => readFileData(path))
   ipcMain.handle('fs:write', (_e, path: string, text: string, crlf: boolean) => writeFileData(path, text, crlf))
   ipcMain.handle('fs:create', (_e, dir: string, name: string, isDir: boolean) => createEntry(dir, name, isDir))
+  ipcMain.handle('fs:move', (_e, path: string, dir: string) => moveEntry(path, dir))
   ipcMain.handle('fs:rename', (_e, path: string, name: string) => renameEntry(path, name))
   ipcMain.handle('fs:trash', async (_e, path: string) => {         // a la papelera: se puede recuperar
     try { await shell.trashItem(path); return { ok: true, message: tm('m.trash') } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
