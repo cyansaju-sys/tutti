@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdSettings, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
+import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdPower, MdSettings, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
 import type { McpAgent, McpScope, McpServer, McpSpec, RegistryServer } from '@shared/types'
 import { FIELD, FIELD_SLIM, Modal } from '@/shared/components/ui'
 import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, prefillFrom, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
@@ -112,7 +112,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
           return (
             <div key={first.name.toLowerCase()} className="group flex items-center gap-1 rounded-lg transition-colors hover:bg-accent-bg">
               <button onClick={() => setDetails(first.name.toLowerCase())} title={t('mcp.details')} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-left">
-                <Avatar name={first.name} />
+                {compact ? <MdPower size={15} className="shrink-0 text-accent" aria-hidden /> : <Avatar name={first.name} />}          {/* en la pestaña Tutti, un enchufe en lugar de las iniciales */}
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
                     <span className="min-w-0 truncate text-[12px] font-semibold">{first.name}</span>

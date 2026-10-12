@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph'
+  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'specform' | 'steeringform' | 'skillform'
   text: string
   crlf: boolean
   truncated: boolean
@@ -47,8 +47,15 @@ export interface McpServer {
   config: Record<string, unknown>      // entrada original de la configuración
   source: string                       // archivo donde está guardada
 }
-/** Una parte de lo que reciben los agentes: el contexto global, el del proyecto o un archivo de steering con `inclusion: always`. */
-export interface ContextSource { kind: 'global' | 'project' | 'steering'; name: string; file: string; chars: number }
+/** Un hook de .tutti/hooks (formato de Kiro). `supported`: Tutti sabe ejecutar su trigger; `error`: por qué no es válido. */
+export interface HookInfo { file: string; name: string; description: string; trigger: string; matcher: string; actionType: 'command' | 'agent' | ''; enabled: boolean; supported: boolean; error?: string }
+/** Un archivo de .tutti/steering con lo que dice su cabecera (sin el cuerpo). */
+export interface SteeringInfo { file: string; base: string; name: string; inclusion: 'always' | 'fileMatch' | 'manual' | 'auto'; patterns: string[]; description: string; scope: 'project' | 'global' }
+/** Una parte de lo que reciben los agentes: el contexto global, el del proyecto o un archivo de steering. */
+export interface ContextSource {
+  kind: 'global' | 'project' | 'steering'; name: string; file: string; chars: number
+  mode?: 'always' | 'fileMatch' | 'manual' | 'auto'; delivered?: 'full' | 'index'      // solo el steering: cuándo se entrega y si va entero o solo listado
+}
 /** El servidor MCP de la propia app y los agentes a los que se aplica. */
 export interface AppMcpInfo {
   running: boolean; tools: string[]
@@ -104,7 +111,17 @@ export interface Api {
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   dialog: { chooseFolder(start?: string): Promise<string | null> }
   ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
+  skills: { import(project: string, source: string): Promise<McpResult> }      // copia una skill (carpeta con SKILL.md) a .tutti/skills; el SKILL.md nuevo va en `message`
+  hooks: {
+    list(project: string): Promise<{ hooks: HookInfo[]; trusted: boolean }>
+    trust(project: string, on: boolean): Promise<void>          // autoriza (o quita) que los hooks del proyecto se ejecuten
+    watch(project: string | null): Promise<void>                 // empieza a vigilar el proyecto abierto (si está autorizado)
+    onRan(cb: (r: { name: string; ok: boolean; message: string }) => void): () => void
+  }
   context: {
+    globalSteeringDir(): Promise<string>                                                // la carpeta de los steering globales (se crea si falta)
+    working(project: string, files: string[]): Promise<void>                            // los archivos abiertos en el editor, para el modo `fileMatch`
+    steering(project: string): Promise<SteeringInfo[]>                                   // los steering del proyecto y su modo
     sources(project: string): Promise<ContextSource[]>                                   // qué recibirán los agentes y cuánto pesa
     init(project: string, sub?: string): Promise<string>                                 // crea .tutti (y su subcarpeta) al añadir algo; devuelve la ruta
     open(project: string): Promise<{ file: string; text: string; exists: boolean }>      // no crea el archivo: se crea al guardar

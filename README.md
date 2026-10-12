@@ -242,28 +242,45 @@ OpenCode como archivos de instrucciones. Funciona también si el agente se abre 
 responde arma un borrador con reglas. Al cambiar de apartado se cancela.
 
 Bajo el editor, el panel **Lo que reciben los agentes** muestra de dónde sale cada parte y cuánto pesa en tokens aproximados (avisa si
-pasa de unos 3 000). Un archivo de `.tutti/steering/` solo se entrega si su cabecera dice `inclusion: always`; los nuevos nacen con
-`inclusion: manual` y no gastan nada.
+pasa de unos 3 000). Los archivos de `.tutti/steering/` siguen el steering de Kiro: una cabecera opcional dice cuándo se entregan
+(`inclusion: always` por defecto, `fileMatch` con `fileMatchPattern`, `manual` o `auto` con `name` y `description`); las guías que no van enteras
+se listan con su ruta, y `#[[file:ruta]]` dentro del texto se sustituye por el archivo real. El **+** de Steering crea uno con sus modos o los
+tres archivos base (`product.md`, `tech.md` y `structure.md`).
 
 ![Contexto del proyecto](docs/img/contexto.png)
 
-### La carpeta .tutti
+### La pestaña Tutti y la carpeta .tutti
 
-Tutti crea `.tutti/` en cada proyecto que abres, con un `README.md`; se versiona con git y la comparte el equipo. Las **subcarpetas solo
-aparecen cuando añades algo**. La pestaña **Tutti** (`Ctrl+Shift+J`) las muestra:
+La pestaña **Tutti** (`Ctrl+Shift+J`) reúne en un sitio lo que los agentes necesitan saber de tu proyecto: **documentación, specs, hooks, steering, skills** y los servidores MCP instalados. Todo vive en `.tutti/`, una carpeta que Tutti crea en cada proyecto que abres (con un `README.md`); es texto plano, se versiona con git y la comparte el equipo. Las **subcarpetas solo aparecen cuando añades algo**.
 
 ```
 .tutti/
-├─ specs/      una carpeta por función: requirements.md (EARS), design.md y tasks.md (casillas, con su avance)
-├─ docs/       documentación por categorías (Diátaxis: tutoriales, guías prácticas, referencia, explicación)
-├─ steering/   contexto.md y tus guías para los agentes
-├─ hooks/
+├─ specs/      una carpeta por función o error: requirements.md (EARS) o bugfix.md, design.md y tasks.md (casillas, con su avance)
+├─ docs/       documentación por categorías (Diátaxis: tutorials, how-to, reference, explanation)
+├─ steering/   contexto.md y tus guías para los agentes (product.md, tech.md…)
+├─ hooks/      un .json por hook, en el formato de Kiro
 └─ skills/     una carpeta por skill, con su SKILL.md
 ```
 
-Los `.md` tienen un botón **Vista / Código** en el editor; los de `.tutti` se abren ya renderizados, con las casillas de `tasks.md`.
+Cada sección tiene su **+** y, si está vacía, un botón de ancho completo para crear el primer elemento. Crear una spec, un hook o un steering abre un **formulario como una pestaña del editor**.
 
-![La carpeta .tutti](docs/img/tutti.png)
+- **Specs** (flujo de Kiro): ¿funcionalidad o error?, qué quieres y, si es una funcionalidad, ¿requisitos o diseño primero? Un error crea `bugfix.md` (actual, esperado, sin regresiones). Puedes empezar con plantillas o **pedírselo al agente abierto**: trabaja por fases y espera tu aprobación entre una y otra (o, con el flujo **Rápida**, los tres archivos de una vez). En la barra del editor de cada archivo de la spec, el agente puede **analizar** los requisitos, **actualizar** el diseño y las tareas cuando los cambias y **ejecutar las tareas** (la siguiente o todas).
+- **Steering** (modos de Kiro): `always` (por defecto), `fileMatch` + `fileMatchPattern`, `manual` o `auto` con `name` y `description`; lo que no va entero se lista con su ruta. `#[[file:ruta]]` y `#[[folder:ruta]]` dentro del texto se sustituyen por el contenido real. `fileMatch` mira los archivos con cambios en git y los abiertos en el editor, y puedes crear steering **globales** (para todos tus proyectos, fuera del repositorio). Crea de golpe `product.md`, `tech.md` y `structure.md` y el agente puede rellenarlos.
+- **Hooks** (formato de Kiro): `PostFileSave` ejecuta un comando (con el archivo en `$TUTTI_HOOK_FILE` y el contexto por stdin) o le escribe un prompt al agente; el **+** ofrece un formulario guiado o describírselo al agente, y se editan con el mismo formulario. `PreToolUse`, `PostToolUse` y `Stop` se muestran pero no se ejecutan. **No corren hasta que pulsas «Permitir hooks en este proyecto»**, porque ejecutan comandos del repositorio.
+- **Skills**: el formulario pide el nombre, qué hace y cuándo usarla (la descripción por la que el agente la elige) y las instrucciones; también puede redactarlas el agente, y puedes importar una skill que ya tengas.
+- **Documentación**: solo se ven las categorías con documentos; al crear uno eliges la categoría.
+
+Los `.md` tienen un botón **Vista / Código** en el editor; los de `.tutti` se abren ya renderizados, con las casillas de `tasks.md`. En el Explorador, la carpeta lleva el logo de Tutti.
+
+![La pestaña Tutti](docs/img/tutti.png)
+
+<table>
+<tr>
+<td width="33%"><img src="docs/img/spec-formulario.png" alt="Crear una spec" /></td>
+<td width="33%"><img src="docs/img/steering-formulario.png" alt="Crear un steering" /></td>
+<td width="33%"><img src="docs/img/hook-formulario.png" alt="Crear un hook" /></td>
+</tr>
+</table>
 
 ### Servidores MCP
 

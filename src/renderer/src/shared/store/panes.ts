@@ -13,7 +13,7 @@ export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, g
     if (!cwd) { get().toast(tr(get, 'store.openProjectFirst'), 'error'); return }
     const id = await window.api.orchestra.newId()          // los ids los reparte la app: así no chocan con los de los sub-agentes
     const title = opts.title ?? `${agent.name} · ${basename(cwd)}`
-    set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args: [...(agent.args ?? []), ...args], cwd }], activePane: id, focus: 'pane', modal: null }))
+    set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args: [...(agent.args ?? []), ...args], cwd, ...(opts.prompt && { prompt: opts.prompt }) }], activePane: id, focus: 'pane', modal: null }))
   },
   /** Un agente pidió abrir otro (reparto de tareas): se añade su panel y la terminal inicia el proceso con la tarea. */
   addPane: (pane) => set((s) => (s.panes.some((p) => p.id === pane.id) ? s : { panes: [...s.panes, pane] })),

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdAccountTree, MdClose, MdCode, MdVisibility } from 'react-icons/md'
+import { MdAccountTree, MdClose, MdCode, MdTune, MdVisibility } from 'react-icons/md'
 import type { GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { t, useT } from '@/shared/lib/i18n'
@@ -14,6 +14,11 @@ import { CodeEditor, type ExternalChange } from './CodeEditor'
 import { DiffView } from './DiffView'
 import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '../../git/components/GitGraph'
+import { HookFormView } from '../../tutti/components/HookFormView'
+import { SpecActionsBar } from '../../tutti/components/SpecActionsBar'
+import { SpecFormView } from '../../tutti/components/SpecFormView'
+import { SkillFormView } from '../../tutti/components/SkillFormView'
+import { SteeringFormView } from '../../tutti/components/SteeringFormView'
 
 export async function saveDoc(doc: Doc): Promise<void> {
   const { toast, markSaved } = useStore.getState()
@@ -161,7 +166,7 @@ export function EditorArea() {
                 active ? 'border-accent bg-surface text-text' : 'border-panel bg-panel text-muted hover:bg-raised'
               )}
             >
-              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
+              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : ['hookform', 'specform', 'steeringform', 'skillform'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
               <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
               {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
               {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
@@ -172,7 +177,7 @@ export function EditorArea() {
           )
         })}
       </div>
-      {doc && doc.kind !== 'graph' && (
+      {doc && doc.kind !== 'graph' && !['hookform', 'specform', 'steeringform', 'skillform'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">
             {crumbs(project, doc.diffOf ?? doc.path).map((c, i, all) => (
@@ -183,6 +188,7 @@ export function EditorArea() {
             ))}
           </div>
           <span className="flex shrink-0 items-center gap-2 pl-3 text-[10px] text-muted">
+            {isMd && <SpecActionsBar doc={doc} />}
             {isMd && (
               <button onClick={() => setPreviews((p) => ({ ...p, [doc.path]: !preview }))} title={preview ? t('ed.showSource') : t('ed.showPreview')}
                 className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors hover:bg-accent-bg hover:text-accent">
@@ -250,6 +256,10 @@ export function EditorArea() {
         />
       )}
       {doc?.kind === 'graph' && <GitGraph />}
+      {doc?.kind === 'hookform' && <HookFormView key={doc.path} path={doc.path} />}
+      {doc?.kind === 'specform' && <SpecFormView />}
+      {doc?.kind === 'steeringform' && <SteeringFormView />}
+      {doc?.kind === 'skillform' && <SkillFormView />}
       {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}
       {doc?.kind === 'image' && <div className="grid flex-1 place-items-center overflow-auto p-4"><img src={doc.dataUrl} alt={doc.title} className="max-h-full max-w-full object-contain" /></div>}
       {doc?.kind === 'binary' && <div className="grid flex-1 place-items-center text-[12px] text-muted">{t('ed.binary')}</div>}
