@@ -2,6 +2,17 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.2.1
+
+- **La carpeta `.tutti` en cada proyecto:** Tutti crea `.tutti/` con un `README.md` al abrir un proyecto; las subcarpetas aparecen solo cuando añades algo. Se versiona con git y la comparte el equipo.
+- **Pestaña Tutti:** muestra y crea **specs** al estilo Kiro (`requirements.md` en formato EARS, `design.md` y `tasks.md` con casillas y su avance), **documentación** con Diátaxis (tutoriales, guías prácticas, referencia y explicación), **steering**, **hooks**, **skills** y los servidores MCP instalados. Atajo `Ctrl+Shift+J`.
+- **Los `.md` se ven como Markdown:** botón *Vista / Código* en el editor; los de `.tutti` se abren ya renderizados, con las casillas de las tareas y la cabecera del steering como etiquetas.
+- **Un solo archivo de contexto por proyecto:** el `AGENTS.md` del proyecto si ya lo tiene (se edita ahí mismo, sin copias) o, si no, `.tutti/steering/contexto.md`.
+- **Lo que reciben los agentes:** el panel de Contexto enseña de dónde sale cada parte y cuánto pesa en tokens. Un archivo de steering con `inclusion: always` en su cabecera se entrega a los agentes; los nuevos nacen con `inclusion: manual`.
+- **Explorador:** selección múltiple (`Shift+↑/↓`, `Shift`+clic, `Ctrl`+clic), **arrastrar para mover** archivos y carpetas (con confirmación), renombrar en la propia fila, flechas para plegar carpetas, la raíz del proyecto plegable y carpetas teñidas según tengan archivos nuevos o modificados. La carpeta `.tutti` lleva el logo de Tutti.
+- **MCP y Consumo más ordenados:** cada sección tiene su propio scroll y una altura que puedes ajustar arrastrando; las listas siguen el estilo del panel de extensiones, «Disponibles» solo aparece al buscar y el botón de borrar el historial queda fijo. Se oculta la tarjeta «tutti» de la lista de MCP.
+- **Título en cada pestaña de la barra lateral**, con las pestañas reordenadas.
+
 ## 1.1.0
 
 - **Apertura rápida más limpia:** el diálogo de apertura rápida ya no muestra archivos ni carpetas ocultos.

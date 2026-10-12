@@ -1,29 +1,40 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdRemoveCircleOutline, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
-import type { AppMcpInfo, McpAgent, McpScope, McpServer, McpSpec, RegistryServer } from '@shared/types'
+import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdSettings, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
+import type { McpAgent, McpScope, McpServer, McpSpec, RegistryServer } from '@shared/types'
 import { FIELD, FIELD_SLIM, Modal } from '@/shared/components/ui'
 import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, prefillFrom, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
 import { useT } from '@/shared/lib/i18n'
+import { useResizeHeight } from '@/shared/lib/useResizeHeight'
 import { useStore } from '@/shared/store'
-import { McpStoreDetail, McpStoreList } from './McpStore'
+import { Avatar, McpStoreDetail, McpStoreList } from './McpStore'
 
 const SUPPORTED: McpAgent[] = ['claude', 'opencode', 'gemini', 'codex', 'agy']
 const REFRESH_MS = 5000
 
-/** Sección plegable: el título con una flecha; se recuerda si estaba cerrada. */
-function Fold({ id, title, count, children }: { id: string; title: string; count?: number; children: React.ReactNode }) {
+/**
+ * Sección plegable: el título con una flecha; se recuerda si estaba cerrada. Su contenido tiene su propio scroll: altura máxima fija o, con `fill`, todo el espacio libre de la vista (la última sección).
+ * Con `forceOpen` siempre se ve desplegada. Con `resize`, un tirador bajo el contenido deja arrastrar su altura (doble clic: vuelve a la automática); se recuerda.
+ */
+function Fold({ id, title, count, fill = false, resize = false, forceOpen = false, children }: { id: string; title: string; count?: number; fill?: boolean; resize?: boolean; forceOpen?: boolean; children: React.ReactNode }) {
   const key = `tutti.mcp.${id}.collapsed`
-  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
-  const toggle = (): void => setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })
+  const [stored, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
+  const collapsed = stored && !forceOpen                     // con forceOpen (p. ej. al buscar) se ve aunque la hayas plegado
+  const toggle = (): void => forceOpen ? undefined : setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })
+  const t = useT()
+  const size = useResizeHeight(`tutti.mcp.${id}.height`)
   return (
-    <section className="mb-2">
-      <button onClick={toggle} aria-expanded={!collapsed} className="flex w-full items-center gap-0.5 rounded px-1 py-1 text-left text-muted/80 transition-colors hover:text-text">
+    <section className={clsx('mb-2', fill && !collapsed && 'flex min-h-40 flex-1 flex-col')}>
+      <button onClick={toggle} aria-expanded={!collapsed} className="flex w-full items-center gap-1 rounded px-1 py-1 text-left text-text transition-colors hover:text-accent">
         <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
-        <h4 className="truncate text-[10px] font-semibold uppercase tracking-wider">{title}</h4>
-        {count !== undefined && <span className="ml-1 rounded-full bg-ov/[0.07] px-1.5 text-[9px] font-medium">{count}</span>}
+        <h4 className="truncate text-[12px] font-semibold">{title}</h4>
+        {count !== undefined && <span className="ml-1 rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
       </button>
-      {!collapsed && children}
+      {!collapsed && <div ref={size.body} style={size.height ? { height: size.height } : undefined} className={clsx('sect-scroll overflow-y-auto', fill ? 'min-h-0 flex-1' : !size.height && 'max-h-60')}>{children}</div>}
+      {!collapsed && resize && (
+        <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
+          className="group grid h-2 cursor-row-resize place-items-center touch-none"><span className="h-px w-8 rounded bg-line transition-colors group-hover:bg-accent" /></div>
+      )}
     </section>
   )
 }
@@ -51,17 +62,14 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   const [prefill, setPrefill] = useState<Prefill | null>(null)          // instalar desde el registro: el diálogo de añadir con los datos rellenos
   const [storeItem, setStoreItem] = useState<RegistryServer | null>(null)
   const [query, setQuery] = useState('')
-  const [app, setApp] = useState<AppMcpInfo | null>(null)
 
   const installed = useMemo(() => SUPPORTED.filter((a) => agents.some((x) => x.command === a)), [agents])
   const refresh = useCallback(async () => {
     const next = await window.api.mcp.list(project)
     setServers((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
-    const info = await window.api.mcp.app()
-    setApp((prev) => (JSON.stringify(prev) === JSON.stringify(info) ? prev : info))
   }, [project])
 
-  useEffect(() => { if (addSignal > 0) setAdding(true) }, [addSignal])
+  useEffect(() => { if (addSignal > 0 && installed.length) setAdding(true) }, [addSignal])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })) }, [set])
   useEffect(() => { void refresh(); const t = setInterval(() => void refresh(), REFRESH_MS); return () => clearInterval(t) }, [refresh])
 
@@ -85,43 +93,41 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
 
   return (
     <div className={clsx('flex flex-col', compact ? 'pl-3' : 'h-full px-2')}>
-      {!compact && <div className="flex items-center justify-end px-1.5 pb-2">
-        <button title={t('mcp.addTip')} disabled={!installed.length} onClick={() => setAdding(true)}
-          className="grid size-6 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent disabled:opacity-40">
-          <MdAdd size={17} />
-        </button>
-      </div>}
       {showStore && <div className="px-1.5 pb-2">
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('st.search')} spellCheck={false}
           onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }} className={FIELD_SLIM} />
       </div>}
-      <div className={clsx(!compact && 'min-h-0 flex-1 overflow-y-auto pb-2')}>
+      <div className={clsx(!compact && 'flex min-h-0 flex-1 flex-col overflow-y-auto pb-2')}>
         {showInstalled && !query.trim() && (
           <>
-        {app && <AppSection info={app} />}
         {servers === null && <p className="px-2 text-[11px] text-muted">{t('mcp.reading')}</p>}
         {servers && installed.length === 0 && <p className="px-2 text-[11px] text-muted">{t('mcp.noneSupported')}</p>}
         {servers && installed.length > 0 && visible.length === 0 && (compact
-          ? <div className="px-1"><button onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-2 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent"><MdAdd size={15} /> {t('mcp.addTip')}</button></div>
+          ? <div className="px-1"><button onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent"><MdAdd size={15} /> {t('mcp.addTip')}</button></div>
           : <p className="px-2 text-[11px] text-muted">{t('mcp.empty')}</p>)}
-        {groups.length > 0 && <Fold id="installed" title={t('st.installed')} count={groups.length}>
+        {groups.length > 0 && <Fold id="installed" title={t('st.installed')} count={groups.length} resize>
         {groups.map((g) => {
           const first = g[0]
           const agentNames = [...new Set(g.map((x) => AGENT_NAMES[x.agent]))]
           return (
             <div key={first.name.toLowerCase()} className="group flex items-center gap-1 rounded-lg transition-colors hover:bg-accent-bg">
-              <button onClick={() => setDetails(first.name.toLowerCase())} title={t('mcp.details')} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-1.5 text-left">
-                <span className="grid size-7 shrink-0 place-items-center rounded-md bg-ov/[0.05] text-accent">
-                  {first.kind === 'remote' ? <MdCloudQueue size={15} /> : <MdTerminal size={15} />}
-                </span>
+              <button onClick={() => setDetails(first.name.toLowerCase())} title={t('mcp.details')} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-left">
+                <Avatar name={first.name} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12px] font-semibold">{first.name}</span>
-                  <span className="block truncate text-[10px] text-muted">{t(SCOPE_KEYS[first.scope])} · {agentNames.join(', ')}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="min-w-0 truncate text-[12px] font-semibold">{first.name}</span>
+                    {first.kind === 'remote' ? <MdCloudQueue size={13} className="shrink-0 text-muted" /> : <MdTerminal size={13} className="shrink-0 text-muted" />}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted">{t(SCOPE_KEYS[first.scope])} · {agentNames.join(', ')}</span>
                 </span>
               </button>
               <button title={t('mcp.remove')} onClick={() => setRemoving(g)}
-                className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-all hover:bg-danger/15 hover:text-danger group-hover:opacity-100">
+                className="grid size-6 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-all hover:bg-danger/15 hover:text-danger group-hover:opacity-100">
                 <MdDeleteOutline size={16} />
+              </button>
+              <button title={t('mcp.details')} onClick={() => setDetails(first.name.toLowerCase())}
+                className="mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-ov/[0.08] hover:text-text">
+                <MdSettings size={16} />
               </button>
             </div>
           )
@@ -130,13 +136,11 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
           </>
         )}
         {showStore && !query.trim() && (
-          <Fold id="featured" title={t('st.featured')}>
+          <Fold id="featured" title={t('st.featured')} fill={!compact}>
             <McpStoreList featured query="" installedNames={installedNames} onOpen={setStoreItem} />
           </Fold>
         )}
-        {showStore && <Fold id={query.trim() ? 'results' : 'available'} title={query.trim() ? t('st.results') : t('st.available')}>
-          <McpStoreList query={query.trim()} installedNames={installedNames} onOpen={setStoreItem} />
-        </Fold>}
+        {showStore && query.trim() && <Fold id="available" title={t('st.available')} fill={!compact} forceOpen><McpStoreList query={query.trim()} installedNames={installedNames} onOpen={setStoreItem} /></Fold>}
       </div>
 
       {storeItem && <McpStoreDetail server={storeItem} onClose={() => setStoreItem(null)} onInstall={(option) => { setPrefill(prefillFrom(storeItem, option)); setStoreItem(null) }} />}
@@ -155,47 +159,6 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
       )}
       {adding && <AddDialog installed={installed} project={project} onClose={() => setAdding(false)} onDone={() => void refresh()} />}
     </div>
-  )
-}
-
-/** El MCP de la propia app («tutti»): una sola tarjeta global; al abrirla se ve a qué agentes llega. */
-function AppSection({ info }: { info: AppMcpInfo }) {
-  const t = useT()
-  const [open, setOpen] = useState(false)
-  const shown = info.agents.filter((a) => a.installed)
-  const applied = shown.filter((a) => a.applied).map((a) => a.name)
-  const broken = shown.some((a) => a.problem)
-  return (
-    <Fold id="tutti" title={t('mcp.appHeading')}>
-      <button onClick={() => setOpen(true)} title={t('mcp.appCardTip')} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent-bg">
-        <span className={clsx('grid size-7 shrink-0 place-items-center rounded-md bg-ov/[0.05]', broken ? 'text-danger' : 'text-accent')}><MdTerminal size={15} /></span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12px] font-semibold">tutti</span>
-          <span className="block truncate text-[10px] text-muted">{info.running ? `${t('mcp.scope.global')} · ${applied.length ? applied.join(', ') : t('mcp.noAgent')}` : t('mcp.inactive')}</span>
-        </span>
-      </button>
-      {open && (
-        <Modal onClose={() => setOpen(false)} width={460} title="tutti">
-          <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-4 pb-4">
-            <div className="flex flex-wrap gap-1.5"><Tag>{t('mcp.global')}</Tag><Tag>{info.running ? t('mcp.active') : t('mcp.inactive')}</Tag></div>
-            <p className="text-[12px] leading-relaxed text-muted">
-              {info.running ? t('mcp.appTools', { tools: info.tools.join(', ') }) : t('mcp.appOff')}
-            </p>
-            <div className="flex flex-col gap-1">
-              {shown.map((a) => (
-                <div key={a.command} className="flex items-center gap-2.5 rounded-lg bg-ov/[0.04] px-2.5 py-1.5">
-                  <span className={clsx('shrink-0', a.applied ? 'text-accent' : a.problem ? 'text-danger' : 'text-muted')}>{a.applied ? <MdCheckCircle size={16} /> : <MdRemoveCircleOutline size={16} />}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-semibold">{a.name}</span>
-                    <span className={clsx('block break-all text-[10px]', a.problem ? 'text-danger' : 'text-muted')}>{a.problem ?? a.how}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Modal>
-      )}
-    </Fold>
   )
 }
 

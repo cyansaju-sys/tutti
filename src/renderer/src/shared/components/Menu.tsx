@@ -12,7 +12,7 @@ export interface MenuItem { label: string; icon?: ReactNode; onClick?: () => voi
 const WIDTH = 190
 const SUB_WIDTH = 190
 const GAP = 4
-const MARGIN = 8
+const MARGIN = 14      // separación mínima del borde de la ventana
 
 /**
  * Menú desplegable anclado a un botón (`anchor` = su rectángulo en pantalla): se abre debajo, alineado a su borde derecho, y

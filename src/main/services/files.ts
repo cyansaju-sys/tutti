@@ -1,5 +1,5 @@
 import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
-import { dirname, extname, join } from 'node:path'
+import { basename, dirname, extname, join, sep } from 'node:path'
 import type { DirEntry, FileData, McpResult } from '../../shared/types'
 import { tm } from '../utils/i18n'
 
@@ -81,6 +81,16 @@ export async function renameEntry(path: string, name: string): Promise<McpResult
   if (!validName(name)) return { ok: false, message: tm('m.fs.badName') }
   const target = join(dirname(path), name)
   if (target === path) return { ok: true, message: path }
+  if (await exists(target)) return { ok: false, message: tm('m.fs.exists', { name }) }
+  try { await rename(path, target); return { ok: true, message: target } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
+}
+
+/** Mueve un archivo o carpeta dentro de la carpeta `dir`. No pisa nada y no deja meter una carpeta dentro de sí misma. Devuelve la ruta nueva en `message`. */
+export async function moveEntry(path: string, dir: string): Promise<McpResult> {
+  const name = basename(path)
+  const target = join(dir, name)
+  if (dirname(path) === dir) return { ok: true, message: path }                          // ya está ahí
+  if (dir === path || dir.startsWith(path + sep)) return { ok: false, message: tm('m.fs.moveInto', { name }) }
   if (await exists(target)) return { ok: false, message: tm('m.fs.exists', { name }) }
   try { await rename(path, target); return { ok: true, message: target } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
 }

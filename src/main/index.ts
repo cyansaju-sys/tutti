@@ -5,7 +5,7 @@ import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, remov
 import { ensureGlobalContext, contextSources, ensureProjectDir, openProjectContext } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
-import { createEntry, listDir, mtime, renameEntry, readFileData, writeFileData } from './services/files'
+import { createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
 import { tm } from './utils/i18n'
@@ -75,7 +75,7 @@ function registerIpc(): void {
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
   ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
-  ipcMain.handle('context:init', (_e, project: string, sub?: string) => ensureProjectDir(project, sub))
+  ipcMain.handle('context:init', (_e, project: string, sub?: string) => (process.env.TUTTI_CAPTURE ? join(project, '.tutti', sub ?? '') : ensureProjectDir(project, sub)))      // en las capturas no se escribe en el proyecto fotografiado
   ipcMain.handle('context:sources', (_e, project: string) => contextSources(project))
   ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
   ipcMain.handle('context:ensure-global', () => ensureGlobalContext())
@@ -85,6 +85,7 @@ function registerIpc(): void {
   ipcMain.handle('fs:read', (_e, path: string) => readFileData(path))
   ipcMain.handle('fs:write', (_e, path: string, text: string, crlf: boolean) => writeFileData(path, text, crlf))
   ipcMain.handle('fs:create', (_e, dir: string, name: string, isDir: boolean) => createEntry(dir, name, isDir))
+  ipcMain.handle('fs:move', (_e, path: string, dir: string) => moveEntry(path, dir))
   ipcMain.handle('fs:rename', (_e, path: string, name: string) => renameEntry(path, name))
   ipcMain.handle('fs:trash', async (_e, path: string) => {         // a la papelera: se puede recuperar
     try { await shell.trashItem(path); return { ok: true, message: tm('m.trash') } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }

@@ -104,6 +104,12 @@ sec('archivos', 'Archivos y editor', 'Files and editor', '''
 <tr><td>Copiar ruta / ruta relativa</td><td>Al portapapeles</td></tr>
 <tr><td>Borrar</td><td>Pide confirmación y lo manda a la <strong>papelera</strong> (se puede recuperar)</td></tr>
 </table>
+<h3>Seleccionar varios y mover</h3>
+<ul>
+<li><kbd>Shift</kbd>+<kbd>↓</kbd>/<kbd>↑</kbd> amplía la selección; <kbd>Shift</kbd>+clic selecciona un rango y <kbd>Ctrl</kbd>+clic añade o quita una fila. Con varias seleccionadas, el clic derecho ofrece enviarlas al agente, copiar sus rutas o borrarlas (<kbd>Supr</kbd> también).</li>
+<li><strong>Arrastra</strong> archivos o carpetas sobre una carpeta (o sobre el espacio vacío, para la raíz) para moverlos. Tutti pregunta antes de mover, no pisa nada que ya exista y no deja meter una carpeta dentro de sí misma; las pestañas abiertas siguen al archivo.</li>
+<li>Las carpetas se tiñen según lo que tienen dentro: <strong>verde</strong> si solo hay archivos nuevos, <strong>ámbar</strong> si hay modificados, rojo si solo hay borrados. Renombrar se hace en la propia fila, sin diálogo.</li>
+</ul>
 <h3>Cuando un agente cambia un archivo abierto</h3>
 <p>Tutti lo detecta y marca en el editor las líneas antiguas (rojo) y las nuevas (verde); arriba hay un panel con cada tramo, con <em>Aceptar</em> y <em>Deshacer</em> por tramo y para todos. Lo aceptado queda como modificación local, sin guardar, para que lo revises. Mientras decides, el archivo es de solo lectura.</p>
 <h3>Lenguajes</h3>
@@ -133,6 +139,12 @@ sec('archivos', 'Archivos y editor', 'Files and editor', '''
 <tr><td>Copy path / relative path</td><td>To the clipboard</td></tr>
 <tr><td>Delete</td><td>Asks for confirmation and sends it to the <strong>trash</strong> (recoverable)</td></tr>
 </table>
+<h3>Selecting several and moving</h3>
+<ul>
+<li><kbd>Shift</kbd>+<kbd>↓</kbd>/<kbd>↑</kbd> extends the selection; <kbd>Shift</kbd>+click selects a range and <kbd>Ctrl</kbd>+click adds or removes a row. With several selected, right click offers sending them to the agent, copying their paths or deleting them (<kbd>Del</kbd> too).</li>
+<li><strong>Drag</strong> files or folders onto a folder (or onto the empty space, for the root) to move them. Tutti asks before moving, never overwrites anything that exists and does not let you put a folder inside itself; open tabs follow the file.</li>
+<li>Folders are tinted by what they hold: <strong>green</strong> if only new files, <strong>amber</strong> if any are modified, red if only deleted. Renaming happens on the row itself, with no dialog.</li>
+</ul>
 <h3>When an agent changes an open file</h3>
 <p>Tutti detects it and marks the old lines (red) and the new ones (green) in the editor; a panel at the top lists each chunk, with <em>Accept</em> and <em>Undo</em> per chunk and for all. What you accept stays as an unsaved local modification for you to review. While you decide, the file is read-only.</p>
 <h3>Languages</h3>
@@ -245,7 +257,7 @@ sec('reparto', 'Reparto de tareas', 'Task delegation', '''
 <tr><td>Codex</td><td><code>-c mcp_servers.tutti.url=…</code> y la clave por variable de entorno: no se toca su <code>config.toml</code></td></tr>
 <tr><td>Antigravity</td><td>No admite configuración por proceso: Tutti registra un servidor «tutti» en <code>~/.gemini/config/mcp_config.json</code> (un pequeño puente en <code>&lt;config&gt;/tutti/mcp-bridge.mjs</code>) y a cada panel le pasa la dirección y la clave por entorno. Fuera de Tutti ese servidor no ofrece herramientas. Si Antigravity pide permiso la primera vez, apruébalo</td></tr>
 </table>
-<p>Se desactiva con <code>"orchestration": false</code> en <code>settings.json</code>. La tarjeta <strong>tutti</strong> de la pestaña MCP muestra a qué agentes llega.</p>
+<p>Se desactiva con <code>"orchestration": false</code> en <code>settings.json</code>.</p>
 ''', '''
 <p>Tutti opens a local MCP server (only on <code>127.0.0.1</code>, with a different token on every run) and connects every agent to it with four tools:</p>
 <table>
@@ -267,7 +279,7 @@ sec('reparto', 'Reparto de tareas', 'Task delegation', '''
 <tr><td>Codex</td><td><code>-c mcp_servers.tutti.url=…</code> and the key through an environment variable: its <code>config.toml</code> is untouched</td></tr>
 <tr><td>Antigravity</td><td>It does not support per-process configuration: Tutti registers a “tutti” server in <code>~/.gemini/config/mcp_config.json</code> (a small bridge at <code>&lt;config&gt;/tutti/mcp-bridge.mjs</code>) and passes each panel the address and key through the environment. Outside Tutti that server offers no tools. If Antigravity asks for permission the first time, approve it</td></tr>
 </table>
-<p>It is disabled with <code>"orchestration": false</code> in <code>settings.json</code>. The <strong>tutti</strong> card in the MCP tab shows which agents it reaches.</p>
+<p>It is disabled with <code>"orchestration": false</code> in <code>settings.json</code>.</p>
 ''')
 
 sec('contexto', 'Contexto del proyecto', 'Project context', '''
@@ -275,8 +287,8 @@ sec('contexto', 'Contexto del proyecto', 'Project context', '''
 <img src="img/contexto.png" alt="Contexto del proyecto" loading="lazy" />
 <h3>Proyecto</h3>
 <ul>
-<li>Vive <strong>en el repositorio</strong>, en <code>AGENTS.md</code> dentro de la carpeta del proyecto: es el archivo estándar que también leen Codex, OpenCode, Cursor y otros agentes, y al estar en git se versiona y se comparte con el equipo.</li>
-<li>No se crea hasta que escribes y guardas (se guarda solo). Si el proyecto ya tiene un <code>AGENTS.md</code>, se abre tal cual.</li>
+<li>Vive <strong>en el repositorio</strong>, en <strong>un solo archivo</strong>: el <code>AGENTS.md</code> del proyecto si ya lo tiene (es el estándar que también leen Codex, OpenCode, Cursor y otros agentes, y se edita ahí mismo, sin copias) o, si no, <code>.tutti/steering/contexto.md</code>. Al estar en git se versiona y se comparte con el equipo.</li>
+<li>No se crea hasta que escribes y guardas (se guarda solo). Un contexto ya guardado en <code>.tutti</code> manda sobre un <code>AGENTS.md</code> que aparezca después.</li>
 <li>Los contextos que tenías de la versión anterior (guardados en la configuración de Tutti, fuera del repositorio) se siguen usando hasta que los guardes en el proyecto.</li>
 <li><strong>Generar con IA</strong> lo redacta un agente a partir de un resumen pequeño del proyecto (estructura, <code>package.json</code>, inicio del README, últimos commits), sin dejarle explorar, para gastar muy pocos tokens. Con Claude usa el modelo pequeño <code>haiku</code>; si ningún agente responde arma un borrador con reglas. Se escribe en el idioma de la interfaz y se cancela al cambiar de apartado.</li>
 </ul>
@@ -284,13 +296,16 @@ sec('contexto', 'Contexto del proyecto', 'Project context', '''
 <p>La pestaña <strong>Global</strong> guarda tus preferencias para <strong>todos</strong> los proyectos —cómo trabajas, tu estilo de código, lo que no quieres que hagan los agentes—. Se guarda en la configuración de Tutti (<code>contexto-global.md</code>), nunca en un repositorio, y funciona aunque no haya proyecto abierto.</p>
 <h3>Quién lo recibe</h3>
 <p>Al abrir un agente desde Tutti recibe primero el global y después el del proyecto. Claude Code los toma como parte de su prompt de sistema y OpenCode como archivos de instrucciones (<code>AGENTS.md</code> no se repite porque OpenCode ya lo lee solo). Funciona también si el agente se abre en una subcarpeta y sin el reparto de tareas. Una plantilla sin tocar no se envía.</p>
+<h3>Lo que reciben los agentes</h3>
+<p>Bajo el editor, el panel <strong>Lo que reciben los agentes</strong> enseña de dónde sale lo que recibirá cada agente (el global, el del proyecto y los archivos de <code>steering</code> marcados) y cuánto pesa cada parte en tokens aproximados. Si pasa de unos 3 000 avisa: cada agente lo lee entero al empezar y gasta tokens.</p>
+<p>Un archivo de <code>.tutti/steering/</code> solo se entrega si su cabecera dice <code>inclusion: always</code>; los nuevos nacen con <code>inclusion: manual</code> y no gastan nada.</p>
 ''', '''
 <p>The <strong>Context</strong> section (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd>) stores a text that <strong>the agents you open read</strong>: what the project is, how to run it, conventions and how you prefer to work. It has two layers and is shown as <strong>Markdown</strong> (headings, lists, code and links with formatting); <em>Edit</em> or a double click opens it for changes.</p>
 <img src="img/contexto.png" alt="Project context" loading="lazy" />
 <h3>Project</h3>
 <ul>
-<li>It lives <strong>in the repository</strong>, in <code>AGENTS.md</code> inside the project folder: the standard file that Codex, OpenCode, Cursor and other agents also read, and being in git it is versioned and shared with the team.</li>
-<li>It is not created until you write and save (it saves itself). If the project already has an <code>AGENTS.md</code>, it opens as is.</li>
+<li>It lives <strong>in the repository</strong>, in <strong>a single file</strong>: the project's <code>AGENTS.md</code> if it already has one (the standard that Codex, OpenCode, Cursor and other agents also read, edited right there, with no copies) or, if not, <code>.tutti/steering/contexto.md</code>. Being in git it is versioned and shared with the team.</li>
+<li>It is not created until you write and save (it saves itself). A context already saved in <code>.tutti</code> wins over an <code>AGENTS.md</code> that shows up later.</li>
 <li>Contexts you had from the previous version (stored in Tutti's configuration, outside the repository) keep being used until you save them in the project.</li>
 <li><strong>Generate with AI</strong> has an agent write it from a small summary of the project (structure, <code>package.json</code>, start of the README, latest commits), without letting it explore, to spend very few tokens. With Claude it uses the small <code>haiku</code> model; if no agent answers it builds a draft with rules. It is written in the interface language and cancelled when you leave the section.</li>
 </ul>
@@ -298,6 +313,49 @@ sec('contexto', 'Contexto del proyecto', 'Project context', '''
 <p>The <strong>Global</strong> tab stores your preferences for <strong>all</strong> projects —how you work, your code style, what you do not want agents to do—. It is stored in Tutti's configuration (<code>contexto-global.md</code>), never in a repository, and works even with no project open.</p>
 <h3>Who receives it</h3>
 <p>When you open an agent from Tutti it receives the global one first and then the project's. Claude Code takes them as part of its system prompt and OpenCode as instruction files (<code>AGENTS.md</code> is not repeated because OpenCode already reads it by itself). It also works if the agent opens in a subfolder and without task delegation. An untouched template is not sent.</p>
+<h3>What agents receive</h3>
+<p>Under the editor, the <strong>What agents receive</strong> panel shows where what each agent will get comes from (the global one, the project's and the marked <code>steering</code> files) and how much each part weighs in approximate tokens. It warns above about 3,000: every agent reads it whole at the start and spends tokens.</p>
+<p>A file in <code>.tutti/steering/</code> is only handed over if its header says <code>inclusion: always</code>; new ones start with <code>inclusion: manual</code> and cost nothing.</p>
+''')
+
+sec('tutti', 'La carpeta .tutti', 'The .tutti folder', '''
+<p>Tutti crea una carpeta <code>.tutti</code> en cada proyecto que abres, con un <code>README.md</code> que explica su contenido. Se versiona con git y la comparte todo el equipo. Las <strong>subcarpetas solo aparecen cuando añades algo</strong>: abrir un proyecto o mirar la pestaña <strong>Tutti</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>) no las crea.</p>
+<img src="img/tutti.png" alt="La pestaña Tutti" loading="lazy" />
+<pre><code>.tutti/
+├─ README.md
+├─ specs/      una carpeta por función: requirements.md, design.md, tasks.md
+├─ docs/       documentación por categorías (Diátaxis)
+├─ steering/   contexto.md y tus guías para los agentes
+├─ hooks/
+└─ skills/     una carpeta por skill, con su SKILL.md</code></pre>
+<h3>Specs</h3>
+<p>Una spec es una carpeta con tres archivos, como en Kiro: <code>requirements.md</code> (historia de usuario y criterios en formato EARS: «CUANDO … EL SISTEMA DEBERÁ …»), <code>design.md</code> (arquitectura, componentes, datos, errores y pruebas) y <code>tasks.md</code> (casillas <code>- [ ]</code>). En la lista ves el avance de cada una, por ejemplo <code>2/5</code>.</p>
+<h3>Documentación</h3>
+<p>Sigue <strong>Diátaxis</strong>: <em>tutoriales</em> (aprender haciendo), <em>guías prácticas</em> (resolver una tarea), <em>referencia</em> (descripción exacta) y <em>explicación</em> (el porqué). Solo se ven las categorías que ya tienen documentos; al crear uno eliges su categoría.</p>
+<h3>Steering, hooks y skills</h3>
+<p><strong>Steering</strong> son guías para los agentes (ver <a href="#contexto">Contexto del proyecto</a>: con <code>inclusion: always</code> se entregan siempre). Una <strong>skill</strong> es una carpeta con su <code>SKILL.md</code>. En la pestaña también ves los <strong>servidores MCP</strong> instalados. En el Explorador la carpeta lleva el logo de Tutti.</p>
+<h3>Ver los .md como Markdown</h3>
+<p>Los archivos <code>.md</code> tienen un botón <strong>Vista / Código</strong> en la barra de ruta del editor. Los de <code>.tutti</code> se abren ya renderizados (con las casillas de <code>tasks.md</code> y las etiquetas de la cabecera de steering); doble clic vuelve al código.</p>
+<img src="img/md-vista.png" alt="Un archivo Markdown en vista" loading="lazy" />
+''', '''
+<p>Tutti creates a <code>.tutti</code> folder in every project you open, with a <code>README.md</code> that explains its contents. It is versioned with git and shared by the whole team. <strong>Subfolders only appear when you add something</strong>: opening a project or looking at the <strong>Tutti</strong> tab (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>) does not create them.</p>
+<img src="img/tutti.png" alt="The Tutti tab" loading="lazy" />
+<pre><code>.tutti/
+├─ README.md
+├─ specs/      one folder per feature: requirements.md, design.md, tasks.md
+├─ docs/       documentation by category (Diátaxis)
+├─ steering/   contexto.md and your guides for the agents
+├─ hooks/
+└─ skills/     one folder per skill, with its SKILL.md</code></pre>
+<h3>Specs</h3>
+<p>A spec is a folder with three files, as in Kiro: <code>requirements.md</code> (user story and criteria in EARS format: “WHEN … THE SYSTEM SHALL …”), <code>design.md</code> (architecture, components, data, errors and tests) and <code>tasks.md</code> (<code>- [ ]</code> checkboxes). In the list you see each one's progress, for example <code>2/5</code>.</p>
+<h3>Documentation</h3>
+<p>It follows <strong>Diátaxis</strong>: <em>tutorials</em> (learn by doing), <em>how-to guides</em> (solve a task), <em>reference</em> (exact description) and <em>explanation</em> (the why). Only categories that already have documents are shown; when you create one you choose its category.</p>
+<h3>Steering, hooks and skills</h3>
+<p><strong>Steering</strong> are guides for the agents (see <a href="#contexto">Project context</a>: with <code>inclusion: always</code> they are always handed over). A <strong>skill</strong> is a folder with its <code>SKILL.md</code>. The tab also shows the installed <strong>MCP servers</strong>. In the Explorer the folder carries the Tutti logo.</p>
+<h3>Viewing .md files as Markdown</h3>
+<p><code>.md</code> files have a <strong>Preview / Source</strong> button in the editor's breadcrumb bar. Those in <code>.tutti</code> open already rendered (with the <code>tasks.md</code> checkboxes and the steering header tags); double-click goes back to the source.</p>
+<img src="img/md-vista.png" alt="A Markdown file in preview" loading="lazy" />
 ''')
 
 sec('mcp', 'Servidores MCP y tienda', 'MCP servers and store', '''
@@ -307,7 +365,6 @@ sec('mcp', 'Servidores MCP y tienda', 'MCP servers and store', '''
 <li><strong>Un servidor, una tarjeta.</strong> Al abrirla ves en qué agentes está aplicado (<em>Aplicado en</em>), su comando o URL, cabeceras y variables (los secretos ocultos hasta que lo pides) y dónde se guarda. Puedes copiarlo a otro agente o quitarlo de uno solo.</li>
 <li>La papelera de la tarjeta lo quita de todos los agentes, pidiendo confirmación.</li>
 <li><strong>+</strong> abre <em>Añadir servidor MCP</em>: remoto (URL y cabeceras) o local (comando, argumentos y variables), los agentes de destino y el alcance (todos los proyectos o solo este). Codex y Antigravity solo guardan servidores globales.</li>
-<li>La tarjeta <strong>tutti</strong> es el servidor de la propia app (el reparto de tareas) y muestra a qué agentes llega.</li>
 <li>Las secciones <em>Tutti</em>, <em>Instalados</em>, <em>Recomendados</em> y <em>Disponibles</em> se pliegan y recuerdan su estado.</li>
 </ul>
 <img src="img/mcp-detalles.png" alt="Detalle de un servidor" loading="lazy" />
@@ -328,7 +385,6 @@ sec('mcp', 'Servidores MCP y tienda', 'MCP servers and store', '''
 <li><strong>One server, one card.</strong> Opening it shows which agents it is applied to (<em>Applied to</em>), its command or URL, headers and variables (secrets hidden until you ask) and where it is stored. You can copy it to another agent or remove it from just one.</li>
 <li>The card's trash can removes it from every agent, asking for confirmation.</li>
 <li><strong>+</strong> opens <em>Add MCP server</em>: remote (URL and headers) or local (command, arguments and variables), the target agents and the scope (all projects or just this one). Codex and Antigravity only store global servers.</li>
-<li>The <strong>tutti</strong> card is the app's own server (task delegation) and shows which agents it reaches.</li>
 <li>The <em>Tutti</em>, <em>Installed</em>, <em>Recommended</em> and <em>Available</em> sections fold and remember their state.</li>
 </ul>
 <img src="img/mcp-detalles.png" alt="Server detail" loading="lazy" />
@@ -445,7 +501,7 @@ sec('atajos', 'Atajos de teclado', 'Keyboard shortcuts', '''
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd></td><td>Cerrar el panel activo</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>AvPág</kbd> / <kbd>RePág</kbd></td><td>Panel siguiente / anterior</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></td><td>Mostrar u ocultar la barra lateral</td></tr>
-<tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> · <kbd>A</kbd> · <kbd>G</kbd> · <kbd>K</kbd> · <kbd>X</kbd> · <kbd>U</kbd></td><td>Archivos · Agentes · Git · Contexto · MCP · Consumo</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> · <kbd>A</kbd> · <kbd>G</kbd> · <kbd>J</kbd> · <kbd>K</kbd> · <kbd>X</kbd> · <kbd>U</kbd></td><td>Archivos · Agentes · Git · Tutti · Contexto · MCP · Consumo</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td><td>En terminales y agentes: copiar (con texto seleccionado) / pegar. También <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> y <kbd>Shift</kbd>+<kbd>Insert</kbd></td></tr>
 <tr><td><kbd>F1</kbd></td><td>Esta ayuda dentro de la app</td></tr>
 </table>
@@ -465,7 +521,7 @@ sec('atajos', 'Atajos de teclado', 'Keyboard shortcuts', '''
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd></td><td>Close the active panel</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Page Down</kbd> / <kbd>Page Up</kbd></td><td>Next / previous panel</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></td><td>Show or hide the sidebar</td></tr>
-<tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> · <kbd>A</kbd> · <kbd>G</kbd> · <kbd>K</kbd> · <kbd>X</kbd> · <kbd>U</kbd></td><td>Files · Agents · Git · Context · MCP · Usage</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> · <kbd>A</kbd> · <kbd>G</kbd> · <kbd>J</kbd> · <kbd>K</kbd> · <kbd>X</kbd> · <kbd>U</kbd></td><td>Files · Agents · Git · Tutti · Context · MCP · Usage</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td><td>In terminals and agents: copy (with text selected) / paste. Also <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> and <kbd>Shift</kbd>+<kbd>Insert</kbd></td></tr>
 <tr><td><kbd>F1</kbd></td><td>This help inside the app</td></tr>
 </table>
@@ -477,7 +533,7 @@ sec('ajustes', 'Ajustes y archivos', 'Settings and files', '''
 <table>
 <tr><th>Archivo</th><th>Qué contiene</th></tr>
 <tr><td><code>settings.json</code></td><td>Los ajustes (tabla de abajo)</td></tr>
-<tr><td><code>contexto-global.md</code></td><td>Tus preferencias para todos los proyectos (el contexto de cada proyecto está en su <code>AGENTS.md</code>)</td></tr>
+<tr><td><code>contexto-global.md</code></td><td>Tus preferencias para todos los proyectos (el contexto de cada proyecto está en su <code>AGENTS.md</code> o en <code>.tutti/steering/contexto.md</code>)</td></tr>
 <tr><td><code>mcp-bridge.mjs</code></td><td>El puente que usa Antigravity para el reparto de tareas</td></tr>
 </table>
 <h3>Claves de <code>settings.json</code></h3>
@@ -500,7 +556,7 @@ sec('ajustes', 'Ajustes y archivos', 'Settings and files', '''
 <table>
 <tr><th>File</th><th>What it contains</th></tr>
 <tr><td><code>settings.json</code></td><td>The settings (table below)</td></tr>
-<tr><td><code>contexto-global.md</code></td><td>Your preferences for all projects (each project's context is in its <code>AGENTS.md</code>)</td></tr>
+<tr><td><code>contexto-global.md</code></td><td>Your preferences for all projects (each project's context is in its <code>AGENTS.md</code> or in <code>.tutti/steering/contexto.md</code>)</td></tr>
 <tr><td><code>mcp-bridge.mjs</code></td><td>The bridge Antigravity uses for task delegation</td></tr>
 </table>
 <h3><code>settings.json</code> keys</h3>
@@ -547,7 +603,7 @@ sec('problemas', 'Solución de problemas', 'Troubleshooting', '''
 <dt>Windows muestra SmartScreen</dt>
 <dd>El instalador no está firmado. Pulsa <em>Más información → Ejecutar de todas formas</em>.</dd>
 <dt>Un agente no ve las herramientas de Tutti</dt>
-<dd>Ábrelo <strong>desde Tutti</strong> (fuera de la app no recibe la configuración de su sesión). Revisa la tarjeta <em>tutti</em> de la pestaña MCP: si un agente sale en rojo, el mensaje dice por qué. Comprueba que <code>"orchestration"</code> no esté en <code>false</code>.</dd>
+<dd>Ábrelo <strong>desde Tutti</strong> (fuera de la app no recibe la configuración de su sesión). Comprueba que <code>"orchestration"</code> no esté en <code>false</code>.</dd>
 <dt>En Antigravity la tarjeta dice «No existe …»</dt>
 <dd>El registro apunta a una ruta vieja (por ejemplo tras mover la app de carpeta). Se repara solo al abrir Tutti con Antigravity instalado; ábrelo de nuevo.</dd>
 <dt>La tienda no carga</dt>
@@ -568,7 +624,7 @@ sec('problemas', 'Solución de problemas', 'Troubleshooting', '''
 <dt>Windows shows SmartScreen</dt>
 <dd>The installer is not signed. Click <em>More info → Run anyway</em>.</dd>
 <dt>An agent does not see Tutti's tools</dt>
-<dd>Open it <strong>from Tutti</strong> (outside the app it does not get its session's configuration). Check the <em>tutti</em> card in the MCP tab: if an agent shows in red, the message says why. Make sure <code>"orchestration"</code> is not <code>false</code>.</dd>
+<dd>Open it <strong>from Tutti</strong> (outside the app it does not get its session's configuration). Make sure <code>"orchestration"</code> is not <code>false</code>.</dd>
 <dt>In Antigravity the card says “… does not exist”</dt>
 <dd>The registration points to an old path (for example after moving the app's folder). It repairs itself when Tutti opens with Antigravity installed; open it again.</dd>
 <dt>The store does not load</dt>
@@ -591,14 +647,17 @@ yarn dist            # empaqueta el AppImage en release/
 yarn dist:win        # empaqueta el instalador de Windows (hay que ejecutarlo en Windows)</code></pre>
 <p>Si tu terminal define <code>ELECTRON_RUN_AS_NODE</code> (algunos editores lo hacen), <code>yarn dev</code> ya la quita por ti.</p>
 <pre><code>src/
-  main/        proceso principal
-    agents/      detección, terminales (node-pty), reparto de tareas (servidor MCP) y su arranque
-    git/         git y el mensaje de commit con IA
-    context/     contexto del proyecto y su generación
-    usage/       consumo e historial de cada agente
-                 (y aquí: ventana, MCP de los agentes, tienda, archivos, ajustes, actualizador)
+  main/        proceso principal (index.ts: ventana y rutas IPC)
+    services/    la lógica, una carpeta por tema:
+      agents/      detección, terminales (node-pty), reparto de tareas (servidor MCP) y su arranque
+      git/         git y el mensaje de commit con IA
+      context/     contexto del proyecto, .tutti y su generación
+      usage/       consumo e historial de cada agente
+      mcp/         MCP de los agentes y la tienda
+                   (y aquí: archivos, búsqueda, ajustes, actualizador)
+    utils/       idioma de los mensajes, versión, ruta del shell, autotest
   preload/     el puente seguro hacia la interfaz (window.api)
-  renderer/    interfaz en React + Tailwind (componentes, vistas, estado con zustand)
+  renderer/    interfaz en React + Tailwind (features/ por tema, shared/ y estado con zustand)
   shared/      tipos compartidos y textos (locales/es.json, en.json)
 test/          pruebas (vitest) y capture.ts, el modo de capturas
 resources/     ícono de la app
@@ -610,7 +669,7 @@ scripts/       dev.mjs</code></pre>
 <tr><td><code>TUTTI_SELFTEST=1</code></td><td>Prueba el reparto de tareas de punta a punta con agentes falsos</td></tr>
 <tr><td><code>TUTTI_CAPTURE=&lt;carpeta&gt;</code></td><td>Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una</td></tr>
 <tr><td><code>TUTTI_CAPTURE_LANG=en</code> · <code>_LIGHT=1</code> · <code>_INTERNAL=1</code></td><td>Con la captura: idioma, tema claro y colocar la ventana en la pantalla integrada</td></tr>
-<tr><td><code>TUTTI_CAPTURE_NEW</code> · <code>_GRAPH</code> · <code>_DIFF=&lt;archivo&gt;</code> · <code>_MCP</code> · <code>_UPDATE</code></td><td>Con la captura: añade esas pantallas</td></tr>
+<tr><td><code>TUTTI_CAPTURE_NEW</code> · <code>_TUTTI</code> · <code>_GRAPH</code> · <code>_DIFF=&lt;archivo&gt;</code> · <code>_MCP</code> · <code>_UPDATE</code></td><td>Con la captura: añade esas pantallas</td></tr>
 <tr><td><code>TUTTI_CAPTURE_REAL=1</code></td><td>Lanza <strong>agentes reales</strong> (Claude Code) para la imagen principal; gasta tokens</td></tr>
 </table>
 <h3>Publicar una release</h3>
@@ -630,14 +689,17 @@ yarn dist            # packages the AppImage into release/
 yarn dist:win        # packages the Windows installer (must be run on Windows)</code></pre>
 <p>If your terminal defines <code>ELECTRON_RUN_AS_NODE</code> (some editors do), <code>yarn dev</code> already removes it for you.</p>
 <pre><code>src/
-  main/        main process
-    agents/      detection, terminals (node-pty), task delegation (MCP server) and their launch
-    git/         git and the AI commit message
-    context/     project context and its generation
-    usage/       usage and history of each agent
-                 (and here: window, agents' MCP, store, files, settings, updater)
+  main/        main process (index.ts: window and IPC routes)
+    services/    the logic, one folder per topic:
+      agents/      detection, terminals (node-pty), task delegation (MCP server) and their launch
+      git/         git and the AI commit message
+      context/     project context, .tutti and its generation
+      usage/       usage and history of each agent
+      mcp/         agents' MCP and the store
+                   (and here: files, search, settings, updater)
+    utils/       message language, version, shell path, self-test
   preload/     the secure bridge to the interface (window.api)
-  renderer/    React + Tailwind interface (components, views, zustand state)
+  renderer/    React + Tailwind interface (features/ by topic, shared/ and zustand state)
   shared/      shared types and texts (locales/es.json, en.json)
 test/          tests (vitest) and capture.ts, the capture mode
 resources/     app icon
@@ -649,7 +711,7 @@ scripts/       dev.mjs</code></pre>
 <tr><td><code>TUTTI_SELFTEST=1</code></td><td>Tests task delegation end to end with fake agents</td></tr>
 <tr><td><code>TUTTI_CAPTURE=&lt;folder&gt;</code></td><td>Opens the app with isolated settings, walks through the screens and saves a capture of each</td></tr>
 <tr><td><code>TUTTI_CAPTURE_LANG=en</code> · <code>_LIGHT=1</code> · <code>_INTERNAL=1</code></td><td>With capture: language, light theme and placing the window on the built-in screen</td></tr>
-<tr><td><code>TUTTI_CAPTURE_NEW</code> · <code>_GRAPH</code> · <code>_DIFF=&lt;file&gt;</code> · <code>_MCP</code> · <code>_UPDATE</code></td><td>With capture: adds those screens</td></tr>
+<tr><td><code>TUTTI_CAPTURE_NEW</code> · <code>_TUTTI</code> · <code>_GRAPH</code> · <code>_DIFF=&lt;file&gt;</code> · <code>_MCP</code> · <code>_UPDATE</code></td><td>With capture: adds those screens</td></tr>
 <tr><td><code>TUTTI_CAPTURE_REAL=1</code></td><td>Launches <strong>real agents</strong> (Claude Code) for the main image; spends tokens</td></tr>
 </table>
 <h3>Publishing a release</h3>

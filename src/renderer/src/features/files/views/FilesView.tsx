@@ -18,7 +18,8 @@ interface Row { entry: DirEntry; depth: number }
 type Ask =
   | { kind: 'create'; dir: string; isDir: boolean }
   | { kind: 'rename'; entry: DirEntry }
-  | { kind: 'delete'; entry: DirEntry }
+  | { kind: 'delete'; entries: DirEntry[] }
+  | { kind: 'move'; paths: string[]; dir: string }
 
 export function FilesView() {
   const t = useT()
@@ -31,6 +32,9 @@ export function FilesView() {
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
   const [ignored, setIgnored] = useState<Set<string>>(new Set())
   const [cursor, setCursor] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())      // selección múltiple (Shift/Ctrl + clic, Shift + ↑↓)
+  const [dropOn, setDropOn] = useState<string | null>(null)            // carpeta (o la raíz) sobre la que se está arrastrando
+  const [anchor, setAnchor] = useState<string | null>(null)              // de dónde parte el rango de Shift
   const [menu, setMenu] = useState<{ entry: DirEntry; anchor: DOMRect } | null>(null)
   const [rootMenu, setRootMenu] = useState<DOMRect | null>(null)      // clic en un espacio vacío: crear en la raíz del proyecto
   const toast = useStore((s) => s.toast)
@@ -59,12 +63,21 @@ export function FilesView() {
 
   const status = useMemo(() => {
     const map = new Map<string, string>()
+    const kinds = new Map<string, Set<string>>()                  // por carpeta: qué clases de cambio hay dentro
+    const kindOf = (code: string): string => (code === 'M' || code === 'D' || code === 'C' ? code : 'A')       // A, U y R: nuevo
     if (project && git) for (const f of git.files) {
       map.set(toPosix(f.path), f.code)
       const parts = toPosix(f.path).split('/')
-      for (let i = 1; i < parts.length; i++) map.set(parts.slice(0, i).join('/'), '●')       // carpetas: un punto
+      for (let i = 1; i < parts.length; i++) {
+        const dir = parts.slice(0, i).join('/')
+        map.set(dir, '●')                                         // carpetas: un punto
+        kinds.set(dir, (kinds.get(dir) ?? new Set()).add(kindOf(f.code)))
+      }
     }
-    return map
+    // color de la carpeta: conflicto, modificada (o mezcla de nuevos y borrados), solo nuevos o solo borrados
+    const tone = new Map<string, string>()
+    for (const [dir, set] of kinds) tone.set(dir, set.has('C') ? 'C' : set.has('M') || set.size > 1 ? 'M' : [...set][0])
+    return { map, tone }
   }, [project, git])
 
   const rows = useMemo(() => {
@@ -95,6 +108,63 @@ export function FilesView() {
     else void openDoc(row.entry.path)
   }
 
+  const clearSelection = (): void => { setSelected(new Set()); setAnchor(null) }
+  /** Selecciona desde el ancla (o la fila marcada) hasta `path`, ambas incluidas. */
+  const selectTo = (path: string): void => {
+    const from = anchor ?? cursor ?? path
+    const a = rows.findIndex((r) => r.entry.path === from), b = rows.findIndex((r) => r.entry.path === path)
+    if (a < 0 || b < 0) return
+    const [lo, hi] = a < b ? [a, b] : [b, a]
+    setSelected(new Set(rows.slice(lo, hi + 1).map((r) => r.entry.path)))
+    setAnchor(from); setCursor(path)
+  }
+  const toggleSelected = (path: string): void => {
+    setSelected((prev) => { const next = new Set(prev); if (!next.delete(path)) next.add(path); return next })
+    setAnchor(path); setCursor(path)
+  }
+  const onRowClick = (e: React.MouseEvent, row: Row): void => {
+    set({ focus: 'tree' })
+    if (e.shiftKey) { selectTo(row.entry.path); return }
+    if (e.ctrlKey || e.metaKey) { toggleSelected(row.entry.path); return }
+    clearSelection(); activate(row)
+  }
+  /** Las filas que afecta una acción: toda la selección si la fila pulsada es parte de ella, o solo esa fila. */
+  const targetsOf = (entry: DirEntry): DirEntry[] => (selected.size > 1 && selected.has(entry.path) ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : [entry])
+
+  /** Mueve lo arrastrado a `dir`: las pestañas abiertas siguen a sus archivos y la carpeta de destino se abre. */
+  const moveTo = async (paths: string[], dir: string): Promise<void> => {
+    setDropOn(null)
+    let moved = false
+    for (const path of paths) {
+      const res = await window.api.fs.move(path, dir)
+      if (!res.ok) { toast(res.message, 'error'); continue }
+      if (res.message !== path) { useStore.getState().renameDocs(path, res.message); moved = true }
+    }
+    if (!moved) return
+    clearSelection()
+    setExpanded((p) => new Set(p).add(dir))
+    reload(); void load(dir)
+  }
+  const dragPaths = (entry: DirEntry): string[] => {
+    const group = selected.size > 1 && selected.has(entry.path) ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry.path) : [entry.path]
+    const inside = (p: string, o: string): boolean => p.startsWith(o + '/') || p.startsWith(o + '\\')
+    return group.filter((p) => !group.some((o) => o !== p && inside(p, o)))      // sin los que ya van dentro de otra carpeta arrastrada
+  }
+  const dropTarget = (e: React.DragEvent, dir: string): boolean => {
+    if (!e.dataTransfer.types.includes('application/x-tutti-paths')) return false
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'
+    if (dropOn !== dir) setDropOn(dir)
+    return true
+  }
+  const dropped = (e: React.DragEvent, dir: string): void => {
+    const raw = e.dataTransfer.getData('application/x-tutti-paths')
+    if (!raw) return
+    e.preventDefault(); e.stopPropagation()
+    const paths = (JSON.parse(raw) as string[]).filter((p) => dirname(p) !== dir)       // los que ya están ahí no hace falta preguntarlos
+    setDropOn(null)
+    if (paths.length) setAsk({ kind: 'move', paths, dir })                              // antes de mover, se pide confirmación
+  }
+
   /** Crea dentro de `dir`: se abre la carpeta y el campo de nombre aparece en el propio árbol. */
   const startCreate = (dir: string, isDir: boolean): void => {
     setRootOpen(true)                                              // el campo de nombre vive en el árbol: que se vea
@@ -105,11 +175,11 @@ export function FilesView() {
   const copy = (text: string): void => { navigator.clipboard.writeText(text).catch(() => toast(t('fs.copyFailed'), 'error')) }
 
   /** Escribe la ruta en el agente activo (sin Enter, para que el usuario siga escribiendo). */
-  const sendToAgent = (entry: DirEntry): void => {
+  const sendToAgent = (entries: DirEntry[]): void => {
     const { panes, activePane } = useStore.getState()
     const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
     if (!pane) { toast(t('fs.noAgent'), 'error'); return }
-    window.api.pty.write(pane.id, agentRef(pane.command, toPosix(relative(project!, entry.path))) + ' ')
+    window.api.pty.write(pane.id, entries.map((e) => agentRef(pane.command, toPosix(relative(project!, e.path)))).join(' ') + ' ')
     set({ activePane: pane.id, focus: 'pane' })
   }
 
@@ -128,10 +198,13 @@ export function FilesView() {
         setExpanded((p) => new Set(p).add(current.dir)); void load(current.dir)
         if (!current.isDir) void openDoc(path)
       })
+    } else if (current.kind === 'move') {
+      await moveTo(current.paths, current.dir)
     } else if (current.kind === 'rename') {
       await run(window.api.fs.rename(current.entry.path, value), (to) => { useStore.getState().renameDocs(current.entry.path, to); setCursor(to) })
     } else {
-      await run(window.api.fs.trash(current.entry.path), () => useStore.getState().dropDocs(current.entry.path))
+      for (const entry of current.entries) await run(window.api.fs.trash(entry.path), () => useStore.getState().dropDocs(entry.path))
+      clearSelection()
     }
   }
 
@@ -148,6 +221,17 @@ export function FilesView() {
     const i = rows.findIndex((r) => r.entry.path === cursor)
     const current = rows[i]
     const go = (n: number): void => { const r = rows[Math.max(0, Math.min(rows.length - 1, n))]; if (r) setCursor(r.entry.path) }
+    const extend = (n: number): void => { const r = rows[Math.max(0, Math.min(rows.length - 1, n))]; if (r) selectTo(r.entry.path) }
+    if (e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {          // Shift + ↑↓: amplía la selección desde el ancla
+      extend(e.key === 'ArrowDown' ? i + 1 : (i < 0 ? 0 : i - 1)); e.preventDefault(); return
+    }
+    if (e.shiftKey) return
+    if (e.key === 'Delete' && (selected.size > 0 || current)) {
+      const entries = selected.size > 0 ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : [current.entry]
+      setAsk({ kind: 'delete', entries }); e.preventDefault(); return
+    }
+    if (e.key === 'Escape' && selected.size > 0) { clearSelection(); e.preventDefault(); return }
+    if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(e.key)) clearSelection()
     switch (e.key) {
       case 'ArrowDown': go(i + 1); break
       case 'ArrowUp': go(i < 0 ? 0 : i - 1); break
@@ -196,20 +280,27 @@ export function FilesView() {
           ))}
         </div>
       </div>
-      {rootOpen && <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className="min-h-0 flex-1 overflow-y-auto px-1 pb-2 outline-none"
+      {rootOpen && <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className={clsx('min-h-0 flex-1 overflow-y-auto px-1 pb-2 outline-none', dropOn === project && 'bg-accent/5 ring-1 ring-inset ring-accent/40')}
+        onDragOver={(e) => { dropTarget(e, project) }} onDragLeave={(e) => { if (e.currentTarget === e.target) setDropOn(null) }} onDrop={(e) => dropped(e, project)}
         onClick={(e) => { if (e.target === e.currentTarget) setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) }}
         onContextMenu={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) } }}>
         {creating && creating.dir === project && <NameInput isDir={creating.isDir} depth={0} onOk={(v) => void confirmAsk(v)} onCancel={() => setAsk(null)} />}
         {rows.length === 0 && !creating && <p className="px-3 py-1 text-[11px] text-muted">{t('fs.emptyFolder')}</p>}
         {rows.map((row) => {
           const { entry, depth } = row
-          const code = status.get(toPosix(relative(project, entry.path)))
-          const color = code ? (GIT_COLOR[code] ?? 'var(--color-text)') : undefined
+          const rel = toPosix(relative(project, entry.path))
+          const code = status.map.get(rel)
+          const color = code ? (GIT_COLOR[code === '●' ? (status.tone.get(rel) ?? '') : code] ?? 'var(--color-text)') : undefined
           return (
             <Fragment key={entry.path}>
             {renaming === entry.path ? <NameInput isDir={entry.isDir} depth={depth} initial={entry.name} onOk={(v) => void confirmAsk(v)} onCancel={() => setAsk(null)} /> : <button
               title={entry.path}
-              onClick={() => activate(row)}
+              onClick={(e) => onRowClick(e, row)}
+              draggable
+              onDragStart={(e) => { e.dataTransfer.setData('application/x-tutti-paths', JSON.stringify(dragPaths(entry))); e.dataTransfer.effectAllowed = 'move' }}
+              onDragEnd={() => setDropOn(null)}
+              onDragOver={(e) => { e.stopPropagation(); dropTarget(e, entry.isDir ? entry.path : dirname(entry.path)) }}
+              onDrop={(e) => dropped(e, entry.isDir ? entry.path : dirname(entry.path))}
               onMouseMove={() => { if (cursor !== entry.path) setCursor(entry.path) }}      // el resaltado sigue al ratón (y desde ahí siguen las flechas)
               onContextMenu={(e) => {
                 e.preventDefault()
@@ -221,6 +312,8 @@ export function FilesView() {
               className={clsx(
                 'flex w-full items-center gap-1.5 rounded-[4px] py-[3px] pr-1.5 text-left text-[12px] transition-colors hover:bg-accent-bg',
                 cursor === entry.path && 'bg-accent-bg ring-1 ring-inset ring-accent/40',
+                selected.has(entry.path) && 'bg-accent/25',
+                dropOn === (entry.isDir ? entry.path : dirname(entry.path)) && dropOn !== project && (entry.isDir ? 'bg-accent/30 ring-1 ring-inset ring-accent' : 'bg-accent/10'),
                 ignored.has(entry.path) && 'opacity-40'
               )}
             >
@@ -240,18 +333,26 @@ export function FilesView() {
           { label: t('fs.newFolder'), icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(project, true) }
         ]} />
       )}
-      {menu && (
+      {menu && targetsOf(menu.entry).length > 1 && (
         <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
-          { label: t('fs.sendToAgent'), icon: <MdSend size={14} />, onClick: () => sendToAgent(menu.entry) },
+          { label: t('fs.sendMany', { n: targetsOf(menu.entry).length }), icon: <MdSend size={14} />, onClick: () => sendToAgent(targetsOf(menu.entry)) },
+          { label: t('fs.copyMany', { n: targetsOf(menu.entry).length }), icon: <MdLink size={14} />, onClick: () => copy(targetsOf(menu.entry).map((e) => toPosix(relative(project, e.path))).join('\n')) },
+          { label: t('fs.deleteMany', { n: targetsOf(menu.entry).length }), separator: true, icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: targetsOf(menu.entry) }) }
+        ]} />
+      )}
+      {menu && targetsOf(menu.entry).length === 1 && (
+        <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
+          { label: t('fs.sendToAgent'), icon: <MdSend size={14} />, onClick: () => sendToAgent([menu.entry]) },
           { label: t('fs.newFile'), separator: true, icon: <MdNoteAdd size={14} />, onClick: () => startCreate(menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), false) },
           { label: t('fs.newFolder'), icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), true) },
           { label: t('fs.rename'), separator: true, icon: <MdDriveFileRenameOutline size={14} />, onClick: () => setAsk({ kind: 'rename', entry: menu.entry }) },
           { label: t('fs.copyPath'), icon: <MdContentCopy size={14} />, onClick: () => copy(menu.entry.path) },
           { label: t('fs.copyRelative'), icon: <MdLink size={14} />, onClick: () => copy(toPosix(relative(project, menu.entry.path))) },
-          { label: t('fs.delete'), separator: true, icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entry: menu.entry }) }
+          { label: t('fs.delete'), separator: true, icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: [menu.entry] }) }
         ]} />
       )}
-      {ask?.kind === 'delete' && <DeleteDialog entry={ask.entry} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
+      {ask?.kind === 'move' && <MoveDialog paths={ask.paths} dest={ask.dir === project ? basename(project) : toPosix(relative(project, ask.dir))} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
+      {ask?.kind === 'delete' && <DeleteDialog entries={ask.entries} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
     </div>
   )
 }
@@ -261,12 +362,32 @@ async function chooseProject(setProject: (p: string | null) => void): Promise<vo
   if (picked) setProject(picked)
 }
 
-function DeleteDialog({ entry, onClose, onOk }: { entry: DirEntry; onClose: () => void; onOk: () => void }) {
+function MoveDialog({ paths, dest, onClose, onOk }: { paths: string[]; dest: string; onClose: () => void; onOk: () => void }) {
   const t = useT()
+  return (
+    <Modal onClose={onClose} width={400} title={t('fs.moveTitle')}>
+      <div className="flex flex-col gap-3 px-4 pb-4">
+        <p className="text-[12px] leading-relaxed text-muted">
+          {paths.length === 1 ? t('fs.moveOne', { name: basename(paths[0]), dest }) : t('fs.moveMany', { n: paths.length, dest })}
+        </p>
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
+          <button autoFocus onClick={onOk} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110">{t('fs.move')}</button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+function DeleteDialog({ entries, onClose, onOk }: { entries: DirEntry[]; onClose: () => void; onOk: () => void }) {
+  const t = useT()
+  const [first] = entries
   return (
     <Modal onClose={onClose} width={400} title={t('fs.delete')}>
       <div className="flex flex-col gap-3 px-4 pb-4">
-        <p className="text-[12px] leading-relaxed text-muted">{t('fs.trashNote', { name: entry.name, contents: entry.isDir ? t('fs.andContents') : '' })}</p>
+        <p className="text-[12px] leading-relaxed text-muted">
+          {entries.length === 1 ? t('fs.trashNote', { name: first.name, contents: first.isDir ? t('fs.andContents') : '' }) : t('fs.trashMany', { n: entries.length })}
+        </p>
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
           <button autoFocus onClick={onOk} className="rounded-lg bg-danger/20 px-4 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/30">{t('fs.delete')}</button>

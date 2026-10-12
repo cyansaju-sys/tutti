@@ -9,7 +9,7 @@ import { publisherOf, quoteArg, shortName } from '@/features/mcp/lib/mcp'
 const SEARCH_DELAY_MS = 350
 
 /** Iniciales sobre un color propio de cada servidor (el registro no trae iconos). */
-function Avatar({ name }: { name: string }) {
+export function Avatar({ name }: { name: string }) {
   let hash = 0
   for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
   const hue = hash % 360

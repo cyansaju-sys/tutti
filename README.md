@@ -130,9 +130,14 @@ Con **clic derecho** sobre un archivo o carpeta:
 |---|---|
 | **Enviar al agente** | Escribe la ruta (`@ruta` en los agentes que la entienden) en el prompt del agente activo, sin pulsar Enter |
 | **Nuevo archivo / Nueva carpeta** | Los crea dentro de la carpeta con el campo de nombre en el árbol; el archivo se abre en el editor |
-| **Renombrar** | Las pestañas abiertas siguen el cambio de nombre |
+| **Renombrar** | En la propia fila, sin diálogo; las pestañas abiertas siguen el cambio de nombre |
 | **Copiar ruta / ruta relativa** | Al portapapeles, sin avisos |
 | **Borrar** | Pide confirmación y lo manda a la **papelera** (se puede recuperar) |
+
+**Seleccionar varios y mover.** `Shift+↓/↑` amplía la selección, `Shift`+clic elige un rango y `Ctrl`+clic añade o quita una fila; con varias
+seleccionadas, el clic derecho ofrece enviarlas al agente, copiar sus rutas o borrarlas (`Supr` también). **Arrastra** archivos o carpetas
+sobre una carpeta para moverlos: Tutti pregunta antes, no pisa nada y las pestañas abiertas siguen al archivo. Las carpetas se tiñen
+según lo que contienen: verde si solo hay archivos nuevos, ámbar si hay modificados.
 
 ![Archivos y editor](docs/img/archivos-y-editor.png)
 
@@ -223,9 +228,10 @@ servicio compartido, así que a cada editor se le lanza con `--standalone`: su c
 El apartado **Contexto** (`Ctrl+Shift+K`) guarda un texto que **leen los agentes que abras**: qué es el proyecto, cómo se ejecuta,
 convenciones y cómo prefieres trabajar. Se ve como **Markdown** (*Editar* o doble clic para modificarlo) y tiene dos capas:
 
-- **Proyecto:** vive **en el repositorio**, en `AGENTS.md`, el archivo estándar que también leen Codex, OpenCode, Cursor y otros, así
-  que se versiona con git y se comparte con el equipo. No se crea hasta que escribes y guardas, y si el proyecto ya tiene uno se abre
-  tal cual. Los contextos de versiones anteriores (en la configuración de Tutti) se siguen usando hasta que los guardes en el proyecto.
+- **Proyecto:** vive **en el repositorio** y en **un solo archivo**: el `AGENTS.md` del proyecto si ya lo tiene (el estándar que también
+  leen Codex, OpenCode, Cursor y otros, y se edita ahí mismo, sin copias) o, si no, `.tutti/steering/contexto.md`. Se versiona con git y
+  se comparte con el equipo. No se crea hasta que escribes y guardas. Los contextos de versiones anteriores (en la configuración de
+  Tutti) se siguen usando hasta que los guardes en el proyecto.
 - **Global:** tus preferencias para **todos** los proyectos, en `<config>/tutti/contexto-global.md` (nunca en un repositorio).
 
 Al abrir un agente desde Tutti recibe primero el global y luego el del proyecto: Claude Code como parte de su prompt de sistema y
@@ -235,15 +241,36 @@ OpenCode como archivos de instrucciones. Funciona también si el agente se abre 
 últimos commits), sin dejarle explorar, para gastar muy pocos tokens: con Claude usa el modelo pequeño `haiku`, y si ningún agente
 responde arma un borrador con reglas. Al cambiar de apartado se cancela.
 
+Bajo el editor, el panel **Lo que reciben los agentes** muestra de dónde sale cada parte y cuánto pesa en tokens aproximados (avisa si
+pasa de unos 3 000). Un archivo de `.tutti/steering/` solo se entrega si su cabecera dice `inclusion: always`; los nuevos nacen con
+`inclusion: manual` y no gastan nada.
+
 ![Contexto del proyecto](docs/img/contexto.png)
+
+### La carpeta .tutti
+
+Tutti crea `.tutti/` en cada proyecto que abres, con un `README.md`; se versiona con git y la comparte el equipo. Las **subcarpetas solo
+aparecen cuando añades algo**. La pestaña **Tutti** (`Ctrl+Shift+J`) las muestra:
+
+```
+.tutti/
+├─ specs/      una carpeta por función: requirements.md (EARS), design.md y tasks.md (casillas, con su avance)
+├─ docs/       documentación por categorías (Diátaxis: tutoriales, guías prácticas, referencia, explicación)
+├─ steering/   contexto.md y tus guías para los agentes
+├─ hooks/
+└─ skills/     una carpeta por skill, con su SKILL.md
+```
+
+Los `.md` tienen un botón **Vista / Código** en el editor; los de `.tutti` se abren ya renderizados, con las casillas de `tasks.md`.
+
+![La carpeta .tutti](docs/img/tutti.png)
 
 ### Servidores MCP
 
 Lee, añade y quita los servidores de **Claude Code, OpenCode, Gemini CLI, Codex y Antigravity** (globales, del proyecto y
 `.mcp.json`) usando la CLI de cada agente. En la lista, **cada servidor es una sola tarjeta**: al abrirla ves en qué agentes está
 aplicado, con sus datos (los secretos ocultos hasta que lo pides), y puedes quitarlo de uno o copiarlo a otro. Codex y Antigravity
-solo guardan servidores globales, y la app lo tiene en cuenta al ofrecer destinos. La tarjeta **tutti** es el servidor de la propia
-app (el reparto de tareas) y muestra a qué agentes llega. Las secciones se pliegan.
+solo guardan servidores globales, y la app lo tiene en cuenta al ofrecer destinos. Las secciones se pliegan y tienen su propio scroll.
 
 <table>
 <tr>
@@ -333,7 +360,7 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | `Ctrl+AvPág` / `Ctrl+RePág` | Editor siguiente / anterior |
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
 | `Ctrl+C` / `Ctrl+V` | En terminales y agentes: copiar (con texto seleccionado) / pegar. También `Ctrl+Shift+C`, `Ctrl+Shift+V` y `Shift+Insert` |
-| `Ctrl+Shift+E` · `F` · `A` · `G` · `K` · `X` · `U` | Archivos · Buscar · Agentes · Git · Contexto · MCP · Consumo |
+| `Ctrl+Shift+E` · `F` · `A` · `G` · `J` · `K` · `X` · `U` | Archivos · Buscar · Agentes · Git · Tutti · Contexto · MCP · Consumo |
 
 
 <br />
@@ -354,13 +381,10 @@ Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `yarn 
 ```
 src/
   main/        proceso principal
-    agents/      agentes: detección, terminales (node-pty), reparto de tareas (servidor MCP) y su arranque
-    git/         git y el mensaje de commit con IA
-    context/     contexto del proyecto y su generación
-    usage/       consumo e historial de cada agente
-                 (y aquí: ventana, MCP de los agentes, archivos, ajustes, actualizador)
+    services/     la lógica, una carpeta por tema (agents, git, context, usage, mcp, files, search, settings, updater)
+    utils/       idioma de los mensajes, versión, ruta del shell, autotest
   preload/     el puente seguro hacia la interfaz (window.api)
-  renderer/    interfaz en React + Tailwind (componentes, vistas, estado con zustand)
+  renderer/    interfaz en React + Tailwind (features/ por tema, shared/ y estado con zustand)
   shared/      tipos compartidos
 test/          pruebas (vitest) en test/main y test/renderer, y capture.ts, el modo de capturas
 resources/     ícono de la app
@@ -379,6 +403,7 @@ Todas por variable de entorno:
 | `TUTTI_MCP_LOG=1` | Imprime cada petición que reciben los servidores MCP |
 | `TUTTI_CAPTURE=<carpeta>` | Abre la app con ajustes aislados, recorre las pantallas y guarda una captura de cada una (así se hicieron las de este README) |
 | `TUTTI_CAPTURE_NEW=1` | Con la captura, añade el inicio sin agentes, el contexto del proyecto y las novedades |
+| `TUTTI_CAPTURE_TUTTI=1` | Con la captura, añade la pestaña Tutti y un `.md` en vista, con un proyecto de ejemplo temporal (no escribe en el tuyo) |
 | `TUTTI_CAPTURE_GRAPH=1` · `TUTTI_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
 | `TUTTI_CAPTURE_INTERNAL=1` | Con la captura, coloca la ventana en la pantalla integrada (si hay varias) y ocupando su área útil |
 | `TUTTI_CAPTURE_LANG=en` · `TUTTI_CAPTURE_LIGHT=1` | Con la captura, saca las imágenes en inglés (`es` / `en`) o con el tema claro |

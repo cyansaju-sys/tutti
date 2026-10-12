@@ -7,6 +7,7 @@ import { Menu } from '@/shared/components/Menu'
 import { FIELD, Modal } from '@/shared/components/ui'
 import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '@/shared/lib/format'
 import { useT } from '@/shared/lib/i18n'
+import { useResizeHeight } from '@/shared/lib/useResizeHeight'
 import { basename } from '@/shared/lib/paths'
 import { useStore } from '@/shared/store'
 
@@ -72,15 +73,34 @@ function Card({ u, now }: { u: AgentUsage; now: number }) {
   )
 }
 
-function Section({ title, id, detail, folded, onToggle, children }: { title: string; id: string; detail?: string; folded: boolean; onToggle: (id: string) => void; children: React.ReactNode }) {
+/**
+ * Sección plegable (como las de MCP): título con flecha y contador, contenido con scroll propio y altura ajustable (`resize`), o que ocupa
+ * el espacio libre (`fill`). `footer` queda fijo bajo el scroll: no se desplaza con la lista. La vista no scrollea: lo hace cada sección.
+ */
+function Section({ title, id, detail, count, folded, onToggle, fill = false, resize = false, footer, children }: {
+  title: string; id: string; detail?: string; count?: number; folded: boolean; onToggle: (id: string) => void
+  fill?: boolean; resize?: boolean; footer?: React.ReactNode; children: React.ReactNode
+}) {
+  const t = useT()
+  const size = useResizeHeight(`tutti.usage.${id}.height`)
   return (
-    <section className="flex flex-col gap-2">
-      <button onClick={() => onToggle(id)} className="flex items-center gap-1 rounded-md px-0.5 py-1 text-left transition-colors hover:bg-accent-bg">
+    <section className={clsx('flex min-h-0 flex-col gap-2', fill && !folded ? 'min-h-32 flex-1' : 'shrink')}>
+      <button onClick={() => onToggle(id)} aria-expanded={!folded} className="flex shrink-0 items-center gap-1 rounded-md px-0.5 py-1 text-left transition-colors hover:bg-accent-bg">
         {folded ? <MdKeyboardArrowRight size={16} className="text-muted" /> : <MdKeyboardArrowDown size={16} className="text-muted" />}
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">{title}</span>
+        <span className="text-[12px] font-semibold">{title}</span>
+        {count !== undefined && count > 0 && <span className="rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
         <span className="ml-1 min-w-0 flex-1 truncate text-[10px] text-muted">{detail}</span>
       </button>
-      {!folded && children}
+      {!folded && (
+        <>
+          <div ref={size.body} style={size.height ? { height: size.height } : undefined} className={clsx('sect-scroll flex min-h-0 flex-col gap-2 overflow-y-auto', fill ? 'flex-1' : !size.height && 'max-h-96')}>{children}</div>
+          {footer && <div className="shrink-0">{footer}</div>}
+          {resize && (
+            <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
+              className="group grid h-2 shrink-0 cursor-row-resize touch-none place-items-center"><span className="h-px w-8 rounded bg-line transition-colors group-hover:bg-accent" /></div>
+          )}
+        </>
+      )}
     </section>
   )
 }
@@ -125,15 +145,21 @@ export function UsageView() {
   if (!data.agents.length) return <p className="px-3 text-[12px] text-muted">{t('us.noAgents')}</p>
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto px-2 pb-3">
-      <Section title={t('us.usage')} id="usage" folded={!!folded.usage} onToggle={toggle}>
+    <div className="flex h-full flex-col gap-3 overflow-hidden px-2 pb-3">
+      <Section title={t('us.usage')} id="usage" folded={!!folded.usage} onToggle={toggle} resize>
         {data.agents.map((u) => <Card key={u.command} u={u} now={now} />)}
       </Section>
-      <Section title={t('us.history')} id="history" detail={project ? basename(project) : ''} folded={!!folded.history} onToggle={toggle}>
+      <Section title={t('us.history')} id="history" detail={project ? basename(project) : ''} count={project ? data.history.length : undefined} folded={!!folded.history} onToggle={toggle} fill
+        footer={project && data.history.length > 0 ? (
+          <button onClick={() => setClearing(true)} title={t('us.clearTip')}
+            className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-1.5 text-[12px] text-muted transition-colors hover:border-danger/50 hover:bg-danger/10 hover:text-danger">
+            <MdDeleteSweep size={15} /> {t('us.clear')}
+          </button>
+        ) : undefined}>
         {!project && <p className="px-1 text-[11px] text-muted">{t('us.openProject')}</p>}
         {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">{t('us.noSessions')}</p>}
         <ul className="flex flex-col gap-0.5">
-          {data.history.slice(0, 12).map((s) => {
+          {data.history.slice(0, 100).map((s) => {
             const can = resumeArgs(s.command, s.id) !== null
             return (
               <li key={`${s.command}:${s.id}`} className="group flex items-center rounded-lg transition-colors hover:bg-accent-bg">
@@ -150,12 +176,6 @@ export function UsageView() {
             )
           })}
         </ul>
-        {project && data.history.length > 0 && (
-          <button onClick={() => setClearing(true)} title={t('us.clearTip')}
-            className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-1.5 text-[12px] text-muted transition-colors hover:border-danger/50 hover:bg-danger/10 hover:text-danger">
-            <MdDeleteSweep size={15} /> {t('us.clear')}
-          </button>
-        )}
       </Section>
 
       {menu && (

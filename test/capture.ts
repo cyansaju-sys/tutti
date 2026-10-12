@@ -22,6 +22,11 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     console.log('capturada', name)
   }
   const store = 'window.__tutti.getState()'
+  // los archivos de ejemplo salen del propio proyecto: el de Tutti si es su repositorio, o los de cualquier otro (p. ej. una app de tareas)
+  const pick = (...files: string[]): string => files.find((f) => existsSync(join(project, f))) ?? files[files.length - 1]
+  const isTutti = existsSync(join(project, 'src/main/services/git/git.ts'))
+  const MAIN = pick('src/main/services/git/git.ts', 'app.js'), SECOND = pick('docs/demo/Contador.tsx', 'logic.js'), THIRD = pick('docs/demo/ejemplo.sql', 'style.css')
+  const TERM = isTutti ? ['agente', 'asistente'] : ['tarea', 'pendiente']
   const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
   // TUTTI_CAPTURE_INTERNAL=1: en la pantalla integrada (si hay varias) y ocupando su área útil; si no, un tamaño fijo
   const internal = process.env.TUTTI_CAPTURE_INTERNAL ? screen.getAllDisplays().find((d) => d.internal) : undefined
@@ -37,9 +42,9 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('terminal-sola', 2500)
     await run(`${store}.toggleShell()`)
   }
-  await open('src/main/services/git/git.ts')
+  await open(MAIN)
   await snap('01-archivos-y-editor', 1800)
-  await open('docs/demo/Contador.tsx')
+  await open(SECOND)
   await snap('02-sintaxis-tsx')
   // tema claro, y el menú de ajustes de la barra lateral
   await run(`${store}.setTheme('light')`)
@@ -53,15 +58,15 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)          // y el menú
   await run(`${store}.set({ tab: 'files' })`)
   await run(`${store}.setTheme('${process.env.TUTTI_CAPTURE_LIGHT ? 'light' : 'dark'}')`)
-  await open('docs/demo/ejemplo.sql')
+  await open(THIRD)
   await snap('03-sql')
   // clic derecho en el editor: enviar la selección al agente, copiar, pegar…
-  await open('src/main/services/git/git.ts')
+  await open(MAIN)
   await run(`(() => { const c = document.querySelector('.cm-content'); const r = c.querySelector('.cm-line:nth-child(9)').getBoundingClientRect(); c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: r.left + 80, clientY: r.top + 6 })) })()`)
   await snap('03a-menu-editor', 600)
   await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
   // buscar en el archivo abierto: Ctrl+H abre el cuadro flotante con la fila de reemplazo
-  await open('src/main/services/git/git.ts')
+  await open(MAIN)
   await run(`(() => {
     const type = (el, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })) }
     document.querySelector('.cm-content')?.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true }))
@@ -75,7 +80,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   await run(`(() => {
     const type = (el, value) => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })) }
     const [find, repl] = document.querySelectorAll('input[placeholder="Buscar"], input[placeholder="Reemplazar"]')
-    type(find, 'agente'); if (repl) type(repl, 'asistente')
+    type(find, ${JSON.stringify(TERM[0])}); if (repl) type(repl, ${JSON.stringify(TERM[1])})
   })()`)
   await snap('03c-buscar-en-proyecto', 1500)
   await run(`${store}.set({ tab: 'files' })`)
@@ -148,7 +153,8 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await run(`${store}.set({ panes: [], activePane: null })`)
   }
   if (process.env.TUTTI_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
-    const sample = '# Tutti\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
+    const tuttiSample = '# Tutti\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
+    const sample = isTutti ? tuttiSample : '# Lista de tareas\n\n## Qué es\nAplicación web para llevar una lista de tareas: añadir, editar, filtrar y marcar como hechas, con los datos guardados en el navegador.\n\n## Estructura\n- index.html y style.css: la página\n- app.js: la interfaz\n- logic.js: la lógica, con sus pruebas en logic.test.js\n\n## Cómo se ejecuta y se prueba\n- Abrir index.html en el navegador\n- node --test logic.test.js\n'
     // el ejemplo va a la ubicación antigua (configuración aislada de la captura): así no se crea un AGENTS.md en el proyecto fotografiado
     mkdirSync(dirname(legacyContextFile(project)), { recursive: true })
     writeFileSync(legacyContextFile(project), sample, 'utf8')
@@ -159,6 +165,35 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await run(`${store}.set({ modal: 'news', newsSince: null })`)
     await snap('23-novedades', 800)
     await run(`${store}.set({ modal: null })`)
+  }
+  if (process.env.TUTTI_CAPTURE_TUTTI) {             // la pestaña Tutti y un .md en vista, con un proyecto de ejemplo temporal (nada se escribe en el real)
+    const dir = mkdtempSync(join(tmpdir(), 'tienda-web-'))
+    const put = (file: string, text: string): void => { mkdirSync(dirname(join(dir, file)), { recursive: true }); writeFileSync(join(dir, file), text, 'utf8') }
+    put('package.json', '{ "name": "tienda-web", "version": "0.4.0" }\n'); put('src/index.ts', 'export {}\n')
+    put('.tutti/README.md', '# Tutti\n')
+    put('.tutti/specs/carrito-de-compra/requirements.md', '# Requisitos: Carrito de compra\n\n## Introducción\n\nQue el cliente pueda reunir productos y pagarlos en un solo paso.\n\n## Requisitos\n\n### 1. Añadir productos\n\n**Historia de usuario:** Como cliente, quiero añadir un producto al carrito, para comprarlo después.\n\n**Criterios de aceptación (EARS):**\n\n1. CUANDO el cliente pulsa «Añadir» EL SISTEMA DEBERÁ sumar el producto al carrito y mostrar el total.\n2. MIENTRAS el producto no tenga existencias EL SISTEMA DEBERÁ ocultar el botón «Añadir».\n')
+    put('.tutti/specs/carrito-de-compra/design.md', '# Diseño: Carrito de compra\n\n## Arquitectura\n\n## Modelo de datos\n')
+    put('.tutti/specs/carrito-de-compra/tasks.md', '# Tareas: Carrito de compra\n\n- [x] 1. Modelo del carrito\n  - [x] 1.1 Tipos y estado\n  - _Requisitos: 1_\n- [x] 2. Botón «Añadir»\n- [ ] 3. Total y existencias\n  - [ ] 3.1 Calcular el total\n  - [ ] 3.2 Ocultar sin existencias\n- [ ] 4. Pruebas\n')
+    put('.tutti/specs/pagos/requirements.md', '# Requisitos: Pagos\n'); put('.tutti/specs/pagos/tasks.md', '# Tareas: Pagos\n\n- [ ] 1. Elegir pasarela\n- [ ] 2. Confirmación\n')
+    put('.tutti/docs/how-to/desplegar.md', '# Cómo desplegar\n\n1. Ejecuta `npm run build`.\n2. Sube la carpeta `dist`.\n'); put('.tutti/docs/explanation/arquitectura.md', '# Arquitectura\n')
+    put('.tutti/docs/reference/api.md', '# API\n')
+    put('.tutti/steering/contexto.md', '# Tienda web\n\nTienda en línea con React y una API REST.\n'); put('.tutti/steering/estilo.md', '---\ninclusion: always\n---\n\n# Estilo\n\nTypeScript estricto, sin punto y coma.\n')
+    put('.tutti/steering/despliegue.md', '---\ninclusion: manual\n---\n\n# Despliegue\n')
+    put('.tutti/skills/revisar-pr/SKILL.md', '---\nname: revisar-pr\ndescription: Revisa un pull request\n---\n\n# revisar-pr\n')
+    execFileSync('git', ['init', '-q'], { cwd: dir })
+    const recent = (await run(`${store}.recentProjects`)) as string[]                // el proyecto de ejemplo no debe quedar en la lista de recientes de las demás capturas
+    await run(`localStorage.setItem('tutti.tutti.mcp.collapsed', '1')`)             // sin los servidores MCP reales del equipo que hace la captura
+    await run(`${store}.setProject(${JSON.stringify(dir)})`)
+    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'tutti' })`)
+    await sleep(1800)
+    await run(`[...document.querySelectorAll('button')].filter((b) => /^(carrito-de-compra|Guías prácticas|How-to guides)/.test(b.textContent.trim())).forEach((b) => b.click())`)         // abre la spec y una categoría de la documentación
+    await snap('24-tutti', 1000)
+    await run(`${store}.openDoc(${JSON.stringify(join(dir, '.tutti/specs/carrito-de-compra/tasks.md'))})`)
+    await run(`${store}.set({ tab: 'tutti' })`)
+    await snap('25-md-vista', 1200)
+    await run(`${store}.set({ tab: 'files', docs: [], activeDoc: null })`)
+    await run(`${store}.setProject(${JSON.stringify(project)})`)
+    await run(`${store}.set({ recentProjects: ${JSON.stringify(recent)} })`)
   }
   if (process.env.TUTTI_CAPTURE_UPDATE) {            // el botón de actualización en sus estados (el estado real lo pone el actualizador)
     await run(`${store}.set({ modal: null, tab: 'files', update: { status: 'available', version: '0.2.1', canInstall: true, url: '' } })`)
@@ -177,7 +212,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   if (process.env.TUTTI_CAPTURE_GRAPH) {             // el grafo de git del proyecto abierto
     await run(`${store}.openGraph()`)
     await snap('18-grafo', 1500)
-    await run(`[...document.querySelectorAll('[title*="Clic: ver"]')].find((e) => e.textContent.includes("Merge branch"))?.click()`)
+    await run(`(() => { const rows = [...document.querySelectorAll('[title*="Clic: ver"]')]; (rows.find((e) => e.textContent.includes("Merge branch")) ?? rows[rows.length - 1])?.click() })()`)
     await snap('19-grafo-detalle', 1200)
     await run(`${store}.set({ modal: null })`)
   }
@@ -188,17 +223,23 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('13-consumo-menu', 500)
   }
   if (process.env.TUTTI_CAPTURE_MCP) {              // requiere servidores de ejemplo en el HOME (ver docs)
-    await run(`${store}.set({ modal: null, tab: 'mcp' })`)
+    await run(`${store}.set({ modal: null, tab: 'mcp', docs: [], activeDoc: null })`)
     await snap('09-mcp', 5000)
     // la tienda: buscar en el registro y abrir la ficha de un servidor
     await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'filesystem'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-    await snap('09b-mcp-tienda', 7000)
-    await run(`document.querySelector('[title*="/"]')?.click()`)
-    await snap('09c-mcp-ficha', 700)
-    await run(`[...document.querySelectorAll('button')].find((b) => /Continuar|Continue/.test(b.textContent))?.click()`)
-    await snap('09d-mcp-instalar', 700)
-    await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
-    await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+    await sleep(14000)
+    // sin conexión al registro no hay resultados que fotografiar: se omiten la tienda, la ficha y el instalar (y se conservan las imágenes que haya)
+    const offline = (await run(`/No se pudo consultar|Could not reach|Buscando en el registro|Searching the registry/.test(document.body.textContent)`)) as boolean
+    if (offline) console.log('registro MCP sin conexión: se omiten 09b, 09c y 09d')
+    else {
+      await snap('09b-mcp-tienda', 300)
+      await run(`document.querySelector('[title*="/"]')?.click()`)
+      await snap('09c-mcp-ficha', 700)
+      await run(`[...document.querySelectorAll('button')].find((b) => /Continuar|Continue/.test(b.textContent))?.click()`)
+      await snap('09d-mcp-instalar', 700)
+      await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
+    }
+    await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); if (!i) return; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
     await sleep(800)
     await run(`document.querySelector('[title="Ver detalles"]')?.click()`)
     await snap('10-mcp-detalles', 600)

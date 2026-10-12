@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdAccountTree, MdClose } from 'react-icons/md'
+import { MdAccountTree, MdClose, MdCode, MdVisibility } from 'react-icons/md'
 import type { GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { t, useT } from '@/shared/lib/i18n'
@@ -12,6 +12,7 @@ import { applyHunks, textHunks, type TextHunk } from '@/features/files/lib/textH
 import { isDirty, useStore, type Doc } from '@/shared/store'
 import { CodeEditor, type ExternalChange } from './CodeEditor'
 import { DiffView } from './DiffView'
+import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '../../git/components/GitGraph'
 
 export async function saveDoc(doc: Doc): Promise<void> {
@@ -48,11 +49,15 @@ export function EditorArea() {
   const closeDoc = useStore((s) => s.closeDoc)
   const updateDocText = useStore((s) => s.updateDocText)
   const [marks, setMarks] = useState<GitMarks>({})
+  const [previews, setPreviews] = useState<Record<string, boolean>>({})        // vista Markdown por archivo (lo que no está aquí usa su valor por defecto)
   // cambios externos por decidir, por archivo: sobreviven al cambiar de pestaña
   const [pendings, setPendings] = useState<Record<string, PendingExternal>>({})
   const pendingsRef = useRef(pendings)
   pendingsRef.current = pendings
   const doc = docs.find((d) => d.path === activePath) ?? null
+  // los .md se pueden ver como Markdown; los de la carpeta .tutti se abren así por defecto
+  const isMd = !!doc && doc.kind === 'text' && /\.(md|markdown)$/i.test(doc.path)
+  const preview = isMd && (previews[doc!.path] ?? /[\\/]\.tutti[\\/]/.test(doc!.path))
   const pending = doc ? pendings[doc.path] ?? null : null
   const setPending = (path: string, value: PendingExternal | null): void =>
     setPendings((all) => { const next = { ...all }; if (value) next[path] = value; else delete next[path]; return next })
@@ -177,7 +182,15 @@ export function EditorArea() {
               </span>
             ))}
           </div>
-          <span className="shrink-0 pl-3 text-[10px] text-muted">{doc.kind === 'diff' ? t('ed.comparison') : languageName(doc.title)}</span>
+          <span className="flex shrink-0 items-center gap-2 pl-3 text-[10px] text-muted">
+            {isMd && (
+              <button onClick={() => setPreviews((p) => ({ ...p, [doc.path]: !preview }))} title={preview ? t('ed.showSource') : t('ed.showPreview')}
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors hover:bg-accent-bg hover:text-accent">
+                {preview ? <><MdCode size={14} /> {t('ed.source')}</> : <><MdVisibility size={14} /> {t('ed.preview')}</>}
+              </button>
+            )}
+            {doc.kind === 'diff' ? t('ed.comparison') : languageName(doc.title)}
+          </span>
         </div>
       )}
       {doc && (doc.readOnly || !editEnabled) && doc.kind === 'text' && (
@@ -213,7 +226,22 @@ export function EditorArea() {
           </div>
         </div>
       )}
-      {doc?.kind === 'text' && (
+      {preview && doc && (() => {
+        const { meta, body } = splitFrontMatter(doc.text)
+        return (
+          <div onDoubleClick={() => setPreviews((p) => ({ ...p, [doc.path]: false }))} title={t('ed.showSource')} className="selectable min-h-0 flex-1 cursor-text overflow-y-auto px-6 py-5">
+            <div className="mx-auto max-w-3xl">
+              {meta.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {meta.map(([k, v]) => <span key={k} className="rounded-full bg-ov/[0.07] px-2.5 py-0.5 text-[10px] text-muted"><b className="font-semibold text-accent">{k}</b> {v}</span>)}
+                </div>
+              )}
+              {body.trim() ? <Markdown text={body} /> : <p className="text-[12px] text-muted">{t('ctx.emptyView')}</p>}
+            </div>
+          </div>
+        )
+      })()}
+      {doc?.kind === 'text' && !preview && (
         <CodeEditor
           path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled || !!visiblePending} marks={marks} changes={externalChanges}
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}

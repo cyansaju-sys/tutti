@@ -12,7 +12,7 @@ import { useStore } from '@/shared/store'
 
 const REFRESH_MS = 5000
 /** El botón que ocupa todo el ancho donde no hay nada todavía. */
-const EMPTY_BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-2 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent'
+const EMPTY_BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent'
 type Kind = 'specs' | 'hooks' | 'steering' | 'skills' | 'docs'
 /** Un archivo de steering nuevo: `inclusion: manual` no gasta tokens; cámbialo a `always` para que Tutti lo entregue a cada agente. */
 const STEERING_TEMPLATE = (name: string): string => `---\ninclusion: manual\n---\n\n# ${name}\n`
@@ -26,10 +26,10 @@ function Fold({ id, title, count, children }: { id: string; title: string; count
   return (
     <section className="mb-2">
       <div className="flex items-center">
-        <button onClick={toggle} aria-expanded={!collapsed} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-1 py-1 text-left text-muted/80 transition-colors hover:text-text">
+        <button onClick={toggle} aria-expanded={!collapsed} className="flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-1 text-left text-text transition-colors hover:text-accent">
           <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
-          <h4 className="truncate text-[10px] font-semibold uppercase tracking-wider">{title}</h4>
-          {count !== undefined && <span className="ml-1 rounded-full bg-ov/[0.07] px-1.5 text-[9px] font-medium">{count}</span>}
+          <h4 className="truncate text-[12px] font-semibold">{title}</h4>
+          {count !== undefined && <span className="ml-1 rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
         </button>
       </div>
       {!collapsed && children}

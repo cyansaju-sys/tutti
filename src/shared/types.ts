@@ -123,6 +123,7 @@ export interface Api {
     mtime(path: string): Promise<number>
     create(dir: string, name: string, isDir: boolean): Promise<McpResult>
     rename(path: string, name: string): Promise<McpResult>
+    move(path: string, dir: string): Promise<McpResult>              // a otra carpeta; la ruta nueva va en `message`
     trash(path: string): Promise<McpResult>
   }
   git: {

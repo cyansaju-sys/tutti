@@ -30,7 +30,7 @@ export function inline(text: string): ReactNode[] {
 type Block =
   | { kind: 'h'; level: number; text: string }
   | { kind: 'p'; text: string }
-  | { kind: 'ul' | 'ol'; items: Array<{ depth: number; text: string }> }
+  | { kind: 'ul' | 'ol'; items: Array<{ depth: number; text: string; done?: boolean }> }      // done: casilla «- [ ]» / «- [x]»
   | { kind: 'quote'; text: string }
   | { kind: 'code'; text: string }
   | { kind: 'hr' }
@@ -56,7 +56,9 @@ export function parseBlocks(source: string): Block[] {
     else if (li) {
       flush()
       const kind = /\d/.test(li[2]) ? 'ol' : 'ul'
-      const item = { depth: Math.min(3, Math.floor(li[1].replace(/\t/g, '  ').length / 2)), text: li[3] }
+      const task = /^\[( |x|X)\]\s+(.*)$/.exec(li[3])
+      const item: { depth: number; text: string; done?: boolean } = { depth: Math.min(3, Math.floor(li[1].replace(/\t/g, '  ').length / 2)), text: task ? task[2] : li[3] }
+      if (task) item.done = task[1] !== ' '
       const prev = blocks[blocks.length - 1]
       if (prev && prev.kind === kind) prev.items.push(item)
       else blocks.push({ kind, items: [item] })
@@ -89,7 +91,14 @@ export function Markdown({ text }: { text: string }) {
             const Tag = b.kind
             return (
               <Tag key={i} className={`m-0 list-outside ${b.kind === 'ul' ? 'list-disc' : 'list-decimal'} pl-5 marker:text-accent`}>
-                {b.items.map((it, j) => <li key={j} style={{ marginLeft: it.depth * 16 }}>{inline(it.text)}</li>)}
+                {b.items.map((it, j) => it.done === undefined
+                  ? <li key={j} style={{ marginLeft: it.depth * 16 }}>{inline(it.text)}</li>
+                  : (
+                    <li key={j} style={{ marginLeft: it.depth * 16 }} className="-ml-5 flex list-none items-start gap-2">
+                      <span aria-hidden className={`mt-[3px] grid size-3.5 shrink-0 place-items-center rounded-[3px] border text-[10px] leading-none ${it.done ? 'border-accent bg-accent text-bg' : 'border-line'}`}>{it.done ? '✓' : ''}</span>
+                      <span className={it.done ? 'text-muted line-through' : undefined}>{inline(it.text)}</span>
+                    </li>
+                  ))}
               </Tag>
             )
           }
@@ -97,4 +106,13 @@ export function Markdown({ text }: { text: string }) {
       })}
     </div>
   )
+}
+
+/** Separa la cabecera (--- clave: valor ---) de un archivo, como la de los steering de .tutti; devuelve sus pares y el resto del texto. */
+export function splitFrontMatter(text: string): { meta: Array<[string, string]>; body: string } {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text)
+  if (!m) return { meta: [], body: text }
+  const meta: Array<[string, string]> = []
+  for (const line of m[1].split('\n')) { const kv = /^([\w-]+):\s*(.*)$/.exec(line.trim()); if (kv) meta.push([kv[1], kv[2]]) }
+  return { meta, body: text.slice(m[0].length) }
 }
