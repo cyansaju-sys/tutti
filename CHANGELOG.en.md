@@ -2,6 +2,19 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.2.4
+
+### Functional
+
+- **Specs with OpenSpec:** the Specs section of the Tutti tab now uses [OpenSpec](https://openspec.dev) instead of Kiro's flow. With its CLI, it starts `openspec/` in the project and shows the configuration, the changes in progress with their progress and the current specs. Each change is proposed with a form (with templates or written by the agent) and can be implemented with the agent, validated and archived. If you do not have the CLI, Tutti gives you the install command.
+- **Hooks are clearer to authorize:** the fixed notice is gone; when you press a hook's switch in an unauthorized project, Tutti asks you to allow hooks. Until they are allowed, their switches look off.
+- **No more repeated requests to the agent:** when asking an agent for something from the Tutti tab, it no longer received the same request several times. Agents that receive the task at launch are not sent it again, and the others are sent it at most twice.
+- **Fewer notices:** we removed the ones that only confirmed something obvious (sent to the agent, saved, copied, added…). Errors and important results stay.
+
+### Aesthetic
+
+- **Cleaner MCP section in Tutti:** without the “Installed” title and with the same maximum height and scroll as the store.
+
 ## 1.2.3
 
 ### Functional

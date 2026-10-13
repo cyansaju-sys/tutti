@@ -2,6 +2,19 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.2.4
+
+### Funcional
+
+- **Specs con OpenSpec:** la sección Specs de la pestaña Tutti usa ahora [OpenSpec](https://openspec.dev) en lugar del flujo de Kiro. Con su CLI, inicia `openspec/` en el proyecto y muestra la configuración, los cambios en marcha con su avance y las specs vigentes. Cada cambio se propone con un formulario (con plantillas o redactado por el agente) y se puede implementar con el agente, validar y archivar. Si no tienes el CLI, Tutti te da el comando de instalación.
+- **Hooks más claros de autorizar:** el aviso fijo desaparece; al pulsar el interruptor de un hook en un proyecto sin autorizar, Tutti pide permitir los hooks. Mientras no se permitan, sus interruptores se ven apagados.
+- **Sin peticiones repetidas al agente:** al pedirle algo a un agente desde la pestaña Tutti, ya no recibía la misma petición varias veces. A los agentes que reciben la tarea al arrancar no se les reenvía, y a los demás se les reenvía como mucho dos veces.
+- **Menos avisos:** quitamos los que solo confirmaban algo evidente (enviado al agente, guardado, copiado, añadido…). Se mantienen los errores y los resultados importantes.
+
+### Estético
+
+- **Sección MCP de Tutti más limpia:** sin el título «Instalados» y con la misma altura máxima y scroll que la tienda.
+
 ## 1.2.3
 
 ### Funcional
