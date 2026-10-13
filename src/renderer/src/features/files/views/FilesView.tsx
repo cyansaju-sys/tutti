@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdChevronRight, MdContentCopy, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
+import { MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
 import type { DirEntry } from '@shared/types'
 import { Menu } from '@/shared/components/Menu'
 import { Modal } from '@/shared/components/ui'
@@ -39,6 +39,7 @@ export function FilesView() {
   const [rootMenu, setRootMenu] = useState<DOMRect | null>(null)      // clic en un espacio vacío: crear en la raíz del proyecto
   const toast = useStore((s) => s.toast)
   const [ask, setAsk] = useState<Ask | null>(null)
+  const [clip, setClip] = useState<{ paths: string[]; cut: boolean } | null>(null)          // el portapapeles de archivos de Tutti: copiar o cortar y pegar en otra carpeta
   const [rootOpen, setRootOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rootCollapsed') !== '1' } catch { return true } })      // la raíz del proyecto es una sección plegable
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
   const box = useRef<HTMLDivElement>(null)
@@ -172,6 +173,23 @@ export function FilesView() {
     setAsk({ kind: 'create', dir, isDir })
   }
 
+  /** Pone en el portapapeles de archivos lo marcado (sin las que ya van dentro de otra carpeta marcada). */
+  const clipEntries = (entries: DirEntry[], cut: boolean): void => {
+    const paths = entries.map((e) => e.path)
+    setClip({ paths: paths.filter((p) => !paths.some((o) => o !== p && (p.startsWith(o + '/') || p.startsWith(o + '\\')))), cut })
+  }
+  /** Pega en `dir`: cortar mueve (y vacía el portapapeles), copiar duplica sin pisar nada. */
+  const pasteInto = async (dir: string): Promise<void> => {
+    if (!clip) return
+    if (clip.cut) { await moveTo(clip.paths, dir); setClip(null); return }
+    for (const path of clip.paths) {
+      const res = await window.api.fs.copy(path, dir)
+      if (!res.ok) toast(res.message, 'error')
+    }
+    setExpanded((p) => new Set(p).add(dir)); reload(); void load(dir)
+  }
+  const pasteDirOf = (entry: DirEntry): string => (entry.isDir ? entry.path : dirname(entry.path))
+
   const copy = (text: string): void => { navigator.clipboard.writeText(text).catch(() => toast(t('fs.copyFailed'), 'error')) }
 
   /** Escribe la ruta en el agente activo (sin Enter, para que el usuario siga escribiendo). */
@@ -210,6 +228,14 @@ export function FilesView() {
 
   // navegación con el teclado: ↑↓ mueven la selección, → abre, ← cierra o sube, Enter abre, Esc devuelve el teclado a la terminal
   const onKeyDown = (e: React.KeyboardEvent): void => {
+    const k = e.key.toLowerCase()
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (k === 'c' || k === 'x' || k === 'v')) {          // Ctrl+C / Ctrl+X / Ctrl+V sobre el árbol
+      const cur = rows.find((r) => r.entry.path === cursor)
+      if (k === 'v') { void pasteInto(cur ? pasteDirOf(cur.entry) : project!); e.preventDefault(); return }
+      const entries = selected.size > 0 ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : cur ? [cur.entry] : []
+      if (entries.length) { clipEntries(entries, k === 'x'); e.preventDefault() }
+      return
+    }
     const menuKey = e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')
     if (e.ctrlKey || e.altKey || e.metaKey) return
     if (menuKey) {          // la tecla de menú abre el de la fila marcada (la que sigue al ratón), no la que tenga el foco del navegador
@@ -330,12 +356,15 @@ export function FilesView() {
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
           { label: t('fs.newFile'), icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },
-          { label: t('fs.newFolder'), icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(project, true) }
+          { label: t('fs.newFolder'), icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(project, true) },
+          { label: t('fs.paste'), separator: true, icon: <MdContentPaste size={14} />, hidden: !clip, onClick: () => void pasteInto(project) }
         ]} />
       )}
       {menu && targetsOf(menu.entry).length > 1 && (
         <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
           { label: t('fs.sendMany', { n: targetsOf(menu.entry).length }), icon: <MdSend size={14} />, onClick: () => sendToAgent(targetsOf(menu.entry)) },
+          { label: t('fs.cut'), icon: <MdContentCut size={14} />, onClick: () => clipEntries(targetsOf(menu.entry), true) },
+          { label: t('fs.copyEntry'), icon: <MdContentCopy size={14} />, onClick: () => clipEntries(targetsOf(menu.entry), false) },
           { label: t('fs.copyMany', { n: targetsOf(menu.entry).length }), icon: <MdLink size={14} />, onClick: () => copy(targetsOf(menu.entry).map((e) => toPosix(relative(project, e.path))).join('\n')) },
           { label: t('fs.deleteMany', { n: targetsOf(menu.entry).length }), separator: true, icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: targetsOf(menu.entry) }) }
         ]} />
@@ -345,6 +374,9 @@ export function FilesView() {
           { label: t('fs.sendToAgent'), icon: <MdSend size={14} />, onClick: () => sendToAgent([menu.entry]) },
           { label: t('fs.newFile'), separator: true, icon: <MdNoteAdd size={14} />, onClick: () => startCreate(menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), false) },
           { label: t('fs.newFolder'), icon: <MdCreateNewFolder size={14} />, onClick: () => startCreate(menu.entry.isDir ? menu.entry.path : dirname(menu.entry.path), true) },
+          { label: t('fs.cut'), separator: true, icon: <MdContentCut size={14} />, onClick: () => clipEntries([menu.entry], true) },
+          { label: t('fs.copyEntry'), icon: <MdContentCopy size={14} />, onClick: () => clipEntries([menu.entry], false) },
+          { label: t('fs.paste'), icon: <MdContentPaste size={14} />, hidden: !clip, onClick: () => void pasteInto(pasteDirOf(menu.entry)) },
           { label: t('fs.rename'), separator: true, icon: <MdDriveFileRenameOutline size={14} />, onClick: () => setAsk({ kind: 'rename', entry: menu.entry }) },
           { label: t('fs.copyPath'), icon: <MdContentCopy size={14} />, onClick: () => copy(menu.entry.path) },
           { label: t('fs.copyRelative'), icon: <MdLink size={14} />, onClick: () => copy(toPosix(relative(project, menu.entry.path))) },

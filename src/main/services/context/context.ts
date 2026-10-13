@@ -145,7 +145,8 @@ export function readContext(project: string): { files: string[]; text: string } 
   const parts = [
     { file: globalContextFile(), text: readOne(globalContextFile()), native: false },
     { file: projectText ? mine : legacyContextFile(project), text: projectText || configText, native: mine === agentsFile(project) && !!projectText },
-    ...(steering?.text ? [{ file: steeringFile(project, steering.text), text: steering.text, native: false }] : [])
+    ...(steering?.text ? [{ file: steeringFile(project, steering.text), text: steering.text, native: false }] : []),
+    ...(existsSync(agentsFile(project)) && existsSync(tuttiDir(project)) ? [{ file: join(tuttiDir(project), 'README.md'), text: tm('m.ctx.tuttiRef'), native: true }] : [])
   ].filter((p) => p.text)
   return parts.length ? { files: parts.filter((p) => !p.native).map((p) => p.file), text: parts.map((p) => p.text).join('\n\n') } : null
 }
