@@ -2,6 +2,14 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.0
+
+### Funcional
+
+- **AGENTS.md desde Tutti:** la pestaña Tutti puede crear, actualizar y quitar el `AGENTS.md` del proyecto, y los agentes reciben su contexto junto con `.tutti`.
+- **MCP sincronizados entre agentes:** prueba, edita y sincroniza tus servidores MCP entre agentes, o estandarízalos para que todos usen la misma configuración.
+- **Nuevos agentes:** Cursor y Qwen se suman a la gestión de MCP.
+
 ## 1.2.4
 
 ### Funcional
