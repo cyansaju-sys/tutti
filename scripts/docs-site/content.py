@@ -100,6 +100,7 @@ sec('archivos', 'Archivos y editor', 'Files and editor', '''
 <tr><th>Acción</th><th>Qué hace</th></tr>
 <tr><td>Enviar al agente</td><td>Escribe la ruta en el prompt del agente activo (<code>@ruta</code> en los que la entienden), sin pulsar Enter</td></tr>
 <tr><td>Nuevo archivo / Nueva carpeta</td><td>Los crea dentro de la carpeta; el archivo se abre en el editor</td></tr>
+<tr><td>Cortar / Copiar / Pegar</td><td>También con <kbd>Ctrl</kbd>+<kbd>X</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> y <kbd>Ctrl</kbd>+<kbd>V</kbd>. Pegar en un archivo lo hace en su carpeta; si el nombre ya existe, la copia se llama «nombre (2)» y no pisa nada. Cortar mueve y las pestañas abiertas siguen al archivo</td></tr>
 <tr><td>Renombrar</td><td>Las pestañas abiertas siguen el cambio de nombre</td></tr>
 <tr><td>Copiar ruta / ruta relativa</td><td>Al portapapeles</td></tr>
 <tr><td>Borrar</td><td>Pide confirmación y lo manda a la <strong>papelera</strong> (se puede recuperar)</td></tr>
@@ -135,6 +136,7 @@ sec('archivos', 'Archivos y editor', 'Files and editor', '''
 <tr><th>Action</th><th>What it does</th></tr>
 <tr><td>Send to agent</td><td>Types the path into the active agent's prompt (<code>@path</code> for the ones that understand it), without pressing Enter</td></tr>
 <tr><td>New file / New folder</td><td>Creates them inside the folder; the file opens in the editor</td></tr>
+<tr><td>Cut / Copy / Paste</td><td>Also with <kbd>Ctrl</kbd>+<kbd>X</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> and <kbd>Ctrl</kbd>+<kbd>V</kbd>. Pasting on a file does it in its folder; if the name already exists, the copy is named “name (2)” and nothing is overwritten. Cutting moves it and open tabs follow the file</td></tr>
 <tr><td>Rename</td><td>Open tabs follow the rename</td></tr>
 <tr><td>Copy path / relative path</td><td>To the clipboard</td></tr>
 <tr><td>Delete</td><td>Asks for confirmation and sends it to the <strong>trash</strong> (recoverable)</td></tr>
@@ -341,7 +343,7 @@ sec('tutti', 'La pestaña Tutti', 'The Tutti tab', '''
 <table>
 <tr><th>Sección</th><th>Qué muestra</th><th>El <strong>+</strong> hace…</th></tr>
 <tr><td><strong>Documentación</strong></td><td>Las categorías (Diátaxis) que ya tienen documentos</td><td>Pide el nombre y la categoría y abre el documento</td></tr>
-<tr><td><strong>Specs</strong></td><td>Una carpeta por spec, con su avance (<code>2/5</code>) y una etiqueta roja si corrige un error</td><td>Abre el formulario guiado, en una pestaña del editor</td></tr>
+<tr><td><strong>Specs (OpenSpec)</strong></td><td>La configuración, los cambios en marcha con su avance (<code>2/5</code>) y las specs vigentes de <code>openspec/</code></td><td>Abre el formulario para proponer un cambio, en una pestaña del editor</td></tr>
 <tr><td><strong>Hooks</strong></td><td>Cada hook con su evento y un interruptor para activarlo</td><td>Abre el formulario para crear un hook</td></tr>
 <tr><td><strong>Steering</strong></td><td>Las guías, con su modo (Siempre, Por archivos, Manual, Automático)</td><td>Abre el formulario del steering y de los archivos base</td></tr>
 <tr><td><strong>Skills</strong></td><td>Una carpeta por skill; al pulsar se abre su <code>SKILL.md</code></td><td>Abre el formulario de la skill (nombre, cuándo usarla e instrucciones)</td></tr>
@@ -349,7 +351,7 @@ sec('tutti', 'La pestaña Tutti', 'The Tutti tab', '''
 </table>
 <p>Cada sección se pliega (y se recuerda). Si una sección está vacía, en lugar de una lista verás un botón de ancho completo para crear el primer elemento. La carpeta <code>.tutti</code> y sus subcarpetas <strong>no se crean hasta que añades algo</strong>: abrir un proyecto o mirar la pestaña no escribe nada, salvo el <code>README.md</code> de <code>.tutti</code>.</p>
 <h3>Formularios en pestañas del editor</h3>
-<p>Crear una spec, un hook o un steering abre un <strong>formulario como una pestaña más del editor</strong> (junto a tus archivos), no una ventana flotante. Al terminar, la pestaña pasa al archivo recién creado. Si no hay un agente abierto, las opciones que le piden algo al agente salen desactivadas, con la explicación.</p>
+<p>Proponer un cambio, crear un hook o un steering abre un <strong>formulario como una pestaña más del editor</strong> (junto a tus archivos), no una ventana flotante. Al terminar, la pestaña pasa al archivo recién creado. Si no hay un agente abierto, las opciones que le piden algo al agente salen desactivadas, con la explicación.</p>
 <h3>Ver los .md como Markdown</h3>
 <p>Los archivos <code>.md</code> tienen un botón <strong>Vista / Código</strong> en la barra de ruta del editor. Los de <code>.tutti</code> se abren ya renderizados, con las casillas de <code>tasks.md</code> marcadas y las etiquetas de la cabecera de un steering; doble clic vuelve al código.</p>
 <img src="img/md-vista.png" alt="Un archivo Markdown en vista" loading="lazy" />
@@ -361,7 +363,7 @@ sec('tutti', 'La pestaña Tutti', 'The Tutti tab', '''
 <table>
 <tr><th>Section</th><th>What it shows</th><th>The <strong>+</strong> does…</th></tr>
 <tr><td><strong>Documentation</strong></td><td>The categories (Diátaxis) that already have documents</td><td>Asks for the name and the category and opens the document</td></tr>
-<tr><td><strong>Specs</strong></td><td>One folder per spec, with its progress (<code>2/5</code>) and a red tag if it fixes a bug</td><td>Opens the guided form, in an editor tab</td></tr>
+<tr><td><strong>Specs (OpenSpec)</strong></td><td>The configuration, the changes in progress with their progress (<code>2/5</code>) and the current specs in <code>openspec/</code></td><td>Opens the form to propose a change, in an editor tab</td></tr>
 <tr><td><strong>Hooks</strong></td><td>Each hook with its event and a switch to turn it on</td><td>Opens the form to create a hook</td></tr>
 <tr><td><strong>Steering</strong></td><td>The guides, with their mode (Always, By files, Manual, Automatic)</td><td>Opens the steering form and the foundation files</td></tr>
 <tr><td><strong>Skills</strong></td><td>One folder per skill; clicking opens its <code>SKILL.md</code></td><td>Opens the skill form (name, when to use it and instructions)</td></tr>
@@ -369,7 +371,7 @@ sec('tutti', 'La pestaña Tutti', 'The Tutti tab', '''
 </table>
 <p>Each section folds (and remembers it). When a section is empty, instead of a list you see a full-width button to create the first item. The <code>.tutti</code> folder and its subfolders are <strong>not created until you add something</strong>: opening a project or looking at the tab writes nothing, except the <code>README.md</code> in <code>.tutti</code>.</p>
 <h3>Forms in editor tabs</h3>
-<p>Creating a spec, a hook or a steering file opens a <strong>form as one more editor tab</strong> (next to your files), not a floating window. When you finish, the tab turns into the file just created. If no agent is open, the options that ask the agent for something are disabled, with the explanation.</p>
+<p>Proposing a change, creating a hook or a steering file opens a <strong>form as one more editor tab</strong> (next to your files), not a floating window. When you finish, the tab turns into the file just created. If no agent is open, the options that ask the agent for something are disabled, with the explanation.</p>
 <h3>Viewing .md files as Markdown</h3>
 <p><code>.md</code> files have a <strong>Preview / Source</strong> button in the editor's breadcrumb bar. Those in <code>.tutti</code> open already rendered, with the <code>tasks.md</code> checkboxes ticked and a steering file's header as tags; double-click goes back to the source.</p>
 <img src="img/md-vista.png" alt="A Markdown file in preview" loading="lazy" />
@@ -380,25 +382,28 @@ sec('dottutti', 'La carpeta .tutti', 'The .tutti folder', '''
 <p>Tutti crea una carpeta <code>.tutti</code> en cada proyecto que abres, con un <code>README.md</code> que explica su contenido. Es texto plano (Markdown y JSON): se versiona con git, se revisa como cualquier cambio y la comparte todo el equipo. Nada sale de tu equipo.</p>
 <pre><code>.tutti/
 ├─ README.md
-├─ specs/      una carpeta por función o error: requirements.md (o bugfix.md), design.md, tasks.md
 ├─ docs/       documentación por categorías (tutorials, how-to, reference, explanation)
 ├─ steering/   contexto.md y las guías para los agentes (product.md, tech.md…)
 ├─ hooks/      un .json por hook (formato de Kiro)
 └─ skills/     una carpeta por skill, con su SKILL.md</code></pre>
 <p>Las <strong>subcarpetas aparecen solo cuando añades su primer elemento</strong>, y se crean todas desde la pestaña <a href="#tutti">Tutti</a> (o a mano: Tutti lee lo que haya).</p>
-<p>Siempre que una acción le pida algo a un agente (redactar una spec, un hook, una skill o el steering base, ejecutar tareas…), puedes <strong>elegir el agente</strong>: uno de los que ya tienes abiertos, que recibe la petición en su panel, o cualquiera de los instalados, que Tutti <strong>abre con la petición como tarea inicial</strong>. Por defecto va al agente activo, o al primero instalado si no hay ninguno abierto.</p>
-<h3>specs/</h3>
-<img src="img/spec-formulario.png" alt="El formulario para crear una spec" loading="lazy" />
-<p>Una spec es una carpeta con tres archivos, como en Kiro: <code>requirements.md</code> (historia de usuario y criterios en formato EARS: «CUANDO … EL SISTEMA DEBERÁ …»), <code>design.md</code> (arquitectura, componentes, datos, errores y pruebas) y <code>tasks.md</code> (casillas <code>- [ ]</code>, también anidadas). En la lista ves el avance de cada una, por ejemplo <code>2/5</code>.</p>
-<p>El formulario guiado pregunta lo mismo que Kiro: ¿una <em>funcionalidad</em> o <em>corregir un error</em>?, qué quieres y, para una funcionalidad, si empezar por <em>requisitos</em> o por el <em>diseño</em>. Un error crea <code>bugfix.md</code> en lugar de <code>requirements.md</code>, con tres secciones: comportamiento actual (el defecto), esperado (la corrección) y el que no debe cambiar (prevención de regresiones, «DEBERÁ SEGUIR …»); su lista de tareas empieza por reproducir el error.</p>
-<p>Puedes empezar con plantillas o <strong>pedírselo al agente abierto</strong>: Tutti le escribe un mensaje con tu descripción y le pide trabajar por fases (requisitos o análisis, diseño, tareas), esperando tu aprobación entre una y otra y sin escribir código todavía. Con el flujo <strong>Rápida</strong> (Quick Spec de Kiro) escribe los tres archivos de una sola vez, sin esperar aprobación entre ellos.</p>
-<p>Al abrir un archivo de una spec, la barra del editor ofrece lo que se le puede pedir al agente abierto (si no hay ninguno, salen desactivadas):</p>
+<p>Siempre que una acción le pida algo a un agente (redactar un cambio, un hook, una skill o el steering base, ejecutar tareas…), puedes <strong>elegir el agente</strong>: uno de los que ya tienes abiertos, que recibe la petición en su panel, o cualquiera de los instalados, que Tutti <strong>abre con la petición como tarea inicial</strong>. Por defecto va al agente activo, o al primero instalado si no hay ninguno abierto.</p>
+<h3>Specs con OpenSpec</h3>
+<img src="img/spec-formulario.png" alt="El formulario para proponer un cambio" loading="lazy" />
+<p>Las specs usan <strong>OpenSpec</strong> y viven fuera de <code>.tutti</code>, en la carpeta <code>openspec/</code> de la raíz del proyecto, que es donde la busca su CLI. Si no lo tienes instalado, la sección te muestra el comando (<code>npm install -g @fission-ai/openspec@latest</code>) con un botón para copiarlo. Después, <strong>Iniciar OpenSpec</strong> crea <code>openspec/</code> con su <code>config.yaml</code>, <code>specs/</code> y <code>changes/</code>; no instala nada en tus agentes.</p>
+<ul>
+<li><code>openspec/specs/&lt;capacidad&gt;/spec.md</code>: lo que el sistema hace <em>hoy</em>, como requisitos («### Requirement: …») con sus escenarios (<code>WHEN</code> / <code>THEN</code>).</li>
+<li><code>openspec/changes/&lt;cambio&gt;/</code>: un cambio en marcha, con <code>proposal.md</code> (por qué y qué cambia), <code>specs/</code> (lo que añade, modifica o quita: «## ADDED / MODIFIED / REMOVED Requirements»), <code>design.md</code> y <code>tasks.md</code> (casillas <code>- [ ]</code>).</li>
+<li><code>openspec/changes/archive/</code>: los cambios terminados. Al archivar uno, sus deltas se funden en <code>openspec/specs</code>.</li>
+<li><code>openspec/config.yaml</code>: el <em>schema</em> (por defecto <code>spec-driven</code>), el contexto del proyecto y las reglas por artefacto. Se abre desde la sección.</li>
+</ul>
+<p>El <strong>+</strong> abre el formulario <em>Proponer un cambio</em>: un nombre (será la carpeta), qué quieres cambiar y quién redacta los archivos. Con <em>plantillas</em> se crean <code>proposal.md</code>, un delta de spec, <code>design.md</code> y <code>tasks.md</code> con su estructura; con <em>pedírselo al agente</em>, el agente abierto los rellena, sin escribir código todavía, y ejecuta <code>openspec validate --strict</code> al terminar.</p>
+<p>Cada cambio de la lista muestra su avance (<code>2/5</code>) y, al pasar el ratón, tres acciones:</p>
 <table>
-<tr><th>En…</th><th>Acción</th><th>Qué hace</th></tr>
-<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Analizar</strong></td><td>Busca inconsistencias, ambigüedades y huecos, y propone correcciones sin cambiar nada hasta que lo apruebes</td></tr>
-<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Actualizar diseño y tareas</strong></td><td>Ajusta el diseño y las tareas a lo que has cambiado, conservando las casillas ya marcadas</td></tr>
-<tr><td><code>design.md</code></td><td><strong>Actualizar tareas</strong></td><td>Ajusta las tareas al diseño que has cambiado</td></tr>
-<tr><td><code>tasks.md</code></td><td><strong>Siguiente tarea</strong> · <strong>Todas</strong></td><td>Ejecuta solo la primera tarea pendiente y espera tu visto bueno, o todas las pendientes marcando cada casilla al terminar</td></tr>
+<tr><th>Acción</th><th>Qué hace</th></tr>
+<tr><td><strong>Implementar con el agente</strong></td><td>Le pide al agente abierto que lea la propuesta, las specs, el diseño y las tareas y trabaje <code>tasks.md</code> en orden, marcando cada casilla al terminar</td></tr>
+<tr><td><strong>Validar</strong></td><td>Ejecuta <code>openspec validate &lt;cambio&gt; --strict</code> y avisa si algo no cumple el formato</td></tr>
+<tr><td><strong>Archivar</strong></td><td>Solo con todas las tareas hechas: mueve el cambio a <code>archive/</code> y actualiza las specs vigentes</td></tr>
 </table>
 <h3>docs/</h3>
 <p>La documentación sigue <strong>Diátaxis</strong>: <code>tutorials</code> (aprender haciendo), <code>how-to</code> (resolver una tarea), <code>reference</code> (descripción exacta) y <code>explanation</code> (el porqué). Solo se ven las categorías que ya tienen documentos; al crear uno eliges su categoría. Si aún no hay una <code>overview.md</code> (la visión general), un botón la crea con su esqueleto y le pide al agente abierto que la rellene explorando el proyecto.</p>
@@ -434,7 +439,7 @@ Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></
 <ul>
 <li><code>PostFileSave</code> se dispara cuando se guarda un archivo del proyecto (por ti o por un agente). Con <code>command</code>, Tutti ejecuta el comando en la raíz con el contexto en JSON por stdin y el archivo en <code>$TUTTI_HOOK_FILE</code>; con <code>agent</code>, escribe el prompt en el agente abierto. El resultado sale como aviso.</li>
 <li><code>PreToolUse</code>, <code>PostToolUse</code> y <code>Stop</code> se leen y se muestran (en ámbar), pero Tutti no los ejecuta: son eventos de la sesión interna de cada agente.</li>
-<li>Como un hook ejecuta comandos del repositorio, <strong>no corre hasta que pulsas «Permitir hooks en este proyecto»</strong>; hasta entonces solo se listan. Cada hook tiene su interruptor, y un hook que reescribe el archivo no se vuelve a disparar en bucle.</li>
+<li>Como un hook ejecuta comandos del repositorio, <strong>no corre hasta que lo permites</strong>: al pulsar el interruptor de un hook, Tutti te pide permitir los hooks en este proyecto; hasta entonces solo se listan, con el interruptor apagado. Cada hook tiene su interruptor, y un hook que reescribe el archivo no se vuelve a disparar en bucle.</li>
 </ul>
 <h3>skills/</h3>
 <img src="img/skill-formulario.png" alt="El formulario para crear una skill" loading="lazy" />
@@ -443,25 +448,28 @@ Usa componentes de función. Contrato de la API: #[[file:openapi.yaml]]</code></
 <p>Tutti creates a <code>.tutti</code> folder in every project you open, with a <code>README.md</code> that explains its contents. It is plain text (Markdown and JSON): it is versioned with git, reviewed like any other change and shared by the whole team. Nothing leaves your computer.</p>
 <pre><code>.tutti/
 ├─ README.md
-├─ specs/      one folder per feature or bug: requirements.md (or bugfix.md), design.md, tasks.md
 ├─ docs/       documentation by category (tutorials, how-to, reference, explanation)
 ├─ steering/   contexto.md and the guides for the agents (product.md, tech.md…)
 ├─ hooks/      one .json per hook (Kiro's format)
 └─ skills/     one folder per skill, with its SKILL.md</code></pre>
 <p><strong>Subfolders only appear when you add their first item</strong>, and they are all created from the <a href="#tutti">Tutti</a> tab (or by hand: Tutti reads whatever is there).</p>
-<p>Whenever an action asks an agent for something (writing a spec, a hook, a skill or the foundation steering, running tasks…), you can <strong>choose the agent</strong>: one you already have open, which receives the request in its panel, or any installed one, which Tutti <strong>opens with the request as its first task</strong>. By default it goes to the active agent, or to the first installed one if none is open.</p>
-<h3>specs/</h3>
-<img src="img/spec-formulario.png" alt="The form to create a spec" loading="lazy" />
-<p>A spec is a folder with three files, as in Kiro: <code>requirements.md</code> (user story and criteria in EARS format: “WHEN … THE SYSTEM SHALL …”), <code>design.md</code> (architecture, components, data, errors and tests) and <code>tasks.md</code> (<code>- [ ]</code> checkboxes, also nested). In the list you see each one's progress, for example <code>2/5</code>.</p>
-<p>The guided form asks the same as Kiro: a <em>feature</em> or <em>fixing a bug</em>?, what you want and, for a feature, whether to start with <em>requirements</em> or with the <em>design</em>. A bug creates <code>bugfix.md</code> instead of <code>requirements.md</code>, with three sections: current behavior (the defect), expected behavior (the fix) and unchanged behavior (regression prevention, “SHALL CONTINUE TO …”); its task list starts by reproducing the bug.</p>
-<p>You can start with templates or <strong>ask the open agent</strong>: Tutti writes it a message with your description and asks it to work in phases (requirements or analysis, design, tasks), waiting for your approval between them and without writing code yet. With the <strong>Quick</strong> flow (Kiro's Quick Spec) it writes the three files in one go, without waiting for approval between them.</p>
-<p>When you open a spec file, the editor bar offers what you can ask the open agent (disabled if none is open):</p>
+<p>Whenever an action asks an agent for something (writing a change, a hook, a skill or the foundation steering, running tasks…), you can <strong>choose the agent</strong>: one you already have open, which receives the request in its panel, or any installed one, which Tutti <strong>opens with the request as its first task</strong>. By default it goes to the active agent, or to the first installed one if none is open.</p>
+<h3>Specs with OpenSpec</h3>
+<img src="img/spec-formulario.png" alt="The form to propose a change" loading="lazy" />
+<p>Specs use <strong>OpenSpec</strong> and live outside <code>.tutti</code>, in the <code>openspec/</code> folder at the project root, which is where its CLI looks for it. If you do not have it installed, the section shows you the command (<code>npm install -g @fission-ai/openspec@latest</code>) with a button to copy it. Then <strong>Start OpenSpec</strong> creates <code>openspec/</code> with its <code>config.yaml</code>, <code>specs/</code> and <code>changes/</code>; it installs nothing in your agents.</p>
+<ul>
+<li><code>openspec/specs/&lt;capability&gt;/spec.md</code>: what the system does <em>today</em>, as requirements (“### Requirement: …”) with their scenarios (<code>WHEN</code> / <code>THEN</code>).</li>
+<li><code>openspec/changes/&lt;change&gt;/</code>: a change in progress, with <code>proposal.md</code> (why and what changes), <code>specs/</code> (what it adds, modifies or removes: “## ADDED / MODIFIED / REMOVED Requirements”), <code>design.md</code> and <code>tasks.md</code> (<code>- [ ]</code> checkboxes).</li>
+<li><code>openspec/changes/archive/</code>: finished changes. When one is archived, its deltas are merged into <code>openspec/specs</code>.</li>
+<li><code>openspec/config.yaml</code>: the <em>schema</em> (<code>spec-driven</code> by default), the project context and per-artifact rules. It opens from the section.</li>
+</ul>
+<p>The <strong>+</strong> opens the <em>Propose a change</em> form: a name (it becomes the folder), what you want to change and who writes the files. With <em>templates</em>, <code>proposal.md</code>, a spec delta, <code>design.md</code> and <code>tasks.md</code> are created with their structure; with <em>ask the agent</em>, the open agent fills them in, without writing code yet, and runs <code>openspec validate --strict</code> when done.</p>
+<p>Each change in the list shows its progress (<code>2/5</code>) and, on hover, three actions:</p>
 <table>
-<tr><th>In…</th><th>Action</th><th>What it does</th></tr>
-<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Analyze</strong></td><td>Looks for inconsistencies, ambiguities and gaps, and proposes fixes without changing anything until you approve</td></tr>
-<tr><td><code>requirements.md</code> / <code>bugfix.md</code></td><td><strong>Update design and tasks</strong></td><td>Adjusts the design and the tasks to what you changed, keeping the checkboxes already ticked</td></tr>
-<tr><td><code>design.md</code></td><td><strong>Update tasks</strong></td><td>Adjusts the tasks to the design you changed</td></tr>
-<tr><td><code>tasks.md</code></td><td><strong>Next task</strong> · <strong>All</strong></td><td>Runs only the first pending task and waits for your go-ahead, or all the pending ones ticking each checkbox as it finishes</td></tr>
+<tr><th>Action</th><th>What it does</th></tr>
+<tr><td><strong>Implement with the agent</strong></td><td>Asks the open agent to read the proposal, the specs, the design and the tasks and work through <code>tasks.md</code> in order, ticking each checkbox as it finishes</td></tr>
+<tr><td><strong>Validate</strong></td><td>Runs <code>openspec validate &lt;change&gt; --strict</code> and warns if something does not follow the format</td></tr>
+<tr><td><strong>Archive</strong></td><td>Only with every task done: moves the change to <code>archive/</code> and updates the current specs</td></tr>
 </table>
 <h3>docs/</h3>
 <p>Documentation follows <strong>Diátaxis</strong>: <code>tutorials</code> (learn by doing), <code>how-to</code> (solve a task), <code>reference</code> (exact description) and <code>explanation</code> (the why). Only categories that already have documents are shown; when you create one you choose its category. If there is no <code>overview.md</code> yet (the general overview), a button creates it with its skeleton and asks the open agent to fill it in by exploring the project.</p>
@@ -497,7 +505,7 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <ul>
 <li><code>PostFileSave</code> fires when a project file is saved (by you or by an agent). With <code>command</code>, Tutti runs the command at the root with the context as JSON on stdin and the file in <code>$TUTTI_HOOK_FILE</code>; with <code>agent</code>, it types the prompt into the open agent. The result shows as a notice.</li>
 <li><code>PreToolUse</code>, <code>PostToolUse</code> and <code>Stop</code> are read and shown (in amber), but Tutti does not run them: they are events of each agent's internal session.</li>
-<li>Because a hook runs commands from the repository, <strong>it does not run until you press “Allow hooks in this project”</strong>; until then they are only listed. Each hook has its own switch, and a hook that rewrites the file does not fire again in a loop.</li>
+<li>Because a hook runs commands from the repository, <strong>it does not run until you allow it</strong>: when you press a hook's switch, Tutti asks you to allow hooks in this project; until then they are only listed, with the switch off. Each hook has its own switch, and a hook that rewrites the file does not fire again in a loop.</li>
 </ul>
 <h3>skills/</h3>
 <img src="img/skill-formulario.png" alt="The form to create a skill" loading="lazy" />

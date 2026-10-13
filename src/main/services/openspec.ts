@@ -40,7 +40,7 @@ export function openspecState(project: string): OpenSpecState {
   const initialized = existsSync(root)
   const changesDir = join(root, 'changes')
   return {
-    installed: which('openspec') !== null,
+    installed: !!process.env.TUTTI_CAPTURE || which('openspec') !== null,          // en las capturas se da por instalado, para no fotografiar el aviso
     initialized,
     configFile,
     schema: schemaOf(read(configFile)),
