@@ -15,7 +15,6 @@ import { DiffView } from './DiffView'
 import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '../../git/components/GitGraph'
 import { HookFormView } from '../../tutti/components/HookFormView'
-import { SpecActionsBar } from '../../tutti/components/SpecActionsBar'
 import { SpecFormView } from '../../tutti/components/SpecFormView'
 import { SkillFormView } from '../../tutti/components/SkillFormView'
 import { SteeringFormView } from '../../tutti/components/SteeringFormView'
@@ -62,7 +61,7 @@ export function EditorArea() {
   const doc = docs.find((d) => d.path === activePath) ?? null
   // los .md se pueden ver como Markdown; los de la carpeta .tutti se abren así por defecto
   const isMd = !!doc && doc.kind === 'text' && /\.(md|markdown)$/i.test(doc.path)
-  const preview = isMd && (previews[doc!.path] ?? /[\\/]\.tutti[\\/]/.test(doc!.path))
+  const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|openspec)[\\/]/.test(doc!.path))
   const pending = doc ? pendings[doc.path] ?? null : null
   const setPending = (path: string, value: PendingExternal | null): void =>
     setPendings((all) => { const next = { ...all }; if (value) next[path] = value; else delete next[path]; return next })
@@ -127,7 +126,6 @@ export function EditorArea() {
     const rel = toPosix(relative(project, path))
     window.api.pty.paste(pane.id, selectionMessage(pane.command, rel, sel.startLine, sel.endLine, sel.text))
     set({ activePane: pane.id, focus: 'pane' })
-    toast(t('ed.sent', { agent: pane.name ?? pane.command, ref: selectionRef(pane.command, rel, sel.startLine, sel.endLine) }), 'ok')
   }
   const close = (d: Doc): void => {
     if (isDirty(d) && !window.confirm(t('app.unsaved', { title: d.title }))) return
@@ -188,7 +186,6 @@ export function EditorArea() {
             ))}
           </div>
           <span className="flex shrink-0 items-center gap-2 pl-3 text-[10px] text-muted">
-            {isMd && <SpecActionsBar doc={doc} />}
             {isMd && (
               <button onClick={() => setPreviews((p) => ({ ...p, [doc.path]: !preview }))} title={preview ? t('ed.showSource') : t('ed.showPreview')}
                 className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors hover:bg-accent-bg hover:text-accent">

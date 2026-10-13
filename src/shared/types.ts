@@ -49,6 +49,13 @@ export interface McpServer {
 }
 /** Un hook de .tutti/hooks (formato de Kiro). `supported`: Tutti sabe ejecutar su trigger; `error`: por qué no es válido. */
 export interface HookInfo { file: string; name: string; description: string; trigger: string; matcher: string; actionType: 'command' | 'agent' | ''; enabled: boolean; supported: boolean; error?: string }
+/** Lo que hay en la carpeta `openspec/` del proyecto (OpenSpec): los cambios en marcha y las specs vigentes. */
+export interface OpenSpecChange { name: string; dir: string; done: number; total: number; hasProposal: boolean; hasDesign: boolean; hasTasks: boolean }
+export interface OpenSpecState {
+  installed: boolean; initialized: boolean; configFile: string; schema: string
+  changes: OpenSpecChange[]; archived: number
+  specs: Array<{ name: string; file: string; requirements: number }>
+}
 /** Un archivo de .tutti/steering con lo que dice su cabecera (sin el cuerpo). */
 export interface SteeringInfo { file: string; base: string; name: string; inclusion: 'always' | 'fileMatch' | 'manual' | 'auto'; patterns: string[]; description: string; scope: 'project' | 'global' }
 /** Una parte de lo que reciben los agentes: el contexto global, el del proyecto o un archivo de steering. */
@@ -112,6 +119,12 @@ export interface Api {
   dialog: { chooseFolder(start?: string): Promise<string | null> }
   ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
   skills: { import(project: string, source: string): Promise<McpResult> }      // copia una skill (carpeta con SKILL.md) a .tutti/skills; el SKILL.md nuevo va en `message`
+  openspec: {
+    state(project: string): Promise<OpenSpecState>
+    init(project: string): Promise<McpResult>
+    validate(project: string, change?: string): Promise<McpResult>
+    archive(project: string, change: string): Promise<McpResult>
+  }
   hooks: {
     list(project: string): Promise<{ hooks: HookInfo[]; trusted: boolean }>
     trust(project: string, on: boolean): Promise<void>          // autoriza (o quita) que los hooks del proyecto se ejecuten

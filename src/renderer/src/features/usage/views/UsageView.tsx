@@ -199,7 +199,7 @@ export function UsageView() {
                 void (async () => {
                   let failed = 0
                   for (const s of data.history) { const r = await window.api.usage.remove(s); if (!r.ok) failed++ }
-                  toast(failed ? t('us.clearFailed', { n: failed }) : t('us.cleared'), failed ? 'error' : 'ok')
+                  if (failed) toast(t('us.clearFailed', { n: failed }), 'error')
                   void load(false)
                 })()
               }} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">{t('us.deleteAll')}</button>
@@ -213,7 +213,7 @@ export function UsageView() {
             <p className="text-[12px] leading-relaxed text-muted">{t('us.deleteBody', { title: title(deleting), agent: deleting.agent })}</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setDeleting(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
-              <button onClick={() => { const s = deleting; setDeleting(null); void window.api.usage.remove(s).then((r) => { toast(r.ok ? t('us.sessionDeleted') : t('us.deleteFailed', { message: r.message }), r.ok ? 'ok' : 'error'); void load(false) }) }}
+              <button onClick={() => { const s = deleting; setDeleting(null); void window.api.usage.remove(s).then((r) => { if (!r.ok) toast(t('us.deleteFailed', { message: r.message }), 'error'); void load(false) }) }}
                 className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">{t('us.delete')}</button>
             </div>
           </div>

@@ -66,7 +66,7 @@ export function App() {
     }, 400)
     return () => clearTimeout(timer)
   }, [project, openPaths])
-  useEffect(() => window.api.hooks.onRan((r) => useStore.getState().toast(r.message, r.ok ? 'ok' : 'error')), [])
+  useEffect(() => window.api.hooks.onRan((r) => { if (!r.ok) useStore.getState().toast(r.message, 'error') }), [])
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-color-scheme: light)')

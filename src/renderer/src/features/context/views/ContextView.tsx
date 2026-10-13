@@ -76,7 +76,6 @@ export function ContextView() {
   const save = async (): Promise<void> => {
     await flush()
     setState('saved')
-    toast(t('ctx.saved'), 'ok')
   }
 
   const generate = async (): Promise<void> => {

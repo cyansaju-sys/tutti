@@ -199,7 +199,6 @@ export function AddAgentDialog() {
     const r = await window.api.agents.addCustom(name, command)
     if (!r.ok) { setError(r.message); return }
     set({ agents: await window.api.agents.detect(), modal: null })
-    toast(r.message, 'ok')
   }
   return (
     <Modal onClose={() => set({ modal: null, focus: 'pane' })} width={500} title={t('dlg.addAgent')}>

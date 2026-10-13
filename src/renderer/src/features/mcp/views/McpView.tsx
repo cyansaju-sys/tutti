@@ -95,7 +95,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
     setRemoving(null)
     const failed: string[] = []
     for (const server of targets) { const res = await window.api.mcp.remove(server, project); if (!res.ok) failed.push(res.message) }
-    toast(failed.length ? t('mcp.removeFailed', { message: failed[0] }) : t('mcp.removed', { name: targets[0].name }), failed.length ? 'error' : 'ok')
+    if (failed.length) toast(t('mcp.removeFailed', { message: failed[0] }), 'error')
     void refresh()
   }
 
@@ -184,11 +184,11 @@ function Details({ group, installed, project, onClose, onChanged, onRemove }: {
   const hasSecrets = [...Object.keys(headers), ...Object.keys(env)].some(isSecret)
   const projectOnly = server.scope !== 'global'          // un servidor de proyecto no se puede copiar a un agente que solo guarda globales
   const missing = agentsMissing(server, all, SUPPORTED).filter((a) => installed.includes(a as McpAgent) && !(projectOnly && GLOBAL_ONLY.includes(a))) as McpAgent[]
-  const copy = async (text: string): Promise<void> => { await navigator.clipboard.writeText(text); toast(t('mcp.copied'), 'ok') }
+  const copy = async (text: string): Promise<void> => { await navigator.clipboard.writeText(text) }
 
   const copyTo = async (agent: McpAgent): Promise<void> => {
     const res = await window.api.mcp.add(agent, specFromServer(server), server.scope === 'shared' ? 'project' : server.scope, project)
-    toast(res.ok ? t('mcp.addedTo', { name: server.name, agent: AGENT_NAMES[agent] }) : t('mcp.addFailed', { message: res.message }), res.ok ? 'ok' : 'error')
+    if (!res.ok) toast(t('mcp.addFailed', { message: res.message }), 'error')
     onChanged()
     if (res.ok) onClose()
   }
@@ -283,7 +283,6 @@ function AddDialog({ installed, project, prefill, onClose, onDone }: { installed
     setBusy(false)
     onDone()
     if (failed.length) { setError(failed.join('\n')); return }
-    toast(t('mcp.addedMany', { name: spec.name, agents: chosen.map((a) => AGENT_NAMES[a]).join(t('mcp.and')) }), 'ok')
     onClose()
   }
 

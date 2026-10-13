@@ -89,22 +89,27 @@ function describe(meta: pty.Meta, leaderId: string | undefined): Record<string, 
 }
 
 /**
- * Entrega la tarea y comprueba que llegó. Si el agente no la acepta como argumento (`viaArgs` falso) se le escribe cuando su
- * interfaz está lista; si la tarea no aparece en su pantalla una vez en reposo (la ignoró o arrancó sin ella), se vuelve a enviar.
+ * Entrega la tarea a los agentes que no la aceptan como argumento: se les escribe cuando su interfaz está lista y, si no aparece en su
+ * pantalla una vez en reposo, se vuelve a enviar (como mucho dos veces). Los que la reciben como argumento no necesitan nada más.
  */
 function deliverTask(id: string, task: string, viaArgs: boolean): void {
+  if (viaArgs) return                    // ya la recibió como argumento al arrancar: reenviarla la duplicaba (el agente la contestaba varias veces)
   const deadline = Date.now() + 90_000
-  let sent = viaArgs ? 0 : -1            // -1: aún no se ha escrito nada
+  let sent = -1                          // -1: aún no se ha escrito nada
+  let rowsAtSend = 0                     // líneas que había al escribirla: si luego crecen mucho, el agente ya la atendió
   const timer = setInterval(() => {
     if (!pty.hasSession(id) || Date.now() > deadline) return clearInterval(timer)
-    const screen = pty.screenText(id, 300)
+    const screen = pty.screenText(id, 100_000)          // todo el historial: tras responder, el comienzo de la tarea sale de las últimas líneas
     if (!screen || pty.idleFor(id) < (sent <= 0 ? 2 : 4)) return          // interfaz sin lista o todavía trabajando
     if (sent >= 0 && taskShown(screen, task)) return clearInterval(timer)  // llegó
-    if (sent >= 3) return clearInterval(timer)                              // reintentos agotados
+    if (sent > 0 && screen.split('\n').length - rowsAtSend > MIN_ANSWER_ROWS) return clearInterval(timer)          // la atendió aunque la pantalla no la muestre (p. ej. «[Pasted text]»)
+    if (sent >= 2) return clearInterval(timer)                              // reintentos agotados
     pty.sendPrompt(id, task)
+    rowsAtSend = screen.split('\n').length
     sent = Math.max(sent, 0) + 1
   }, 1000)
 }
+const MIN_ANSWER_ROWS = 4
 
 /** Porcentaje usado del límite más ajustado de un agente (solo se conoce el de Claude; usa lo último consultado, sin pedir nada). */
 async function quotaOf(command: string): Promise<number | undefined> {
