@@ -84,6 +84,7 @@ function Section({ title, id, detail, count, folded, onToggle, fill = false, res
   const t = useT()
   const size = useResizeHeight(`tutti.usage.${id}.height`)
   return (
+    <>
     <section className={clsx('flex min-h-0 flex-col gap-2', fill && !folded ? 'min-h-32 flex-1' : 'shrink')}>
       <button onClick={() => onToggle(id)} aria-expanded={!folded} className="flex shrink-0 items-center gap-1 rounded-md px-0.5 py-1 text-left transition-colors hover:bg-accent-bg">
         {folded ? <MdKeyboardArrowRight size={16} className="text-muted" /> : <MdKeyboardArrowDown size={16} className="text-muted" />}
@@ -95,13 +96,14 @@ function Section({ title, id, detail, count, folded, onToggle, fill = false, res
         <>
           <div ref={size.body} style={size.height ? { height: size.height } : undefined} className={clsx('sect-scroll flex min-h-0 flex-col gap-2 overflow-y-auto', fill ? 'flex-1' : !size.height && 'max-h-96')}>{children}</div>
           {footer && <div className="shrink-0">{footer}</div>}
-          {resize && (
-            <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
-              className="group grid h-2 shrink-0 cursor-row-resize touch-none place-items-center"><span className="h-px w-8 rounded bg-line transition-colors group-hover:bg-accent" /></div>
-          )}
         </>
       )}
     </section>
+    {!folded && resize && (
+      <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
+        className="group shrink-0 cursor-row-resize touch-none py-1"><div className="h-px bg-line transition-colors group-hover:bg-accent" /></div>
+    )}
+    </>
   )
 }
 
@@ -158,11 +160,11 @@ export function UsageView() {
         ) : undefined}>
         {!project && <p className="px-1 text-[11px] text-muted">{t('us.openProject')}</p>}
         {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">{t('us.noSessions')}</p>}
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col divide-y divide-line/60">
           {data.history.slice(0, 100).map((s) => {
             const can = resumeArgs(s.command, s.id) !== null
             return (
-              <li key={`${s.command}:${s.id}`} className="group flex items-center rounded-lg transition-colors hover:bg-accent-bg">
+              <li key={`${s.command}:${s.id}`} className="group flex items-center transition-colors hover:bg-accent-bg">
                 <button disabled={!can} onClick={() => resume(s)} title={can ? t('us.resumeTip') : undefined} className="min-w-0 flex-1 px-2 py-1.5 text-left">
                   <span className="block truncate text-[12px]">{title(s)}</span>
                   <span className="block truncate text-[10px] text-muted">{s.agent} · {s.project} · {ago(s.end, now)} · {fmtTokens(s.tokens)}</span>

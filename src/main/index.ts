@@ -5,7 +5,7 @@ import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, remov
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
-import { createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
+import { copyEntry, createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
 import { loadSteering } from './services/context/steering'
@@ -105,6 +105,7 @@ function registerIpc(): void {
   ipcMain.handle('fs:write', (_e, path: string, text: string, crlf: boolean) => writeFileData(path, text, crlf))
   ipcMain.handle('fs:create', (_e, dir: string, name: string, isDir: boolean) => createEntry(dir, name, isDir))
   ipcMain.handle('fs:move', (_e, path: string, dir: string) => moveEntry(path, dir))
+  ipcMain.handle('fs:copy', (_e, path: string, dir: string) => copyEntry(path, dir))
   ipcMain.handle('fs:rename', (_e, path: string, name: string) => renameEntry(path, name))
   ipcMain.handle('fs:trash', async (_e, path: string) => {         // a la papelera: se puede recuperar
     try { await shell.trashItem(path); return { ok: true, message: tm('m.trash') } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }

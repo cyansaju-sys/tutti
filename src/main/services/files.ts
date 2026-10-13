@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, sep } from 'node:path'
 import type { DirEntry, FileData, McpResult } from '../../shared/types'
 import { tm } from '../utils/i18n'
@@ -93,4 +93,14 @@ export async function moveEntry(path: string, dir: string): Promise<McpResult> {
   if (dir === path || dir.startsWith(path + sep)) return { ok: false, message: tm('m.fs.moveInto', { name }) }
   if (await exists(target)) return { ok: false, message: tm('m.fs.exists', { name }) }
   try { await rename(path, target); return { ok: true, message: target } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
+}
+
+/** Copia un archivo o carpeta dentro de `dir`. Si ya hay uno con ese nombre añade « (2)», « (3)»… y no pisa nada. Devuelve la ruta nueva en `message`. */
+export async function copyEntry(path: string, dir: string): Promise<McpResult> {
+  const name = basename(path)
+  if (dir === path || dir.startsWith(path + sep)) return { ok: false, message: tm('m.fs.moveInto', { name }) }
+  const ext = extname(name), stem = ext && ext !== name ? name.slice(0, -ext.length) : name, tail = ext !== name ? ext : ''
+  let target = join(dir, name)
+  for (let n = 2; await exists(target); n++) target = join(dir, `${stem} (${n})${tail}`)
+  try { await cp(path, target, { recursive: true, errorOnExist: true, force: false }); return { ok: true, message: target } } catch (e) { return { ok: false, message: e instanceof Error ? e.message : String(e) } }
 }

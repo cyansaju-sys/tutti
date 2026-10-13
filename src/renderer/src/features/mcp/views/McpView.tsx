@@ -24,24 +24,32 @@ function Fold({ id, title, count, fill = false, resize = false, forceOpen = fals
   const t = useT()
   const size = useResizeHeight(`tutti.mcp.${id}.height`)
   return (
-    <section className={clsx('mb-2', fill && !collapsed && 'flex min-h-40 flex-1 flex-col')}>
+    <>
+    <section className={clsx('border-t border-line pb-1 first:border-t-0 [.rh+&]:border-t-0', fill && !collapsed && 'flex min-h-40 flex-1 flex-col')}>
       <button onClick={toggle} aria-expanded={!collapsed} className="flex w-full items-center gap-1 rounded px-1 py-1 text-left text-text transition-colors hover:text-accent">
         <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
         <h4 className="truncate text-[12px] font-semibold">{title}</h4>
         {count !== undefined && <span className="ml-1 rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
       </button>
       {!collapsed && <div ref={size.body} style={size.height ? { height: size.height } : undefined} className={clsx('sect-scroll overflow-y-auto', fill ? 'min-h-0 flex-1' : !size.height && 'max-h-60')}>{children}</div>}
-      {!collapsed && resize && (
-        <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
-          className="group grid h-2 cursor-row-resize place-items-center touch-none"><span className="h-px w-8 rounded bg-line transition-colors group-hover:bg-accent" /></div>
-      )}
     </section>
+    {!collapsed && resize && (
+      <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
+        className="rh group cursor-row-resize touch-none py-1"><div className="h-px bg-line transition-colors group-hover:bg-accent" /></div>
+    )}
+    </>
   )
 }
 
 const Tag = ({ children }: { children: React.ReactNode }) => (
   <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-medium text-accent">{children}</span>
 )
+
+/** Los instalados llevan su pliegue «Instalados»; incrustados en la pestaña Tutti (compact) la sección ya lo dice: van sin título, con la misma altura máxima y scroll que la tienda. */
+function InstalledWrap({ compact, count, children }: { compact: boolean; count: number; children: React.ReactNode }) {
+  const t = useT()
+  return compact ? <div className="sect-scroll max-h-60 overflow-y-auto">{children}</div> : <Fold id="installed" title={t('st.installed')} count={count} resize>{children}</Fold>
+}
 
 /**
  * Servidores MCP de cada agente instalado, con + para añadir uno y papelera para quitarlo.
@@ -105,7 +113,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
         {servers && installed.length > 0 && visible.length === 0 && (compact
           ? <div className="px-1"><button onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent"><MdAdd size={15} /> {t('mcp.addTip')}</button></div>
           : <p className="px-2 text-[11px] text-muted">{t('mcp.empty')}</p>)}
-        {groups.length > 0 && <Fold id="installed" title={t('st.installed')} count={groups.length} resize>
+        {groups.length > 0 && <InstalledWrap compact={compact} count={groups.length}>
         {groups.map((g) => {
           const first = g[0]
           const agentNames = [...new Set(g.map((x) => AGENT_NAMES[x.agent]))]
@@ -132,7 +140,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
             </div>
           )
         })}
-        </Fold>}
+        </InstalledWrap>}
           </>
         )}
         {showStore && !query.trim() && (

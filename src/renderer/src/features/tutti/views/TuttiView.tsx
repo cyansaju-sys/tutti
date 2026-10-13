@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdAdd, MdChevronRight, MdEdit, MdExplore } from 'react-icons/md'
+import { MdAdd, MdChevronRight, MdEdit, MdExplore, MdSmartToy, MdTerminal } from 'react-icons/md'
 import type { MsgKey } from '@shared/i18n'
 import type { DirEntry, HookInfo, SteeringInfo } from '@shared/types'
 import { FIELD_SLIM } from '@/shared/components/ui'
@@ -18,14 +18,16 @@ const EMPTY_BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md b
 type Kind = 'specs' | 'hooks' | 'steering' | 'skills' | 'docs'
 
 /** Sección plegable: el título con una flecha y, a la derecha, el botón + para añadir; se recuerda si estaba cerrada. */
-function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title: string; count?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
+/** Con más de MAX_ROWS elementos (`rows`), el contenido de la sección tiene su propio scroll: alto de MAX_ROWS filas de `rowPx`. */
+const MAX_ROWS = 5
+function Fold({ id, title, count, rows = 0, rowPx = 28, onAdd, addTip, children }: { id: string; title: string; count?: number; rows?: number; rowPx?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
   const key = `tutti.tutti.${id}.collapsed`
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
   const toggle = (): void => setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })
   return (
-    <section className="mb-2">
-      <div className="flex items-center">
-        <button onClick={toggle} aria-expanded={!collapsed} className="flex min-w-0 flex-1 items-center gap-1 rounded px-1 py-1 text-left text-text transition-colors hover:text-accent">
+    <section className="border-t border-line pb-1 first:border-t-0">
+      <div className="flex h-7 items-center">
+        <button onClick={toggle} aria-expanded={!collapsed} className="flex h-full min-w-0 flex-1 items-center gap-1 rounded px-1 text-left text-text transition-colors hover:text-accent">
           <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
           <h4 className="truncate text-[12px] font-semibold">{title}</h4>
           {count !== undefined && <span className="ml-1 rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
@@ -37,7 +39,7 @@ function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title
           </button>
         )}
       </div>
-      {!collapsed && children}
+      {!collapsed && (rows > MAX_ROWS ? <div className="sect-scroll overflow-y-auto" style={{ maxHeight: MAX_ROWS * rowPx }}>{children}</div> : children)}
     </section>
   )
 }
@@ -146,12 +148,10 @@ export function TuttiView() {
   const HooksSection = () => {
     const perFile = new Map<string, number>()
     return (
-      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} onAdd={() => setHookChoice(true)} addTip={t('tutti.add.hooks')}>
-        {hooks.list.length > 0 && (
-          <div className={clsx('mx-1 mb-1.5 rounded-md border px-2.5 py-1.5 text-[11px] leading-snug', hooks.trusted ? 'border-line text-muted' : 'border-warn/40 bg-warn/[0.08] text-text')}>
-            {hooks.trusted
-              ? <span>{t('tutti.hookOn')} <button onClick={() => void trust(false)} className="underline hover:text-text">{t('tutti.hookUntrust')}</button></span>
-              : <><span>{t('tutti.hookWarn')}</span> <button onClick={() => void trust(true)} className="mt-1 block rounded bg-accent px-2 py-0.5 font-medium text-bg hover:brightness-110">{t('tutti.hookTrust')}</button></>}
+      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} rows={hooks.list.length} rowPx={44} onAdd={() => setHookChoice(true)} addTip={t('tutti.add.hooks')}>
+        {hooks.list.length > 0 && !hooks.trusted && (
+          <div className="mx-1 mb-1.5 rounded-md border border-warn/40 bg-warn/[0.08] px-2.5 py-1.5 text-[11px] leading-snug text-text">
+            <span>{t('tutti.hookWarn')}</span> <button onClick={() => void trust(true)} className="mt-1 block rounded bg-accent px-2 py-0.5 font-medium text-bg hover:brightness-110">{t('tutti.hookTrust')}</button>
           </div>
         )}
         <ul>
@@ -159,13 +159,16 @@ export function TuttiView() {
             const index = perFile.get(h.file) ?? 0
             perFile.set(h.file, index + 1)
             return (
-              <li key={`${h.file}:${index}`} className="group flex items-center gap-1 rounded transition-colors hover:bg-accent-bg">
-                <button onClick={() => void openDoc(h.file)} title={h.error ?? h.description ?? h.file} className="flex min-w-0 flex-1 flex-col px-2 py-1 pl-5 text-left">
+              <li key={`${h.file}:${index}`} className="group flex h-11 items-center gap-1 rounded transition-colors hover:bg-accent-bg">
+                <button onClick={() => void openDoc(h.file)} title={h.error ?? h.description ?? h.file} className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 pl-5 text-left">
+                  {h.actionType === 'agent' ? <MdSmartToy size={15} className="shrink-0 text-muted" /> : <MdTerminal size={15} className="shrink-0 text-muted" />}
+                  <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-1.5">
                     <span className="min-w-0 truncate text-[12px]">{h.name}</span>
                     {h.trigger && <span className={clsx('shrink-0 rounded px-1.5 py-px text-[9px] font-medium', h.supported ? 'bg-ov/[0.07] text-muted' : 'bg-warn/15 text-warn')} title={h.supported ? undefined : t('tutti.hookNoRun')}>{h.trigger}</span>}
                   </span>
                   <span className={clsx('truncate text-[10px]', h.error ? 'text-danger' : 'text-muted')}>{h.error ?? (h.matcher ? `${h.actionType} · ${h.matcher}` : h.actionType)}</span>
+                  </span>
                 </button>
                 <button title={t('tutti.hookEdit')} onClick={() => openHookForm({ file: h.file, index, name: h.name })}
                   className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100"><MdEdit size={13} /></button>
@@ -194,7 +197,7 @@ export function TuttiView() {
     const items: DirEntry[] = kind === 'docs' ? lists.docs.filter((e) => !e.isDir || specInfo[e.path]?.files.length) : lists[kind]
     const nothingYet = kind === 'docs' || items.length === 0
     return (
-    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} onAdd={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
+    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} rows={items.length} onAdd={() => (kind === 'specs' ? openSpecForm() : kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
       {creating === kind && !target && NameInput(kind)}
       {creating === 'docs' && kind === 'docs' && !target && (
         <div className="mx-1 mb-1.5 flex flex-wrap gap-1" role="radiogroup" aria-label={t('tutti.category')}>
@@ -208,9 +211,9 @@ export function TuttiView() {
       )}
       <ul>{items.map((e) => (kind === 'specs' || kind === 'docs') && e.isDir ? (
         <li key={e.path}>
-          <div className="group flex items-center rounded transition-colors hover:bg-accent-bg">
+          <div className="group flex h-7 items-center rounded transition-colors hover:bg-accent-bg">
             <button onClick={() => setOpenSpecs((s) => { const n = new Set(s); if (!n.delete(e.path)) n.add(e.path); return n })} aria-expanded={openSpecs.has(e.path)}
-              className="flex min-w-0 flex-1 items-center gap-1 px-2 py-1 pl-3 text-left text-[12px]">
+              className="flex h-full min-w-0 flex-1 items-center gap-1 px-2 pl-3 text-left text-[12px]">
               <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', openSpecs.has(e.path) && 'rotate-90')} />
               <span className="min-w-0 flex-1 truncate font-medium">{kind === 'docs' ? t(`tutti.cat.${e.name}` as MsgKey) : e.name}</span>
               {kind === 'specs' && specInfo[e.path]?.files.some((f) => f.name === 'bugfix.md') && <span className="shrink-0 rounded bg-danger/15 px-1.5 py-px text-[9px] font-medium text-danger">{t('tutti.bug')}</span>}
@@ -220,7 +223,7 @@ export function TuttiView() {
           </div>
           {creating === kind && target === e.path && NameInput(kind)}
           {openSpecs.has(e.path) && (specInfo[e.path]?.files ?? []).map((f) => (
-            <button key={f.path} onClick={() => open(f)} className="flex w-full items-center gap-2 rounded px-2 py-1 pl-9 text-left text-[12px] transition-colors hover:bg-accent-bg">
+            <button key={f.path} onClick={() => open(f)} className="flex h-7 w-full items-center gap-2 rounded px-2 pl-9 text-left text-[12px] transition-colors hover:bg-accent-bg">
               <img src={iconFor(f.name, f.isDir)} alt="" className="size-4 shrink-0" draggable={false} />
               <span className="truncate">{f.name}</span>
             </button>
@@ -228,7 +231,7 @@ export function TuttiView() {
         </li>
       ) : (
         <li key={e.path}>
-          <button onClick={() => open(e)} className="flex w-full items-center gap-2 rounded px-2 py-1 pl-5 text-left text-[12px] transition-colors hover:bg-accent-bg">
+          <button onClick={() => open(e)} className="flex h-7 w-full items-center gap-2 rounded px-2 pl-5 text-left text-[12px] transition-colors hover:bg-accent-bg">
             {kind === 'steering' && !e.isDir
               ? <MdExplore size={15} className="shrink-0 text-accent" aria-hidden />          // las guías de steering llevan una brújula en lugar del icono de Markdown
               : <img src={iconFor(e.name, e.isDir)} alt="" className="size-4 shrink-0" draggable={false} />}

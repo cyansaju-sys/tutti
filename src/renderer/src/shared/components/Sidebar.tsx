@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
 import { useState } from 'react'
-import { MdAdd, MdLanguage, MdPalette, MdSettings } from 'react-icons/md'
+import { MdAdd, MdLanguage, MdOutlineSettings, MdPalette } from 'react-icons/md'
 import { Menu } from '@/shared/components/Menu'
 import { useT } from '@/shared/lib/i18n'
 import { sidebarIcon } from '@/shared/lib/icons'
@@ -18,10 +18,10 @@ import { UsageView } from '@/features/usage/views/UsageView'
 export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
   { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
   { id: 'tutti', icon: 'tutti', titleKey: 'tab.tutti', key: 'J' },
+  { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
   { id: 'context', icon: 'context', titleKey: 'tab.context', key: 'K' },
   { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
   { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
-  { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
   { id: 'mcp', icon: 'mcp', titleKey: 'tab.mcp', key: 'X' },
   { id: 'ai', icon: 'ai', titleKey: 'tab.ai', key: 'U' }
 ]
@@ -42,14 +42,14 @@ export function Sidebar() {
 
   return (
     <div style={{ width: open ? width + 56 : 56 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', !open && 'mr-1.5')}>
-      <div className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line py-1">
+      <div className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line p-0.5">
         {TABS.map((tab_) => (
           <button
             key={tab_.id}
             title={`${t(tab_.titleKey)} (Ctrl+Shift+${tab_.key})`}
-            onClick={() => set({ tab: tab_.id })}
+            onClick={() => set(tab === tab_.id && open ? { sidebarOpen: false } : { tab: tab_.id, sidebarOpen: true })}
             onDoubleClick={() => set({ tab: tab_.id, sidebarOpen: !open })}
-            className={clsx('relative grid size-10 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg')}
+            className={clsx('relative grid size-9 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg')}
           >
             <img src={sidebarIcon(tab_.icon)} alt="" className="size-6" draggable={false} />
             {tab_.id === 'git' && changes > 0 && (
@@ -64,7 +64,7 @@ export function Sidebar() {
           onClick={(e) => setMenu(e.currentTarget.getBoundingClientRect())}
           className={clsx('mt-auto grid size-10 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent', menu && 'bg-accent-bg text-accent')}
         >
-          <MdSettings size={22} />
+          <MdOutlineSettings size={22} />
         </button>
       </div>
       {menu && (

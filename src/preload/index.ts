@@ -14,7 +14,7 @@ const api: Api = {
   fs: {
     list: (d) => ipcRenderer.invoke('fs:list', d), read: (p) => ipcRenderer.invoke('fs:read', p),
     write: (p, t, c) => ipcRenderer.invoke('fs:write', p, t, c), mtime: (p) => ipcRenderer.invoke('fs:mtime', p),
-    create: (d, n, dir) => ipcRenderer.invoke('fs:create', d, n, dir), rename: (p, n) => ipcRenderer.invoke('fs:rename', p, n), move: (p, d) => ipcRenderer.invoke('fs:move', p, d), trash: (p) => ipcRenderer.invoke('fs:trash', p)
+    create: (d, n, dir) => ipcRenderer.invoke('fs:create', d, n, dir), rename: (p, n) => ipcRenderer.invoke('fs:rename', p, n), move: (p, d) => ipcRenderer.invoke('fs:move', p, d), copy: (p, d) => ipcRenderer.invoke('fs:copy', p, d), trash: (p) => ipcRenderer.invoke('fs:trash', p)
   },
   git: {
     status: (r) => ipcRenderer.invoke('git:status', r), ignored: (r, p) => ipcRenderer.invoke('git:ignored', r, p),

@@ -56,7 +56,7 @@ export function McpStoreList({ query, installedNames, onOpen, featured = false }
         const remote = s.options.some((o) => o.kind === 'remote')
         const local = s.options.some((o) => o.kind === 'local')
         return (
-          <div key={s.name} onClick={() => onOpen(s)} title={s.name} className="group flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-accent-bg">
+          <div key={s.name} onClick={() => onOpen(s)} title={s.name} className="group flex cursor-pointer items-start gap-2.5 border-t border-line/60 px-2 first:border-t-0 py-2 transition-colors hover:bg-accent-bg">
             <Avatar name={s.name} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
