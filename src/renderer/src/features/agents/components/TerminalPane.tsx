@@ -41,8 +41,7 @@ function wire(): void {
     const pane = [...useStore.getState().panes, ...useStore.getState().shells].find((p) => p.id === id)
     const name = pane?.command.split(/[\\/]/).pop() ?? tr('proc.default')
     const toast = useStore.getState().toast
-    if (code === 0) toast(tr('proc.ended', { name }), 'info')
-    else if (code === 127) toast(tr('proc.notFound', { name }), 'error')
+    if (code === 127) toast(tr('proc.notFound', { name }), 'error')
     else if (code !== null && code < 0) toast(tr('proc.signal', { name, code: -code }), 'error')
     else toast(tr('proc.exitCode', { name, code: code ?? '?' }), 'error')
   })

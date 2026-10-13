@@ -34,7 +34,6 @@ export function SkillFormView() {
     if (!source) return
     const res = await window.api.skills.import(project, source)
     if (!res.ok) { toast(res.message, 'error'); return }
-    toast(t('skf.imported'), 'ok')
     closeDoc('skill:new')
     void openDoc(res.message)
   }

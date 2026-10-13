@@ -5,6 +5,7 @@ import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, remov
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
+import { archiveOpenspec, initOpenspec, openspecState, validateOpenspec } from './services/openspec'
 import { copyEntry, createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
@@ -87,6 +88,10 @@ function registerIpc(): void {
       pty.sendPrompt(leader.id, prompt); return true
     }
   }
+  ipcMain.handle('openspec:state', (_e, project: string) => openspecState(project))
+  ipcMain.handle('openspec:init', (_e, project: string) => initOpenspec(project))
+  ipcMain.handle('openspec:validate', (_e, project: string, change?: string) => validateOpenspec(project, change))
+  ipcMain.handle('openspec:archive', (_e, project: string, change: string) => archiveOpenspec(project, change))
   ipcMain.handle('hooks:list', (_e, project: string) => ({ hooks: loadHooks(project), trusted: isTrusted(project) }))
   ipcMain.handle('hooks:trust', (_e, project: string, on: boolean) => { setTrusted(project, on); if (on) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('hooks:watch', (_e, project: string | null) => { if (process.env.TUTTI_CAPTURE) return; if (project) startHooks(project, hooksHost); else stopHooks() })

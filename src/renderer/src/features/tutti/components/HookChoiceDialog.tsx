@@ -24,8 +24,7 @@ export function HookChoiceDialog({ onClose }: { onClose: () => void }) {
 
   const send = async (): Promise<void> => {
     if (!agent || !idea.trim()) return
-    const name = await ask.send(hookAgentPrompt(lang, idea))
-    if (name) toast(t('sa.sent', { agent: name }), 'ok')
+    await ask.send(hookAgentPrompt(lang, idea))
     onClose()
   }
   const Option = ({ icon, title, hint, onClick, off }: { icon: React.ReactNode; title: string; hint: string; onClick: () => void; off?: boolean }) => (

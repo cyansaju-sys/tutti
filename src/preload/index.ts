@@ -25,6 +25,10 @@ const api: Api = {
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
   skills: { import: (project, source) => ipcRenderer.invoke('skills:import', project, source) },
+  openspec: {
+    state: (p) => ipcRenderer.invoke('openspec:state', p), init: (p) => ipcRenderer.invoke('openspec:init', p),
+    validate: (p, c) => ipcRenderer.invoke('openspec:validate', p, c), archive: (p, c) => ipcRenderer.invoke('openspec:archive', p, c)
+  },
   hooks: {
     list: (project) => ipcRenderer.invoke('hooks:list', project), trust: (project, on) => ipcRenderer.invoke('hooks:trust', project, on), watch: (project) => ipcRenderer.invoke('hooks:watch', project),
     onRan: (cb) => subscribe<[{ name: string; ok: boolean; message: string }]>('hooks:ran', cb)

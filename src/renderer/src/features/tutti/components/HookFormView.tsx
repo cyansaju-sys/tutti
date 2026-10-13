@@ -40,7 +40,7 @@ export function HookFormView({ path }: { path: string }) {
       const next = text === null ? null : replaceHook(text, edit.index, form)
       if (next === null) { toast(t('hf.editFail'), 'error'); return }
       await window.api.fs.write(edit.file, next, false)
-      toast(t('hf.saved'), 'ok'); closeDoc(path); void openDoc(edit.file)
+      closeDoc(path); void openDoc(edit.file)
       return
     }
     const dir = await window.api.context.init(project, 'hooks')           // la primera vez crea .tutti/hooks
