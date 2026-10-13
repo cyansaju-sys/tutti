@@ -35,6 +35,7 @@ const api: Api = {
   },
   context: {
     steering: (project) => ipcRenderer.invoke('context:steering', project), globalSteeringDir: () => ipcRenderer.invoke('context:global-steering'), working: (project, files) => ipcRenderer.invoke('context:working', project, files), sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
+    agents: { state: (project) => ipcRenderer.invoke('context:agents-state', project), write: (project) => ipcRenderer.invoke('context:agents-write', project), remove: (project) => ipcRenderer.invoke('context:agents-remove', project) },
     onAgent: (cb) => subscribe<[string]>('context:agent', cb)
   },
   agents: {
@@ -54,7 +55,9 @@ const api: Api = {
   },
   mcp: {
     list: (p) => ipcRenderer.invoke('mcp:list', p), app: () => ipcRenderer.invoke('mcp:app'), registry: (q, c) => ipcRenderer.invoke('mcp:registry', q, c), featured: () => ipcRenderer.invoke('mcp:featured'), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
-    remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p)
+    remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p),
+    probe: (s, p) => ipcRenderer.invoke('mcp:probe', s, p), update: (s, spec, p) => ipcRenderer.invoke('mcp:update', s, spec, p), disable: (s, p) => ipcRenderer.invoke('mcp:disable', s, p), enable: (s, p) => ipcRenderer.invoke('mcp:enable', s, p),
+    sync: { state: (p, sc) => ipcRenderer.invoke('mcp:sync-state', p, sc), apply: (p, sc) => ipcRenderer.invoke('mcp:sync-apply', p, sc), pull: (p, sc) => ipcRenderer.invoke('mcp:sync-pull', p, sc), standardize: (p) => ipcRenderer.invoke('mcp:sync-standardize', p), resolve: (p, sc, n, a, u) => ipcRenderer.invoke('mcp:sync-resolve', p, sc, n, a, u) }
   },
   orchestra: {
     newId: () => ipcRenderer.invoke('orchestra:newId'),

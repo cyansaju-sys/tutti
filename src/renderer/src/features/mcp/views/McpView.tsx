@@ -1,15 +1,17 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdPower, MdSettings, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
-import type { McpAgent, McpScope, McpServer, McpSpec, RegistryServer } from '@shared/types'
+import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
+import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, RegistryServer, SyncScope, SyncState } from '@shared/types'
 import { FIELD, FIELD_SLIM, Modal } from '@/shared/components/ui'
-import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, prefillFrom, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
+import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, prefillFrom, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
 import { useT } from '@/shared/lib/i18n'
 import { useResizeHeight } from '@/shared/lib/useResizeHeight'
 import { useStore } from '@/shared/store'
 import { Avatar, McpStoreDetail, McpStoreList } from './McpStore'
 
-const SUPPORTED: McpAgent[] = ['claude', 'opencode', 'gemini', 'codex', 'agy']
+const SUPPORTED: McpAgent[] = ['claude', 'opencode', 'gemini', 'codex', 'agy', 'qwen', 'cursor']
+/** Comando con el que se detecta el agente, si no es su propio nombre. */
+const COMMAND: Partial<Record<McpAgent, string>> = { cursor: 'cursor-agent' }
 const REFRESH_MS = 5000
 
 /**
@@ -41,6 +43,69 @@ function Fold({ id, title, count, fill = false, resize = false, forceOpen = fals
   )
 }
 
+const SYNC_KEYS = { ok: 'mcp.syncOk', missing: 'mcp.syncMissing', differs: 'mcp.syncDiffers', disabled: 'mcp.syncDisabled', unsupported: 'mcp.syncUnsupported', launch: 'mcp.syncLaunch' } as const
+
+/**
+ * Compara los agentes con la fuente (Claude Code: `.mcp.json` o sus MCP de usuario) y deja sincronizarlos. Una sola sección para proyecto y
+ * global. Lista solo lo que necesita atención (lo que ya está igual en todos los agentes se ve en la lista de instalados), pero el botón
+ * de añadir lo que falta siempre está, desactivado si no hay nada pendiente.
+ */
+function SyncSection({ project, compact, onChanged }: { project: string | null; compact: boolean; onChanged: () => void }) {
+  const t = useT()
+  const toast = useStore((s) => s.toast)
+  const [states, setStates] = useState<Array<{ scope: SyncScope; state: SyncState }>>([])
+  const [busy, setBusy] = useState(false)
+  const load = useCallback(async () => {
+    const scopes: SyncScope[] = project ? ['project', 'global'] : ['global']
+    const next = (await Promise.all(scopes.map(async (scope) => ({ scope, state: await window.api.mcp.sync.state(project, scope) })))).filter((x) => x.state.available)
+    setStates((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+  }, [project])
+  useEffect(() => { void load(); const i = setInterval(() => void load(), REFRESH_MS); return () => clearInterval(i) }, [load])
+
+  const blocks = states
+    .map(({ scope, state }) => ({ scope, state, todo: state.servers.filter((sv) => sv.agents.some((a) => a.state !== 'ok' && a.state !== 'launch')) }))
+    .filter((b) => b.state.servers.length || b.state.extras || b.state.local)
+  if (!blocks.length) return null
+  const run = async (action: Promise<{ ok: boolean; message: string }>): Promise<void> => {
+    setBusy(true)
+    const res = await action
+    setBusy(false)
+    toast(res.message, res.ok ? 'ok' : 'error')
+    void load(); onChanged()
+  }
+  const button = 'rounded-md bg-ov/[0.05] px-2 py-0.5 transition-colors hover:bg-accent-bg disabled:opacity-50'
+  const wide = 'mt-1 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors enabled:hover:border-accent enabled:hover:bg-accent-bg enabled:hover:text-accent disabled:opacity-50'
+  const body = (
+    <div className="px-1.5 pb-1">
+      {blocks.map(({ scope, state, todo }) => (
+        <div key={scope} className="pb-1">
+          <p className="selectable truncate px-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted" title={state.source}>{t(SCOPE_KEYS[scope])}</p>
+          {!todo.length && !state.extras && !state.local && <p className="px-1 py-1 text-[11px] text-muted">{t('mcp.syncAllOk')}</p>}
+          {todo.map((sv) => (
+            <div key={sv.name} className="px-1 py-1">
+              <span className="block truncate text-[12px] font-semibold">{sv.name}</span>
+              <span className="block text-[11px] text-muted">{sv.agents.map((a) => `${AGENT_NAMES[a.agent]}: ${t(SYNC_KEYS[a.state])}`).join(' · ')}</span>
+              {sv.agents.filter((a) => a.state === 'differs').map((a) => (
+                <span key={a.agent} className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="text-muted">{AGENT_NAMES[a.agent]}:</span>
+                  <button disabled={busy} onClick={() => void run(window.api.mcp.sync.resolve(project, scope, sv.name, a.agent, 'source'))} className={button}>{t('mcp.syncUseSource')}</button>
+                  <button disabled={busy} onClick={() => void run(window.api.mcp.sync.resolve(project, scope, sv.name, a.agent, 'agent'))} className={button}>{t('mcp.syncUseAgent')}</button>
+                </span>
+              ))}
+            </div>
+          ))}
+          <button disabled={busy || !todo.some((sv) => sv.agents.some((a) => a.state === 'missing'))} onClick={() => void run(window.api.mcp.sync.apply(project, scope))} className={wide}>{t('mcp.syncApply')}</button>
+          {scope === 'project' && state.local > 0
+            ? <button disabled={busy} onClick={() => void run(window.api.mcp.sync.standardize(project!))} className={wide}>{t('mcp.syncStandardize', { count: String(state.local) })}</button>
+            : state.extras > 0 && <button disabled={busy} onClick={() => void run(window.api.mcp.sync.pull(project, scope))} className={wide}>{t('mcp.syncPull', { count: String(state.extras) })}</button>}
+        </div>
+      ))}
+    </div>
+  )
+  const count = blocks.reduce((n, b) => n + b.todo.length + Math.max(b.state.extras, b.state.local), 0)
+  return compact ? <div className="sect-scroll max-h-60 overflow-y-auto">{body}</div> : <Fold id="sync" title={t('mcp.sync')} count={count || undefined}>{body}</Fold>
+}
+
 const Tag = ({ children }: { children: React.ReactNode }) => (
   <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-medium text-accent">{children}</span>
 )
@@ -67,11 +132,12 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   const [details, setDetails] = useState<string | null>(null)          // nombre (en minúsculas) del servidor abierto
   const [removing, setRemoving] = useState<McpServer[] | null>(null)
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<McpServer[] | null>(null)      // grupo que se está editando
   const [prefill, setPrefill] = useState<Prefill | null>(null)          // instalar desde el registro: el diálogo de añadir con los datos rellenos
   const [storeItem, setStoreItem] = useState<RegistryServer | null>(null)
   const [query, setQuery] = useState('')
 
-  const installed = useMemo(() => SUPPORTED.filter((a) => agents.some((x) => x.command === a)), [agents])
+  const installed = useMemo(() => SUPPORTED.filter((a) => agents.some((x) => x.command === (COMMAND[a] ?? a))), [agents])
   const refresh = useCallback(async () => {
     const next = await window.api.mcp.list(project)
     setServers((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
@@ -108,6 +174,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
       <div className={clsx(!compact && 'flex min-h-0 flex-1 flex-col overflow-y-auto pb-2')}>
         {showInstalled && !query.trim() && (
           <>
+        <SyncSection project={project} compact={compact} onChanged={() => void refresh()} />
         {servers === null && <p className="px-2 text-[11px] text-muted">{t('mcp.reading')}</p>}
         {servers && installed.length === 0 && <p className="px-2 text-[11px] text-muted">{t('mcp.noneSupported')}</p>}
         {servers && installed.length > 0 && visible.length === 0 && (compact
@@ -118,7 +185,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
           const first = g[0]
           const agentNames = [...new Set(g.map((x) => AGENT_NAMES[x.agent]))]
           return (
-            <div key={first.name.toLowerCase()} className="group flex items-center gap-1 rounded-lg transition-colors hover:bg-accent-bg">
+            <div key={first.name.toLowerCase()} className={clsx('group flex items-center gap-1 rounded-lg transition-colors hover:bg-accent-bg', g.every((x) => x.disabled) && 'opacity-55')}>
               <button onClick={() => setDetails(first.name.toLowerCase())} title={t('mcp.details')} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-left">
                 {compact ? <MdPower size={15} className="shrink-0 text-accent" aria-hidden /> : <Avatar name={first.name} />}          {/* en la pestaña Tutti, un enchufe en lugar de las iniciales */}
                 <span className="min-w-0 flex-1">
@@ -126,7 +193,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
                     <span className="min-w-0 truncate text-[12px] font-semibold">{first.name}</span>
                     {first.kind === 'remote' ? <MdCloudQueue size={13} className="shrink-0 text-muted" /> : <MdTerminal size={13} className="shrink-0 text-muted" />}
                   </span>
-                  <span className="block truncate text-[11px] text-muted">{t(SCOPE_KEYS[first.scope])} · {agentNames.join(', ')}</span>
+                  <span className="block truncate text-[11px] text-muted">{g.every((x) => x.disabled) && `${t('mcp.off')} · `}{t(SCOPE_KEYS[first.scope])} · {agentNames.join(', ')}</span>
                 </span>
               </button>
               <button title={t('mcp.remove')} onClick={() => setRemoving(g)}
@@ -153,7 +220,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
 
       {storeItem && <McpStoreDetail server={storeItem} onClose={() => setStoreItem(null)} onInstall={(option) => { setPrefill(prefillFrom(storeItem, option)); setStoreItem(null) }} />}
       {prefill && <AddDialog installed={installed} project={project} prefill={prefill} onClose={() => setPrefill(null)} onDone={() => void refresh()} />}
-      {open && <Details group={open} installed={installed} project={project} onClose={() => setDetails(null)} onChanged={() => void refresh()} onRemove={setRemoving} />}
+      {open && <Details group={open} installed={installed} project={project} onClose={() => setDetails(null)} onChanged={() => void refresh()} onRemove={setRemoving} onEdit={(g) => { setDetails(null); setEditing(g) }} />}
       {removing && (
         <Modal onClose={() => setRemoving(null)} width={400} title={t('mcp.removeTitle')}>
           <div className="px-4 pb-4">
@@ -166,18 +233,21 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
         </Modal>
       )}
       {adding && <AddDialog installed={installed} project={project} onClose={() => setAdding(false)} onDone={() => void refresh()} />}
+      {editing && <AddDialog installed={installed} project={project} editing={editing} prefill={prefillFromServer(editing.find((x) => !x.disabled) ?? editing[0])} onClose={() => setEditing(null)} onDone={() => void refresh()} />}
     </div>
   )
 }
 
-function Details({ group, installed, project, onClose, onChanged, onRemove }: {
-  group: McpServer[]; installed: McpAgent[]; project: string | null; onClose: () => void; onChanged: () => void; onRemove: (targets: McpServer[]) => void
+function Details({ group, installed, project, onClose, onChanged, onRemove, onEdit }: {
+  group: McpServer[]; installed: McpAgent[]; project: string | null; onClose: () => void; onChanged: () => void; onRemove: (targets: McpServer[]) => void; onEdit: (group: McpServer[]) => void
 }) {
   const t = useT()
   const server = group[0]
   const all = group
   const toast = useStore((s) => s.toast)
   const [reveal, setReveal] = useState(false)
+  const [probe, setProbe] = useState<McpProbe | 'running' | null>(null)
+  const [busy, setBusy] = useState(false)
   const cfg = server.config as Record<string, unknown>
   const headers = (cfg.headers as Record<string, string>) ?? {}
   const env = { ...((cfg.environment as Record<string, string>) ?? {}), ...((cfg.env as Record<string, string>) ?? {}) }
@@ -186,6 +256,18 @@ function Details({ group, installed, project, onClose, onChanged, onRemove }: {
   const missing = agentsMissing(server, all, SUPPORTED).filter((a) => installed.includes(a as McpAgent) && !(projectOnly && GLOBAL_ONLY.includes(a))) as McpAgent[]
   const copy = async (text: string): Promise<void> => { await navigator.clipboard.writeText(text) }
 
+  const runProbe = async (): Promise<void> => {
+    setProbe('running')
+    setProbe(await window.api.mcp.probe(group.find((x) => !x.disabled) ?? server, project))
+  }
+  const toggle = async (x: McpServer): Promise<void> => {
+    setBusy(true)
+    const res = await (x.disabled ? window.api.mcp.enable(x, project) : window.api.mcp.disable(x, project))
+    setBusy(false)
+    if (!res.ok) toast(res.message, 'error')
+    onChanged()
+    if (res.ok) onClose()
+  }
   const copyTo = async (agent: McpAgent): Promise<void> => {
     const res = await window.api.mcp.add(agent, specFromServer(server), server.scope === 'shared' ? 'project' : server.scope, project)
     if (!res.ok) toast(t('mcp.addFailed', { message: res.message }), 'error')
@@ -208,6 +290,16 @@ function Details({ group, installed, project, onClose, onChanged, onRemove }: {
     <Modal onClose={onClose} width={500} title={server.name}>
       <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-4 pb-4">
         <div className="flex flex-wrap gap-1.5">{[...new Set(group.map((x) => x.scope))].map((sc) => <Tag key={sc}>{t(SCOPE_KEYS[sc])}</Tag>)}<Tag>{server.kind === 'remote' ? t('mcp.remote') : t('mcp.local')}</Tag></div>
+        <div className="flex flex-wrap gap-2">
+          <button disabled={probe === 'running'} onClick={() => void runProbe()} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg disabled:opacity-50"><MdPlayArrow size={15} className="text-accent" /> {probe === 'running' ? t('mcp.probing') : t('mcp.probe')}</button>
+          <button onClick={() => onEdit(group)} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg"><MdEdit size={15} className="text-accent" /> {t('mcp.edit')}</button>
+        </div>
+        {probe && probe !== 'running' && (
+          <div className={clsx('rounded-lg px-3 py-2 text-[11px]', probe.ok ? 'bg-accent/10' : 'bg-danger/10')}>
+            <div className={clsx('font-semibold', probe.ok ? 'text-accent' : 'text-danger')}>{probe.message} · {probe.ms} ms</div>
+            {probe.tools.length > 0 && <ul className="selectable mt-1.5 flex max-h-40 flex-col gap-1 overflow-y-auto">{probe.tools.map((x) => <li key={x.name}><span className="font-mono font-semibold">{x.name}</span>{x.description && <span className="text-muted"> · {x.description}</span>}</li>)}</ul>}
+          </div>
+        )}
         <Field label={server.kind === 'remote' ? t('mcp.url') : t('mcp.command')} value={server.target} copyable />
         {pairs(t('mcp.headers'), headers)}
         {pairs(t('mcp.envVars'), env)}
@@ -217,11 +309,13 @@ function Details({ group, installed, project, onClose, onChanged, onRemove }: {
           <div className="flex flex-col gap-1">
             {group.map((x) => (
               <div key={`${x.agent}${x.scope}${x.source}`} className="group flex items-center gap-2.5 rounded-lg bg-ov/[0.04] px-2.5 py-1.5">
-                <MdCheckCircle size={16} className="shrink-0 text-accent" />
+                <MdCheckCircle size={16} className={clsx('shrink-0', x.disabled ? 'text-muted' : 'text-accent')} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[12px] font-semibold">{AGENT_NAMES[x.agent]}</span>
-                  <span className="block truncate text-[10px] text-muted">{t(SCOPE_KEYS[x.scope])}</span>
+                  <span className="block truncate text-[10px] text-muted">{x.disabled && `${t('mcp.off')} · `}{t(SCOPE_KEYS[x.scope])}</span>
                 </span>
+                <button disabled={busy} title={t(x.disabled ? 'mcp.enableIn' : 'mcp.disableIn', { agent: AGENT_NAMES[x.agent] })} onClick={() => void toggle(x)}
+                  className={clsx('grid size-6 shrink-0 place-items-center rounded-md transition-colors hover:bg-ov/[0.08] disabled:opacity-50', x.disabled ? 'text-muted' : 'text-accent')}><MdPowerSettingsNew size={15} /></button>
                 <button title={t('mcp.removeFrom', { agent: AGENT_NAMES[x.agent] })} onClick={() => { onClose(); onRemove([x]) }}
                   className="grid size-6 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-all hover:bg-danger/15 hover:text-danger group-hover:opacity-100"><MdDeleteOutline size={15} /></button>
               </div>
@@ -249,7 +343,7 @@ function Details({ group, installed, project, onClose, onChanged, onRemove }: {
 
 const input = FIELD
 
-function AddDialog({ installed, project, prefill, onClose, onDone }: { installed: McpAgent[]; project: string | null; prefill?: Prefill; onClose: () => void; onDone: () => void }) {
+function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { installed: McpAgent[]; project: string | null; prefill?: Prefill; editing?: McpServer[]; onClose: () => void; onDone: () => void }) {
   const t = useT()
   const toast = useStore((s) => s.toast)
   const [kind, setKind] = useState<'remote' | 'local'>(prefill?.kind ?? 'remote')
@@ -272,6 +366,18 @@ function AddDialog({ installed, project, prefill, onClose, onDone }: { installed
     const spec: McpSpec = kind === 'remote'
       ? { name: name.trim(), kind, url: url.trim(), headers: parsePairs(headers, [': ', ':']) }
       : { name: name.trim(), kind, command: command.trim(), args: splitArgs(args), env: parsePairs(env, ['=']) }
+    if (editing) {
+      setBusy(true); setError('')
+      const failed: string[] = []
+      for (const entry of editing) {
+        const res = await window.api.mcp.update(entry, spec, project)
+        if (!res.ok) failed.push(`${AGENT_NAMES[entry.agent]}: ${res.message}`)
+      }
+      setBusy(false)
+      onDone()
+      if (failed.length) setError(failed.join('\n')); else onClose()
+      return
+    }
     const chosen = scope === 'project' ? targets.filter((a) => !GLOBAL_ONLY.includes(a)) : targets
     if (!chosen.length) { setError(t('mcp.pickOne')); return }
     setBusy(true); setError('')
@@ -287,10 +393,10 @@ function AddDialog({ installed, project, prefill, onClose, onDone }: { installed
   }
 
   return (
-    <Modal onClose={onClose} width={520} title={t('mcp.addTitle')}>
+    <Modal onClose={onClose} width={520} title={t(editing ? 'mcp.editTitle' : 'mcp.addTitle')}>
       <div className="flex max-h-[68vh] flex-col gap-3 overflow-y-auto px-4 pb-4">
         <div className="flex gap-2"><Choice on={kind === 'remote'} label={t('mcp.kindRemote')} onClick={() => setKind('remote')} /><Choice on={kind === 'local'} label={t('mcp.kindLocal')} onClick={() => setKind('local')} /></div>
-        <input className={input} placeholder={t('mcp.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} autoFocus spellCheck={false} />
+        <input className={input} placeholder={t('mcp.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!editing} disabled={!!editing} spellCheck={false} />
         {kind === 'remote' ? (
           <>
             <input className={input} placeholder="https://server.example.com/mcp" value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} />
@@ -304,6 +410,7 @@ function AddDialog({ installed, project, prefill, onClose, onDone }: { installed
           </>
         )}
         {prefill && prefill.fields.length > 0 && <p className="text-[11px] leading-snug text-muted">{t('st.fieldsHelp')}</p>}
+        {!editing && <>
         <div>
           <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">{t('mcp.agents')}</div>
           <div className="flex flex-wrap gap-2">
@@ -320,10 +427,12 @@ function AddDialog({ installed, project, prefill, onClose, onDone }: { installed
         {scope === 'project' && installed.some((a) => GLOBAL_ONLY.includes(a)) && (
           <p className="text-[11px] text-muted">{t(installed.filter((a) => GLOBAL_ONLY.includes(a)).length > 1 ? 'mcp.onlyGlobalMany' : 'mcp.onlyGlobal', { agents: installed.filter((a) => GLOBAL_ONLY.includes(a)).map((a) => AGENT_NAMES[a]).join(t('mcp.and')), scope: t(SCOPE_KEYS.global) })}</p>
         )}
+        </>}
+        {editing && <p className="text-[11px] text-muted">{t('mcp.editHelp', { agents: [...new Set(editing.map((x) => AGENT_NAMES[x.agent]))].join(', ') })}</p>}
         {error && <pre className="selectable whitespace-pre-wrap text-[11px] leading-snug text-danger">{error}</pre>}
         <div className="flex justify-end gap-2 pt-1">
           <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
-          <button disabled={busy} onClick={() => void submit()} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110 disabled:opacity-50">{busy ? t('mcp.adding') : t('dlg.add')}</button>
+          <button disabled={busy} onClick={() => void submit()} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-colors hover:brightness-110 disabled:opacity-50">{busy ? t('mcp.adding') : t(editing ? 'mcp.save' : 'dlg.add')}</button>
         </div>
       </div>
     </Modal>

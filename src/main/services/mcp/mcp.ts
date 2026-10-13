@@ -5,14 +5,14 @@
  * la lectura es directa de sus archivos de configuración.
  */
 import { execFile } from 'node:child_process'
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import type { McpAgent, McpResult, McpScope, McpServer, McpSpec } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
 import { extendedPath } from '../../utils/shellpath'
 
-export const SUPPORTED: Record<McpAgent, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity' }
+export const SUPPORTED: Record<McpAgent, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity', cursor: 'Cursor Agent', qwen: 'Qwen Code' }
 export const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 
 type Entry = Record<string, unknown>
@@ -61,6 +61,14 @@ export function codexEntries(file: string): Array<[string, Entry]> {
   }
   return [...out.entries()]
 }
+
+export const qwenGlobalConfig = (): string => join(homedir(), '.qwen', 'settings.json')
+export const cursorGlobalConfig = (): string => join(homedir(), '.cursor', 'mcp.json')
+/** Archivo de MCP de un agente que lo guarda en `mcpServers` de un JSON (Cursor Agent y Qwen Code, además de Gemini). */
+export const mcpServersFile = (agent: 'cursor' | 'qwen' | 'gemini', scope: McpScope, project: string | null): string =>
+  scope === 'global' || !project
+    ? { cursor: cursorGlobalConfig(), qwen: qwenGlobalConfig(), gemini: geminiGlobalConfig() }[agent]
+    : join(project, ...{ cursor: ['.cursor', 'mcp.json'], qwen: ['.qwen', 'settings.json'], gemini: ['.gemini', 'settings.json'] }[agent])
 
 export const opencodeGlobalConfig = (): string => join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'opencode', 'opencode.json')
 
@@ -119,6 +127,13 @@ export function listServers(project: string | null): McpServer[] {
     const found = readJson(file).mcpServers
     for (const [name, entry] of Object.entries(isObject(found) ? found : {})) add(name, 'gemini', 'project', isObject(entry) ? entry : {}, file)
   }
+  for (const agent of ['qwen', 'cursor'] as const) {
+    for (const scope of project ? (['global', 'project'] as const) : (['global'] as const)) {
+      const file = mcpServersFile(agent, scope, project)
+      const found = readJson(file).mcpServers
+      for (const [name, entry] of Object.entries(isObject(found) ? found : {})) add(name, agent, scope, isObject(entry) ? entry : {}, file)
+    }
+  }
   const agyServers = readJson(agyGlobalConfig()).mcpServers
   for (const [name, entry] of Object.entries(isObject(agyServers) ? agyServers : {})) add(name, 'agy', 'global', isObject(entry) ? entry : {}, agyGlobalConfig())
   for (const [name, entry] of codexEntries(codexConfig())) add(name, 'codex', 'global', entry, codexConfig())
@@ -139,7 +154,7 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
   const env = Object.entries(spec.env ?? {})
   const args = spec.args ?? []
   if (agent === 'claude') {
-    const cliScope = scope === 'global' ? 'user' : 'local'
+    const cliScope = { global: 'user', project: 'local', shared: 'project' }[scope]
     const argv = ['claude', 'mcp', 'add', spec.name]               // el nombre va antes: -H y -e aceptan varios valores
     if (remote) {
       argv.push(spec.url!, '--transport', 'http', '-s', cliScope)
@@ -151,8 +166,8 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
     }
     return argv
   }
-  if (agent === 'gemini') {
-    const argv = ['gemini', 'mcp', 'add', '-s', scope === 'global' ? 'user' : 'project']
+  if (agent === 'gemini' || agent === 'qwen') {                    // Qwen Code es un derivado de Gemini CLI: mismos argumentos
+    const argv = [agent, 'mcp', 'add', '-s', scope === 'global' ? 'user' : 'project']
     if (remote) {
       argv.push('-t', 'http')
       for (const [k, v] of headers) argv.push('-H', `${k}: ${v}`)
@@ -163,6 +178,7 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
     }
     return argv
   }
+  if (agent === 'cursor') throw new Error('Cursor Agent no tiene `mcp add`: se escribe su mcp.json')
   if (agent === 'agy') {                                           // las opciones van antes del nombre
     const argv = ['agy', 'mcp', 'add']
     for (const [k, v] of headers) argv.push('--header', `${k}: ${v}`)
@@ -205,7 +221,37 @@ export async function addServer(agent: McpAgent, spec: McpSpec, scope: McpScope,
   if ((agent === 'codex' || agent === 'agy') && scope !== 'global') return { ok: false, message: tm('m.mcp.globalOnly', { agent: SUPPORTED[agent] }) }
   if (agent === 'codex' && spec.kind === 'remote' && Object.keys(spec.headers ?? {}).length) return { ok: false, message: tm('m.mcp.codexHeaders') }
   if (scope !== 'global' && !project) return { ok: false, message: tm('m.mcp.needProject') }
+  if (agent === 'cursor') return addToMcpServersFile(mcpServersFile('cursor', scope, project), spec)
   return run(buildAddArgv(agent, spec, scope), project)
+}
+
+/** Entrada de `mcpServers` (formato de Cursor) para un servidor. */
+const cursorEntry = (spec: McpSpec): Entry => spec.kind === 'remote'
+  ? { url: spec.url, ...(Object.keys(spec.headers ?? {}).length ? { headers: spec.headers } : {}) }
+  : { command: spec.command, ...(spec.args?.length ? { args: spec.args } : {}), ...(Object.keys(spec.env ?? {}).length ? { env: spec.env } : {}) }
+
+/** Cursor no trae `mcp add`: se escribe su mcp.json (conservando lo demás que tenga). */
+function addToMcpServersFile(file: string, spec: McpSpec): McpResult {
+  try {
+    const data = readJson(file)
+    const servers = isObject(data.mcpServers) ? data.mcpServers : {}
+    servers[spec.name] = cursorEntry(spec)
+    data.mcpServers = servers
+    mkdirSync(dirname(file), { recursive: true })
+    writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
+    return { ok: true, message: 'Hecho' }
+  } catch (e) {
+    return { ok: false, message: `No se pudo editar ${file}: ${e instanceof Error ? e.message : String(e)}` }
+  }
+}
+
+/** Quita `name` del `mcpServers` de un JSON. Devuelve false si no estaba. */
+function removeFromMcpServersFile(file: string, name: string): boolean {
+  const data = readJson(file)
+  if (!isObject(data.mcpServers) || !(name in data.mcpServers)) return false
+  delete data.mcpServers[name]
+  writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
+  return true
 }
 
 /** Quita `name` de un opencode.json, esté donde esté (mcp.servers o mcp). Devuelve false si no estaba. */
@@ -225,7 +271,11 @@ export async function removeServer(server: McpServer, project: string | null): P
     const cliScope = { global: 'user', project: 'local', shared: 'project' }[server.scope]
     return run(['claude', 'mcp', 'remove', server.name, '-s', cliScope], project)
   }
-  if (server.agent === 'gemini') return run(['gemini', 'mcp', 'remove', '-s', server.scope === 'global' ? 'user' : 'project', server.name], project)
+  if (server.agent === 'gemini' || server.agent === 'qwen') return run([server.agent, 'mcp', 'remove', '-s', server.scope === 'global' ? 'user' : 'project', server.name], project)
+  if (server.agent === 'cursor') {
+    const file = mcpServersFile('cursor', server.scope, project)
+    try { return removeFromMcpServersFile(file, server.name) ? { ok: true, message: 'Quitado' } : { ok: false, message: 'No estaba en el archivo' } } catch (e) { return { ok: false, message: `No se pudo editar ${file}: ${e instanceof Error ? e.message : String(e)}` } }
+  }
   if (server.agent === 'agy') return run(['agy', 'mcp', 'remove', server.name], project)
   if (server.agent === 'codex') return run(['codex', 'mcp', 'remove', server.name], project)
   // OpenCode no trae `mcp remove`: se edita su archivo

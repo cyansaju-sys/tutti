@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electr
 import { spawn } from 'node:child_process'
 import { join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
+import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
@@ -19,6 +20,9 @@ import type { GitOp, PtyOptions, SearchOptions } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
+import { asServer, listDisabled } from './services/mcp/disabled'
+import { disableServer, enableServer, probeServer, updateServer } from './services/mcp/manage'
+import { applySync, pullSync, resolveSync, standardizeProject, syncState } from './services/mcp/sync'
 import { featuredServers, searchRegistry } from './services/mcp/registry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
@@ -102,6 +106,9 @@ function registerIpc(): void {
   ipcMain.handle('context:working', (_e, project: string, files: string[]) => setWorkingFiles(project, files))
   ipcMain.handle('context:sources', (_e, project: string) => contextSources(project))
   ipcMain.handle('context:open', (_e, project: string) => openProjectContext(project))
+  ipcMain.handle('context:agents-state', (_e, project: string) => agentsPointerState(project))
+  ipcMain.handle('context:agents-write', (_e, project: string) => (process.env.TUTTI_CAPTURE ? { ok: true, message: join(project, 'AGENTS.md') } : writeAgentsPointer(project)))      // en las capturas no se escribe en el proyecto fotografiado
+  ipcMain.handle('context:agents-remove', (_e, project: string) => removeAgentsPointer(project))
   ipcMain.handle('context:ensure-global', () => ensureGlobalContext())
   ipcMain.handle('fs:list', (_e, dir: string) => listDir(dir))
   ipcMain.handle('search:run', (_e, root: string, opts: SearchOptions) => searchFiles(root, opts))
@@ -145,7 +152,20 @@ function registerIpc(): void {
   ipcMain.handle('git:suggestCommit', (e, root: string) => withTask('commit', (signal) => suggestCommit(root, (name) => e.sender.send('git:commitAgent', name), signal)))
   ipcMain.handle('git:marks', (_e, file: string) => git.marks(file))
 
-  ipcMain.handle('mcp:list', (_e, project: string | null) => mcp.listServers(project))
+  ipcMain.handle('mcp:list', (_e, project: string | null) => {
+    const live = mcp.listServers(project)
+    const off = listDisabled(project).filter((e) => !live.some((s) => s.agent === e.agent && s.scope === e.scope && s.name.toLowerCase() === e.name.toLowerCase())).map(asServer)
+    return [...live, ...off]
+  })
+  ipcMain.handle('mcp:probe', (_e, server, project) => probeServer(server, project))
+  ipcMain.handle('mcp:update', (_e, server, spec, project) => updateServer(server, spec, project))
+  ipcMain.handle('mcp:disable', (_e, server, project) => disableServer(server, project))
+  ipcMain.handle('mcp:enable', (_e, server, project) => enableServer(server, project))
+  ipcMain.handle('mcp:sync-state', (_e, project, scope) => syncState(project, scope))
+  ipcMain.handle('mcp:sync-apply', (_e, project, scope) => applySync(project, scope))
+  ipcMain.handle('mcp:sync-standardize', (_e, project) => standardizeProject(project))
+  ipcMain.handle('mcp:sync-pull', (_e, project, scope) => pullSync(project, scope))
+  ipcMain.handle('mcp:sync-resolve', (_e, project, scope, name, agent, use) => resolveSync(project, scope, name, agent, use))
   ipcMain.handle('mcp:app', () => appMcpInfo())
   ipcMain.handle('mcp:featured', () => featuredServers())
   ipcMain.handle('mcp:registry', (_e, query: string, cursor: string) => searchRegistry(query, cursor))
