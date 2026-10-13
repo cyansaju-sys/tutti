@@ -40,12 +40,13 @@ export interface TaskInfo {
 export interface PtyExit { id: string; code: number | null; error?: string }
 
 export type McpScope = 'global' | 'project' | 'shared'
-export type McpAgent = 'claude' | 'opencode' | 'gemini' | 'codex' | 'agy'
+export type McpAgent = 'claude' | 'opencode' | 'gemini' | 'codex' | 'agy' | 'cursor' | 'qwen'
 /** Servidor MCP ya configurado en un agente. */
 export interface McpServer {
   name: string; agent: McpAgent; scope: McpScope; kind: 'remote' | 'local'; target: string
   config: Record<string, unknown>      // entrada original de la configuración
   source: string                       // archivo donde está guardada
+  disabled?: boolean                   // desactivado desde Tutti: no está en el agente, la app guarda cómo estaba
 }
 /** Un hook de .tutti/hooks (formato de Kiro). `supported`: Tutti sabe ejecutar su trigger; `error`: por qué no es válido. */
 export interface HookInfo { file: string; name: string; description: string; trigger: string; matcher: string; actionType: 'command' | 'agent' | ''; enabled: boolean; supported: boolean; error?: string }
@@ -88,6 +89,17 @@ export type GitOp = 'tag' | 'branch' | 'checkout' | 'cherry-pick' | 'revert' | '
 export interface GitChangedFile { status: string; path: string; added: number; deleted: number }
 export interface GitCommit { hash: string; parents: string[]; author: string; time: number; refs: string[]; subject: string }
 export interface McpResult { ok: boolean; message: string }
+/** Sincronización de MCP entre agentes: la fuente es Claude Code (`.mcp.json` en el proyecto, `~/.claude.json` en lo global). */
+export type SyncScope = 'project' | 'global'
+export interface SyncState {
+  available: boolean; source: string; extras: number      // `extras`: servidores que solo están en otros agentes
+  local: number                                           // los MCP de proyecto que se pueden pasar a .mcp.json (locales de Claude y sueltos de otros agentes)
+  servers: Array<{ name: string; agents: Array<{ agent: McpAgent; state: 'ok' | 'missing' | 'differs' | 'disabled' | 'unsupported' | 'launch' }> }>
+}
+/** El AGENTS.md del proyecto y su bloque que apunta a `.tutti`: si existe, si lleva el bloque, si está al día y si además tiene texto propio. */
+export interface AgentsPointerState { file: string; exists: boolean; hasBlock: boolean; upToDate: boolean; ownContent: boolean }
+/** Resultado de probar un servidor MCP: si conecta y qué herramientas ofrece. */
+export interface McpProbe { ok: boolean; message: string; tools: Array<{ name: string; description: string }>; ms: number }
 
 /** Una sesión del historial de un agente. */
 export interface SessionInfo {
@@ -139,6 +151,11 @@ export interface Api {
     init(project: string, sub?: string): Promise<string>                                 // crea .tutti (y su subcarpeta) al añadir algo; devuelve la ruta
     open(project: string): Promise<{ file: string; text: string; exists: boolean }>      // no crea el archivo: se crea al guardar
     ensureGlobal(): Promise<string>
+    agents: {
+      state(project: string): Promise<AgentsPointerState>          // el AGENTS.md del proyecto y su bloque que apunta a .tutti
+      write(project: string): Promise<McpResult>                   // crea AGENTS.md o añade/actualiza el bloque; la ruta va en `message`
+      remove(project: string): Promise<McpResult>                  // quita el bloque (y borra el archivo si se queda vacío)
+    }
     generate(project: string): Promise<McpResult & { text?: string; agent?: string }>
     onAgent(cb: (name: string) => void): () => void
   }
@@ -206,6 +223,17 @@ export interface Api {
     featured(): Promise<RegistryServer[]>
     add(agent: McpAgent, spec: McpSpec, scope: McpScope, project: string | null): Promise<McpResult>
     remove(server: McpServer, project: string | null): Promise<McpResult>
+    probe(server: McpServer, project: string | null): Promise<McpProbe>          // arranca o llama al servidor y pide sus herramientas
+    update(server: McpServer, spec: McpSpec, project: string | null): Promise<McpResult>   // cambia un servidor en su agente y alcance
+    disable(server: McpServer, project: string | null): Promise<McpResult>       // lo quita del agente y se apunta cómo estaba
+    enable(server: McpServer, project: string | null): Promise<McpResult>
+    sync: {
+      state(project: string | null, scope: SyncScope): Promise<SyncState>
+      apply(project: string | null, scope: SyncScope): Promise<McpResult>      // añade a cada agente lo que le falta de la fuente
+      standardize(project: string): Promise<McpResult>                         // pasa los MCP locales a .mcp.json y limpia opencode.json
+      pull(project: string | null, scope: SyncScope): Promise<McpResult>       // trae a la fuente lo que solo está en otros agentes
+      resolve(project: string | null, scope: SyncScope, name: string, agent: McpAgent, use: 'source' | 'agent'): Promise<McpResult>
+    }
   }
   orchestra: {
     newId(): Promise<string>

@@ -6,6 +6,7 @@ import { detectAgents } from './agents'
 import { capableFor, exhausted, isDifficulty, capable, pickAgent, type Candidate, type Difficulty } from './assign'
 import { readContext } from '../context/context'
 import { projectRoot } from '../context/projectRoot'
+import { launchServers } from '../mcp/sync'
 import { agyBridgeStatus, ensureAgyBridge } from './agyBridge'
 import { buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from './launch'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
@@ -247,7 +248,9 @@ export async function startHub(window: () => BrowserWindow | null): Promise<void
     if (entry && opts.command === 'agy') ensureAgyBridge()
     const prompt = opts.prompt?.trim()
     const context = opts.cwd ? readContext(projectRoot(opts.cwd, knownProjects())) ?? undefined : undefined
-    const launch = buildLaunch(opts.command, entry, prompt, opts.args ?? [], opts.command === 'opencode' ? opencodeMajor() : 2, context)
+    const root = opts.cwd ? projectRoot(opts.cwd, knownProjects()) : null
+    const project = opts.command === 'opencode' && root ? launchServers(root) : []          // los MCP del .mcp.json, en lugar de un opencode.json
+    const launch = buildLaunch(opts.command, entry, prompt, opts.args ?? [], opts.command === 'opencode' ? opencodeMajor() : 2, context, project)
     // los agentes que no aceptan la tarea como argumento la reciben escrita cuando su interfaz está lista
     const after = prompt ? () => deliverTask(opts.id, prompt, !!PROMPT_ARGS[opts.command]) : undefined
     return { ...launch, after }

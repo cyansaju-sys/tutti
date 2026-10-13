@@ -2,12 +2,13 @@ import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
 import { MdAdd, MdChevronRight, MdEdit, MdExplore, MdSmartToy, MdTerminal } from 'react-icons/md'
 import type { MsgKey } from '@shared/i18n'
-import type { DirEntry, HookInfo, OpenSpecState, SteeringInfo } from '@shared/types'
+import type { AgentsPointerState, DirEntry, HookInfo, OpenSpecState, SteeringInfo } from '@shared/types'
 import { FIELD_SLIM, Modal } from '@/shared/components/ui'
 import { McpView } from '@/features/mcp/views/McpView'
 import { useAskAgent } from '@/features/tutti/lib/useAskAgent'
 import { OpenSpecBody } from '@/features/tutti/components/OpenSpecBody'
 import { HookChoiceDialog } from '@/features/tutti/components/HookChoiceDialog'
+import { agentsMdPrompt } from '@/features/tutti/lib/agentsMd'
 import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
 import { iconFor } from '@/shared/lib/icons'
 import { useT } from '@/shared/lib/i18n'
@@ -61,6 +62,7 @@ export function TuttiView() {
   const [lists, setLists] = useState<Record<Kind, DirEntry[]>>({ hooks: [], steering: [], skills: [], docs: [] })
   const [os, setOs] = useState<OpenSpecState | null>(null)          // lo que hay en openspec/ (OpenSpec)
   const [addMcp, setAddMcp] = useState(0)
+  const [agentsMd, setAgentsMd] = useState<AgentsPointerState | null>(null)          // el AGENTS.md del proyecto y su bloque que apunta a .tutti
   const [askTrust, setAskTrust] = useState(false)          // el diálogo que pide permitir los hooks del proyecto (al pulsar el interruptor de uno)
   const [hookChoice, setHookChoice] = useState(false)          // el diálogo «¿cómo quieres crear el hook?»
   const [steeringInfo, setSteeringInfo] = useState<Record<string, SteeringInfo>>({})
@@ -94,6 +96,8 @@ export function TuttiView() {
     const st = await window.api.context.steering(project).catch(() => [] as SteeringInfo[])
     const stMap = Object.fromEntries(st.map((x) => [x.file, x]))
     setSteeringInfo((prev) => (JSON.stringify(prev) === JSON.stringify(stMap) ? prev : stMap))
+    const am = await window.api.context.agents.state(project).catch(() => null)
+    setAgentsMd((prev) => (JSON.stringify(prev) === JSON.stringify(am) ? prev : am))
     const h = await window.api.hooks.list(project).catch(() => ({ hooks: [] as HookInfo[], trusted: false }))
     setHooks((prev) => (JSON.stringify(prev) === JSON.stringify({ list: h.hooks, trusted: h.trusted }) ? prev : { list: h.hooks, trusted: h.trusted }))
   }, [project])
@@ -190,6 +194,51 @@ export function TuttiView() {
     )
   }
 
+  /** AGENTS.md (el estándar que leen los agentes) con un bloque que apunta a .tutti: aquí se crea, se actualiza o se quita. */
+  const AgentsRow = () => {
+    if (!agentsMd) return null
+    const ok = agentsMd.hasBlock && agentsMd.upToDate
+    const status = !agentsMd.exists ? 'tutti.agentsNone' : !agentsMd.hasBlock ? 'tutti.agentsNoBlock' : !agentsMd.upToDate ? 'tutti.agentsStale' : 'tutti.agentsOk'
+    const act = async (fn: () => ReturnType<typeof window.api.context.agents.write>, open = false): Promise<void> => {
+      const res = await fn()
+      if (!res.ok) toast(res.message, 'error')
+      else if (open) void openDoc(res.message)
+      void refresh()
+    }
+    /** Le pide a un agente que rellene lo propio del proyecto (encima del bloque) y remita a `.tutti` en lo que ya estaba allí. */
+    const fill = async (): Promise<void> => {
+      const names = (list: DirEntry[], dirs: boolean): string[] => list.filter((e) => e.isDir === dirs).map((e) => e.name.replace(/\.md$/i, ''))
+      const who = await ask.send(agentsMdPrompt(lang, {
+        steering: lists.steering.filter((e) => !e.isDir).map((e) => e.name), skills: names(lists.skills, true),
+        docs: lists.docs.length > 0, specs: !!os?.initialized
+      }))
+      toast(who ? t('tutti.agentsFilling', { agent: who }) : t('tutti.agentsNoAgent'), who ? 'ok' : 'info')
+    }
+    const create = async (): Promise<void> => {
+      const res = await window.api.context.agents.write(project)
+      if (!res.ok) { toast(res.message, 'error'); return }
+      void openDoc(res.message); void refresh()
+      await fill()
+    }
+    return (
+      <div className="border-t border-line px-1 pb-2 pt-1.5">
+        <div className="flex items-center gap-1.5">
+          <img src={iconFor('AGENTS.md', false)} alt="" className="size-4 shrink-0" draggable={false} />
+          <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{t('tutti.agentsTitle')}</span>
+          {agentsMd.exists && <button onClick={() => void openDoc(agentsMd.file)} className="text-[11px] text-muted underline-offset-2 transition-colors hover:text-accent hover:underline">{t('tutti.agentsOpen')}</button>}
+        </div>
+        <p className="px-0.5 pt-0.5 text-[11px] leading-snug text-muted">{t('tutti.agentsWhat')}</p>
+        <p className={clsx('px-0.5 pt-1 text-[11px] font-medium', ok ? 'text-accent' : 'text-text')}>{t(status as MsgKey)}</p>
+        <div className="flex flex-wrap gap-1.5 pt-1.5">
+          {!agentsMd.exists && <button onClick={() => void create()} className="rounded-md bg-accent-bg px-2.5 py-1 text-[11px] font-medium text-accent transition-colors hover:brightness-110">{t('tutti.agentsCreate')}</button>}
+          {agentsMd.exists && !agentsMd.ownContent && <button onClick={() => void fill()} disabled={!agent} title={agent ? t('tutti.agentsFillTip') : t('sa.noAgent')} className="rounded-md bg-accent-bg px-2.5 py-1 text-[11px] font-medium text-accent transition-colors hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">{t('tutti.agentsFill')}</button>}
+          {agentsMd.exists && !ok && <button onClick={() => void act(() => window.api.context.agents.write(project))} className="rounded-md bg-accent-bg px-2.5 py-1 text-[11px] font-medium text-accent transition-colors hover:brightness-110">{t(!agentsMd.hasBlock ? 'tutti.agentsAdd' : 'tutti.agentsUpdate')}</button>}
+          {agentsMd.hasBlock && <button onClick={() => void act(() => window.api.context.agents.remove(project))} className="rounded-md px-2 py-1 text-[11px] text-muted transition-colors hover:text-danger">{t('tutti.agentsRemove')}</button>}
+        </div>
+      </div>
+    )
+  }
+
   const Section = ({ kind, title }: { kind: Kind; title: string }) => {
     // en la documentación solo se ven las categorías que ya tienen documentos; la categoría se elige al crear uno
     const globals: DirEntry[] = kind === 'steering' ? Object.values(steeringInfo).filter((x) => x.scope === 'global').map((x) => ({ name: x.base, path: x.file, isDir: false })) : []
@@ -273,6 +322,7 @@ export function TuttiView() {
       <Fold id="mcp" title={t('tutti.mcp')} onAdd={() => setAddMcp((n) => n + 1)} addTip={t('mcp.addTip')}>
         <McpView compact part="installed" addSignal={addMcp} />
       </Fold>
+      {AgentsRow()}
     </div>
   )
 }

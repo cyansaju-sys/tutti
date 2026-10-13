@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
-import { buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from '../../../../src/main/services/mcp/mcp'
+import { addServer, buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from '../../../../src/main/services/mcp/mcp'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-mcp-'))
 
@@ -110,5 +110,29 @@ suite('Antigravity (agy)', () => {
   })
   it('serverUrl cuenta como remoto', () => {
     expect(describe({ serverUrl: 'https://s/mcp' })).toEqual({ kind: 'remote', target: 'https://s/mcp' })
+  })
+})
+
+suite('Cursor Agent y Qwen Code', () => {
+  const spec = { name: 'loc', kind: 'local' as const, command: 'npx', args: ['-y', 'srv'], env: { A: '1' } }
+  it('Qwen Code usa los mismos argumentos que Gemini CLI', () => {
+    expect(buildAddArgv('qwen', spec, 'project')).toEqual(['qwen', 'mcp', 'add', '-s', 'project', '-e', 'A=1', 'loc', 'npx', '-y', 'srv'])
+  })
+  it('Claude: el alcance compartido va a .mcp.json (-s project)', () => {
+    expect(buildAddArgv('claude', spec, 'shared')).toContain('project')
+    expect(buildAddArgv('claude', spec, 'project')).toContain('local')
+  })
+  it('Cursor: escribe y quita en .cursor/mcp.json conservando lo demás', async () => {
+    const root = dir()
+    mkdirSync(join(root, '.cursor'))
+    writeFileSync(join(root, '.cursor', 'mcp.json'), JSON.stringify({ otra: 1, mcpServers: { viejo: { command: 'v' } } }))
+    expect((await addServer('cursor', spec, 'project', root)).ok).toBe(true)
+    expect((await addServer('cursor', { name: 'api', kind: 'remote', url: 'https://x/mcp', headers: { A: 'b' } }, 'project', root)).ok).toBe(true)
+    const file = JSON.parse(readFileSync(join(root, '.cursor', 'mcp.json'), 'utf8'))
+    expect(file.otra).toBe(1)
+    expect(file.mcpServers.loc).toEqual({ command: 'npx', args: ['-y', 'srv'], env: { A: '1' } })
+    expect(file.mcpServers.api).toEqual({ url: 'https://x/mcp', headers: { A: 'b' } })
+    const listed = listServers(root).filter((x) => x.agent === 'cursor' && x.scope === 'project').map((x) => x.name).sort()
+    expect(listed).toEqual(['api', 'loc', 'viejo'])
   })
 })

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from '../../../../src/main/services/context/agentsPointer'
 import { ensureGlobalContext, globalContextFile, legacyContextFile, contextSources, ensureGlobalSteeringDir, ensureProjectDir, setWorkingFiles, openProjectContext, projectContextFile, readContext, tuttiDir } from '../../../../src/main/services/context/context'
 
 let base = ''
@@ -193,4 +194,55 @@ describe('steering al estilo de Kiro', () => {
     expect(contextSources(join(project, 'otro'))).toHaveLength(1)        // sin proyecto solo queda el global
   })
 })
+})
+
+describe('AGENTS.md apuntando a .tutti', () => {
+  const agents = (): string => readFileSync(join(project, 'AGENTS.md'), 'utf8')
+  it('crea AGENTS.md solo con el bloque y lista lo que hay en .tutti', () => {
+    mkdirSync(join(project, '.tutti', 'steering'), { recursive: true })
+    mkdirSync(join(project, '.tutti', 'skills', 'revisar'), { recursive: true })
+    writeFileSync(join(project, '.tutti', 'steering', 'product.md'), '# p')
+    expect(agentsPointerState(project)).toMatchObject({ exists: false, hasBlock: false })
+    expect(writeAgentsPointer(project).ok).toBe(true)
+    expect(agents()).toContain('.tutti/steering/')
+    expect(agents()).toContain('product.md')
+    expect(agents()).toContain('revisar')
+    expect(agents()).not.toContain('openspec')                                   // solo lo que existe
+    expect(agentsPointerState(project)).toMatchObject({ exists: true, hasBlock: true, upToDate: true, ownContent: false })
+  })
+  it('un AGENTS.md que solo es el bloque no cuenta como contexto: el contexto va a .tutti', () => {
+    writeAgentsPointer(project)
+    expect(projectContextFile(project)).toBe(join(project, '.tutti', 'steering', 'contexto.md'))
+    expect(contextSources(project).some((r) => r.kind === 'project')).toBe(false)
+  })
+  it('con texto propio: se conserva, sigue siendo el contexto y el bloque no se entrega repetido', () => {
+    writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n\nUsa tabs.\n')
+    writeAgentsPointer(project)
+    expect(agents()).toContain('Usa tabs.')
+    expect(projectContextFile(project)).toBe(join(project, 'AGENTS.md'))
+    const text = readContext(project)!.text
+    expect(text).toContain('Usa tabs.')
+    expect(text).not.toContain('tutti:start')
+    expect(agentsPointerState(project)).toMatchObject({ ownContent: true, upToDate: true })
+  })
+  it('actualizar reemplaza el bloque sin duplicarlo y detecta que está desactualizado', () => {
+    writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n')
+    writeAgentsPointer(project)
+    mkdirSync(join(project, 'openspec'))
+    expect(agentsPointerState(project).upToDate).toBe(false)
+    writeAgentsPointer(project)
+    expect(agents().match(/tutti:start/g)).toHaveLength(1)
+    expect(agents()).toContain('openspec')
+    expect(agentsPointerState(project).upToDate).toBe(true)
+  })
+  it('quitar deja el texto propio, o borra el archivo si solo estaba el bloque', () => {
+    writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n')
+    writeAgentsPointer(project)
+    removeAgentsPointer(project)
+    expect(agents()).toBe('# Reglas\n')
+    rmSync(join(project, 'AGENTS.md'))
+    writeAgentsPointer(project)
+    removeAgentsPointer(project)
+    expect(existsSync(join(project, 'AGENTS.md'))).toBe(false)
+  })
 })

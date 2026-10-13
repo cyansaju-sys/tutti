@@ -13,6 +13,7 @@ import { basename, dirname, join } from 'node:path'
 import { translate, type Lang } from '../../../shared/i18n'
 import type { ContextSource } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
+import { AGENTS_START, stripAgentsBlock } from './agentsPointer'
 import { assembleSteering, changedFiles, loadSteering } from './steering'
 
 /** Carpeta de Tutti dentro de cada proyecto y el archivo de contexto que contiene. */
@@ -43,8 +44,14 @@ export const agentsFile = (project: string): string => join(project, AGENTS_FILE
 
 /** Un AGENTS.md que solo apunta a .tutti (lo dejaba una versión anterior) no cuenta como contexto propio. */
 const POINTER_PATH = `${TUTTI_DIR}/steering/${PROJECT_FILE}`
-const isPointer = (text: string): boolean => text.includes(POINTER_PATH)
-const realAgents = (project: string): boolean => { try { return !isPointer(readFileSync(agentsFile(project), 'utf8')) } catch { return false } }
+/** Lo mismo con el bloque de Tutti (que apunta a .tutti, ver agentsPointer): ese bloque no es contexto, solo un puntero. */
+const realAgents = (project: string): boolean => {
+  try {
+    const raw = readFileSync(agentsFile(project), 'utf8')
+    const body = stripAgentsBlock(raw).trim()
+    return !body.includes(POINTER_PATH) && (body !== '' || !raw.includes(AGENTS_START))
+  } catch { return false }
+}
 
 /** El archivo del contexto del proyecto: el de .tutti si ya existe, si no el AGENTS.md que tenga, y si no el de .tutti (se crea al guardar). */
 export function projectContextFile(project: string): string {
@@ -70,8 +77,8 @@ export function ensureProjectDir(project: string, sub = ''): string {
 /** El texto de un archivo de contexto, o '' si no existe, está vacío o sigue siendo la plantilla sin tocar. */
 function readOne(file: string): string {
   try {
-    const text = readFileSync(file, 'utf8').trim()
-    return text && !isTemplate(text) && !isPointer(text) ? text : ''
+    const text = stripAgentsBlock(readFileSync(file, 'utf8')).trim()
+    return text && !isTemplate(text) && !text.includes(POINTER_PATH) ? text : ''
   } catch { return '' }
 }
 

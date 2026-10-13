@@ -498,6 +498,13 @@
 <tr><td><strong>Servidores MCP</strong></td><td>Los MCP instalados en tus agentes (los mismos de la pestaña MCP)</td><td>Abre el diálogo de añadir un servidor</td></tr>
 </table>
 <p>Cada sección se pliega (y se recuerda). Si una sección está vacía, en lugar de una lista verás un botón de ancho completo para crear el primer elemento. La carpeta <code>.tutti</code> y sus subcarpetas <strong>no se crean hasta que añades algo</strong>: abrir un proyecto o mirar la pestaña no escribe nada, salvo el <code>README.md</code> de <code>.tutti</code>.</p>
+<h3>AGENTS.md apuntando a .tutti</h3>
+<p>Al final de la pestaña, la fila <strong>AGENTS.md</strong> gestiona el archivo estándar donde los agentes (Codex, OpenCode, Cursor, Copilot…) leen cómo trabajar en tu proyecto. Tutti añade un <strong>bloque marcado</strong> (<code>&lt;!-- tutti:start --&gt;</code> … <code>&lt;!-- tutti:end --&gt;</code>) que lista lo que hay en <code>.tutti/</code> —steering, especificaciones de <code>openspec/</code>, documentación y skills— y pide a los agentes que lo consulten. Así cualquier agente que lea <code>AGENTS.md</code> sabe dónde mirar, <strong>también fuera de Tutti</strong>. Es un puntero, no una copia: el contenido sigue en <code>.tutti/</code>.</p>
+<ul>
+<li><strong>Crear AGENTS.md</strong> escribe el bloque y, a continuación, <strong>un agente lo rellena</strong>: qué es el proyecto, los comandos exactos para instalar, ejecutar y probar, la estructura, las convenciones y lo que no debe hacer, siempre encima del bloque y <strong>remitiendo por su ruta</strong> a lo que ya está en <code>.tutti/</code> en vez de copiarlo. Revisa el resultado, sobre todo los comandos.</li>
+<li>Si ya tienes un <code>AGENTS.md</code>, <strong>Añadir el bloque</strong> solo toca su bloque; el resto es tuyo. <strong>Actualizar</strong> rehace la lista cuando se queda desfasada (la fila avisa) y <strong>Quitar el bloque</strong> lo elimina (y borra el archivo si se queda vacío). Si existe y no tiene texto propio, <strong>Rellenar con el agente</strong> hace lo mismo que al crearlo.</li>
+<li>Un <code>AGENTS.md</code> que solo tiene el bloque <strong>no cuenta como contexto propio</strong> (ese va en <code>.tutti/steering/contexto.md</code>), y el bloque no se entrega repetido a los agentes que abres desde Tutti.</li>
+</ul>
 <h3>Formularios en pestañas del editor</h3>
 <p>Proponer un cambio, crear un hook o un steering abre un <strong>formulario como una pestaña más del editor</strong> (junto a tus archivos), no una ventana flotante. Al terminar, la pestaña pasa al archivo recién creado. Si no hay un agente abierto, las opciones que le piden algo al agente salen desactivadas, con la explicación.</p>
 <h3>Ver los .md como Markdown</h3>
@@ -519,6 +526,13 @@
 <tr><td><strong>MCP servers</strong></td><td>The MCPs installed in your agents (the same as the MCP tab)</td><td>Opens the add-a-server dialog</td></tr>
 </table>
 <p>Each section folds (and remembers it). When a section is empty, instead of a list you see a full-width button to create the first item. The <code>.tutti</code> folder and its subfolders are <strong>not created until you add something</strong>: opening a project or looking at the tab writes nothing, except the <code>README.md</code> in <code>.tutti</code>.</p>
+<h3>AGENTS.md pointing to .tutti</h3>
+<p>At the bottom of the tab, the <strong>AGENTS.md</strong> row manages the standard file where agents (Codex, OpenCode, Cursor, Copilot…) read how to work in your project. Tutti adds a <strong>marked block</strong> (<code>&lt;!-- tutti:start --&gt;</code> … <code>&lt;!-- tutti:end --&gt;</code>) that lists what is in <code>.tutti/</code> —steering, the specifications in <code>openspec/</code>, documentation and skills— and asks agents to consult it. This way any agent that reads <code>AGENTS.md</code> knows where to look, <strong>even outside Tutti</strong>. It is a pointer, not a copy: the content stays in <code>.tutti/</code>.</p>
+<ul>
+<li><strong>Create AGENTS.md</strong> writes the block and then <strong>an agent fills it in</strong>: what the project is, the exact commands to install, run and test, the structure, the conventions and what not to do, always above the block and <strong>pointing by path</strong> to what is already in <code>.tutti/</code> instead of copying it. Review the result, especially the commands.</li>
+<li>If you already have an <code>AGENTS.md</code>, <strong>Add the block</strong> only touches its block; the rest is yours. <strong>Update</strong> rebuilds the list when it falls out of date (the row tells you) and <strong>Remove the block</strong> deletes it (and deletes the file if it ends up empty). If it exists and has no text of its own, <strong>Fill in with the agent</strong> does the same as when creating it.</li>
+<li>An <code>AGENTS.md</code> that only has the block <strong>does not count as the project's own context</strong> (that goes in <code>.tutti/steering/contexto.md</code>), and the block is not delivered twice to agents you open from Tutti.</li>
+</ul>
 <h3>Forms in editor tabs</h3>
 <p>Proposing a change, creating a hook or a steering file opens a <strong>form as one more editor tab</strong> (next to your files), not a floating window. When you finish, the tab turns into the file just created. If no agent is open, the options that ask the agent for something are disabled, with the explanation.</p>
 <h3>Viewing .md files as Markdown</h3>
@@ -667,7 +681,7 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <section id="mcp">
   <h2><span class="es">Servidores MCP y tienda</span><span class="en">MCP servers and store</span></h2>
   <div class="es">
-<p>Lee, añade y quita los servidores de <strong>Claude Code, OpenCode, Gemini CLI, Codex y Antigravity</strong> (globales, del proyecto y <code>.mcp.json</code>) usando la CLI de cada agente para respetar su formato.</p>
+<p>Lee, añade y quita los servidores de <strong>Claude Code, OpenCode, Gemini CLI, Qwen Code, Cursor Agent, Codex y Antigravity</strong> (globales, del proyecto y <code>.mcp.json</code>) usando la CLI de cada agente para respetar su formato. Cursor Agent no tiene <code>mcp add</code>: Tutti escribe directamente su <code>.cursor/mcp.json</code>, conservando el resto del archivo.</p>
 <img src="img/mcp.png" alt="Servidores MCP" loading="lazy" />
 <ul>
 <li><strong>Un servidor, una tarjeta.</strong> Al abrirla ves en qué agentes está aplicado (<em>Aplicado en</em>), su comando o URL, cabeceras y variables (los secretos ocultos hasta que lo pides) y dónde se guarda. Puedes copiarlo a otro agente o quitarlo de uno solo.</li>
@@ -676,6 +690,32 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <li>Las secciones <em>Tutti</em>, <em>Instalados</em>, <em>Recomendados</em> y <em>Disponibles</em> se pliegan y recuerdan su estado.</li>
 </ul>
 <img src="img/mcp-detalles.png" alt="Detalle de un servidor" loading="lazy" />
+<h3>Gestionar un servidor</h3>
+<p>Al abrir la tarjeta de un servidor:</p>
+<ul>
+<li><strong>Probar</strong> lo arranca (o llama a su URL) como lo haría un agente y muestra si conecta, cuánto tarda y qué <strong>herramientas</strong> ofrece. Tiene un tope de 20 s; un servidor que usa OAuth no se puede probar desde aquí, porque eso lo autoriza el agente.</li>
+<li><strong>Editar</strong> cambia el comando, la URL, los argumentos, las variables o las cabeceras en todos los agentes donde está (el nombre no se puede cambiar). Si el cambio falla, deja el anterior.</li>
+<li>El <strong>interruptor</strong> de cada agente lo <strong>desactiva</strong> sin perder su configuración: Tutti lo quita del agente y guarda cómo estaba en sus ajustes (no en el proyecto, porque puede llevar secretos). Sale atenuado en la lista y puedes <strong>activarlo</strong> cuando quieras.</li>
+</ul>
+<h3>Sincronizar entre agentes</h3>
+<p>Tutti no inventa otro formato: la <strong>fuente es Claude Code</strong> —el <code>.mcp.json</code> del proyecto y sus MCP de usuario para los globales— y compara con ella cada agente instalado. La sección <strong>Sincronizar</strong> (una sola, con <em>Proyecto</em> y <em>Global</em> dentro) marca por servidor y agente si está <em>igual</em>, <em>falta</em>, es <em>distinto</em> o está <em>desactivado</em>, y solo lista lo que necesita atención.</p>
+<ul>
+<li><strong>Añadir lo que falta</strong> copia a cada agente lo que no tiene (siempre visible; desactivado si no hay nada que copiar).</li>
+<li><strong>Traer N de otros agentes</strong> (en lo global) pasa a la fuente lo que solo existe en otro.</li>
+<li>Un servidor <em>distinto</em> se resuelve con <strong>Usar el de Claude</strong> (el agente pasa a lo que dice la fuente) o <strong>Usar el del agente</strong> (la fuente se actualiza con lo del agente).</li>
+<li><strong>Estandarizar los N MCP locales</strong> (en el proyecto) pasa a <code>.mcp.json</code> los MCP locales de Claude y los que solo están en otros agentes, para compartirlos con el equipo. Los que llevan <strong>claves o tokens</strong> no se mueven (<code>.mcp.json</code> se versiona): se quedan donde estaban y el aviso los lista.</li>
+</ul>
+<p>Dónde guarda cada agente sus MCP de proyecto (<code>.mcp.json</code> solo lo lee, que se sepa, Claude Code):</p>
+<table>
+<tr><th>Agente</th><th>Proyecto</th><th>Cómo recibe lo de <code>.mcp.json</code></th></tr>
+<tr><td>Claude Code</td><td><code>.mcp.json</code> (compartido) o tu <code>~/.claude.json</code> (local)</td><td>Es la fuente</td></tr>
+<tr><td>OpenCode</td><td><code>opencode.json</code></td><td>Al abrirlo desde Tutti, por proceso: no hace falta ese archivo</td></tr>
+<tr><td>Gemini CLI</td><td><code>.gemini/settings.json</code></td><td>Se le escribe su archivo</td></tr>
+<tr><td>Qwen Code</td><td><code>.qwen/settings.json</code></td><td>Se le escribe su archivo</td></tr>
+<tr><td>Cursor Agent</td><td><code>.cursor/mcp.json</code></td><td>Se le escribe su archivo</td></tr>
+<tr><td>Codex, Antigravity</td><td>—</td><td>Solo globales</td></tr>
+</table>
+<div class="note">Al <strong>estandarizar</strong>, de <code>opencode.json</code> se quitan los servidores que ya están <em>iguales</em> en <code>.mcp.json</code>; si el archivo solo tenía MCP, se borra, y si tiene más ajustes (tema, permisos…), se conserva. Los que allí están distintos no se tocan y el aviso los lista. <strong>Contrapartida:</strong> OpenCode solo recibe esos MCP cuando lo abres desde Tutti; en una terminal normal no los tendrá.</div>
 <h3>Tienda</h3>
 <p>El buscador de arriba consulta el <strong>registro oficial de MCP</strong> (<code>registry.modelcontextprotocol.io</code>) con el aspecto de las extensiones de VS Code: icono, nombre, descripción, quién lo publica, si es local o remoto y el botón <strong>Instalar</strong>. Los más conocidos (Context7, Playwright, GitHub, Chrome DevTools, Notion, Figma, Linear, Atlassian, Sentry, Supabase, Stripe, Cloudflare, Vercel, Serena) salen primero en <strong>Recomendados</strong>; al buscar, lo que mejor coincide va arriba.</p>
 <img src="img/mcp-tienda.png" alt="Tienda de servidores" loading="lazy" />
@@ -688,7 +728,7 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <div class="note warn">Instalar un servidor MCP ejecuta código de terceros en tu equipo y el registro no lo revisa. Comprueba el comando y de dónde viene antes de continuar. Sin conexión, la tienda muestra un aviso con <em>Reintentar</em>; lo ya instalado sigue funcionando.</div>
 </div>
   <div class="en">
-<p>It reads, adds and removes the servers of <strong>Claude Code, OpenCode, Gemini CLI, Codex and Antigravity</strong> (global, project and <code>.mcp.json</code>) using each agent's CLI to respect its format.</p>
+<p>It reads, adds and removes the servers of <strong>Claude Code, OpenCode, Gemini CLI, Qwen Code, Cursor Agent, Codex and Antigravity</strong> (global, project and <code>.mcp.json</code>) using each agent's CLI to respect its format. Cursor Agent has no <code>mcp add</code>: Tutti writes its <code>.cursor/mcp.json</code> directly, keeping the rest of the file.</p>
 <img src="img/mcp.png" alt="MCP servers" loading="lazy" />
 <ul>
 <li><strong>One server, one card.</strong> Opening it shows which agents it is applied to (<em>Applied to</em>), its command or URL, headers and variables (secrets hidden until you ask) and where it is stored. You can copy it to another agent or remove it from just one.</li>
@@ -697,6 +737,32 @@ Use function components. API contract: #[[file:openapi.yaml]]</code></pre>
 <li>The <em>Tutti</em>, <em>Installed</em>, <em>Recommended</em> and <em>Available</em> sections fold and remember their state.</li>
 </ul>
 <img src="img/mcp-detalles.png" alt="Server detail" loading="lazy" />
+<h3>Managing a server</h3>
+<p>When you open a server's card:</p>
+<ul>
+<li><strong>Test</strong> starts it (or calls its URL) the way an agent would and shows whether it connects, how long it takes and which <strong>tools</strong> it offers. It has a 20 s limit; a server that uses OAuth cannot be tested from here, because the agent authorizes that.</li>
+<li><strong>Edit</strong> changes the command, URL, arguments, variables or headers in every agent that has it (the name cannot be changed). If the change fails, the previous one stays.</li>
+<li>Each agent's <strong>switch</strong> <strong>turns it off</strong> without losing its configuration: Tutti removes it from the agent and keeps how it was in its settings (not in the project, since it may carry secrets). It shows dimmed in the list and you can <strong>turn it on</strong> whenever you want.</li>
+</ul>
+<h3>Syncing between agents</h3>
+<p>Tutti does not invent another format: the <strong>source is Claude Code</strong> —the project's <code>.mcp.json</code> and its user MCPs for the global ones— and every installed agent is compared with it. The <strong>Sync</strong> section (a single one, with <em>Project</em> and <em>Global</em> inside) marks, per server and agent, whether it is the <em>same</em>, <em>missing</em>, <em>different</em> or <em>disabled</em>, and only lists what needs attention.</p>
+<ul>
+<li><strong>Add what is missing</strong> copies to each agent what it does not have (always visible; disabled when there is nothing to copy).</li>
+<li><strong>Bring N from other agents</strong> (for global ones) moves to the source what only exists in another agent.</li>
+<li>A <em>different</em> server is resolved with <strong>Use Claude's</strong> (the agent becomes what the source says) or <strong>Use the agent's</strong> (the source is updated with the agent's).</li>
+<li><strong>Standardize the N local MCPs</strong> (in the project) moves to <code>.mcp.json</code> Claude's local MCPs and those that only exist in other agents, to share them with the team. Those with <strong>keys or tokens</strong> are not moved (<code>.mcp.json</code> is versioned): they stay where they were and the notice lists them.</li>
+</ul>
+<p>Where each agent keeps its project MCPs (as far as we know, only Claude Code reads <code>.mcp.json</code>):</p>
+<table>
+<tr><th>Agent</th><th>Project</th><th>How it gets what is in <code>.mcp.json</code></th></tr>
+<tr><td>Claude Code</td><td><code>.mcp.json</code> (shared) or your <code>~/.claude.json</code> (local)</td><td>It is the source</td></tr>
+<tr><td>OpenCode</td><td><code>opencode.json</code></td><td>When opened from Tutti, per process: that file is not needed</td></tr>
+<tr><td>Gemini CLI</td><td><code>.gemini/settings.json</code></td><td>Its file is written</td></tr>
+<tr><td>Qwen Code</td><td><code>.qwen/settings.json</code></td><td>Its file is written</td></tr>
+<tr><td>Cursor Agent</td><td><code>.cursor/mcp.json</code></td><td>Its file is written</td></tr>
+<tr><td>Codex, Antigravity</td><td>—</td><td>Global only</td></tr>
+</table>
+<div class="note">When you <strong>standardize</strong>, the servers that are already the <em>same</em> in <code>.mcp.json</code> are removed from <code>opencode.json</code>; if the file only had MCPs it is deleted, and if it has more settings (theme, permissions…) it is kept. Those that differ there are left alone and the notice lists them. <strong>Trade-off:</strong> OpenCode only gets those MCPs when you open it from Tutti; in a regular terminal it will not have them.</div>
 <h3>Store</h3>
 <p>The search box at the top queries the <strong>official MCP registry</strong> (<code>registry.modelcontextprotocol.io</code>) styled like VS Code extensions: icon, name, description, who publishes it, whether it is local or remote and the <strong>Install</strong> button. The best-known ones (Context7, Playwright, GitHub, Chrome DevTools, Notion, Figma, Linear, Atlassian, Sentry, Supabase, Stripe, Cloudflare, Vercel, Serena) come first under <strong>Recommended</strong>; when searching, the best match goes on top.</p>
 <img src="img/mcp-tienda.png" alt="Server store" loading="lazy" />

@@ -2,7 +2,7 @@ import type { MsgKey } from '@shared/i18n'
 import type { McpScope, McpServer, RegistryField, RegistryOption, RegistryServer } from '@shared/types'
 
 export const SCOPE_KEYS: Record<McpScope, MsgKey> = { global: 'mcp.scope.global', project: 'mcp.scope.project', shared: 'mcp.scope.shared' }
-export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity' }
+export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity', qwen: 'Qwen Code', cursor: 'Cursor Agent' }
 /** Agentes que solo guardan sus MCP de forma global (no tienen archivo por proyecto). */
 export const GLOBAL_ONLY: string[] = ['codex', 'agy']
 const SECRET = /key|token|secret|auth|pass|pwd|credential/i      // valores que se ocultan
@@ -84,5 +84,15 @@ export function prefillFrom(server: RegistryServer, option: RegistryOption): Pre
   return {
     name: shortName(server.name), kind: option.kind, url: option.url ?? '', headers: lines(option.headers, ': '),
     command: option.command ?? '', args: (option.args ?? []).map(quoteArg).join(' '), env: lines(option.env, '='), fields: [...option.env, ...option.headers]
+  }
+}
+
+/** Un servidor ya instalado, como los datos del diálogo (para editarlo). */
+export function prefillFromServer(server: McpServer): Prefill {
+  const spec = specFromServer(server)
+  const pairs = (m: Record<string, string> | undefined, sep: string): string => Object.entries(m ?? {}).map(([k, v]) => `${k}${sep}${v}`).join('\n')
+  return {
+    name: server.name, kind: spec.kind, url: spec.url ?? '', headers: pairs(spec.headers, ': '),
+    command: spec.command ?? '', args: (spec.args ?? []).map(quoteArg).join(' '), env: pairs(spec.env, '='), fields: []
   }
 }

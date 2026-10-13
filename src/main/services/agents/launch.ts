@@ -1,8 +1,11 @@
 /** Cómo arrancar cada agente conectado al reparto de tareas (argumentos y variables de entorno). */
+import type { McpSpec } from '../../../shared/types'
 
 export interface McpEntry { type: 'http'; url: string; headers: Record<string, string> }
 /** Contexto para los agentes: el texto (global y del proyecto juntos) y los archivos donde vive cada parte. */
 export interface ProjectContext { text: string; files: string[] }
+/** Los MCP del `.mcp.json` del proyecto que OpenCode recibe al arrancar, en lugar de un `opencode.json` con lo mismo. */
+export type ProjectServers = McpSpec[]
 export interface Launch { args: string[]; env: Record<string, string>; after?: () => void }
 
 // herramientas del servidor «tutti» que Claude Code puede usar sin pedir permiso cada vez
@@ -23,16 +26,19 @@ const instructions = (context?: ProjectContext): { instructions?: string[] } => 
  * privado: la configuración (con el id de ese panel) se aplica solo a él y no deja nada atrás.
  * La 1.x no tiene servicio compartido ni ese flag, y declara los servidores directamente bajo `mcp`.
  */
-export function opencodeLaunch(entry: McpEntry | null, first: string[], given: string[], major: number, context?: ProjectContext): Launch {
-  if (!entry) {         // sin servidor de reparto de tareas: solo el contexto del proyecto
+export function opencodeLaunch(entry: McpEntry | null, first: string[], given: string[], major: number, context?: ProjectContext, project: ProjectServers = []): Launch {
+  const mine = project.map((s): [string, unknown] => [s.name, s.kind === 'remote'
+    ? { type: 'remote', url: s.url, headers: s.headers ?? {} }
+    : { type: 'local', command: [s.command, ...(s.args ?? [])], environment: s.env ?? {} }])
+  if (!entry && !mine.length) {         // sin servidor de reparto de tareas ni MCP del proyecto: solo el contexto
     return { args: [...first, ...given], env: context ? { OPENCODE_CONFIG_CONTENT: JSON.stringify(instructions(context)) } : {} }
   }
-  const remote = { type: 'remote', url: entry.url, headers: entry.headers }
+  const servers = Object.fromEntries([...mine, ...(entry ? [['tutti', { type: 'remote', url: entry.url, headers: entry.headers }] as [string, unknown]] : [])])
   if (major >= 2) {
-    const config = { mcp: { servers: { tutti: remote } }, permission: { 'tutti_*': 'allow' }, ...instructions(context) }   // sin preguntar en cada llamada
+    const config = { mcp: { servers }, ...(entry ? { permission: { 'tutti_*': 'allow' } } : {}), ...instructions(context) }   // sin preguntar en cada llamada
     return { args: ['--standalone', ...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(config) } }
   }
-  return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ mcp: { tutti: remote }, ...instructions(context) }) } }
+  return { args: [...first, ...given], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ mcp: servers, ...instructions(context) }) } }
 }
 
 /** La tarea inicial va primero: --mcp-config acepta varios valores y se la comería. */
@@ -52,11 +58,11 @@ export function codexLaunch(entry: McpEntry, given: string[]): Launch {
   return { args: [...conf('url', entry.url), ...conf('bearer_token_env_var', 'TUTTI_MCP_TOKEN'), ...conf('default_tools_approval_mode', 'approve'), ...given], env: { TUTTI_MCP_TOKEN: token } }
 }
 
-export function buildLaunch(command: string, entry: McpEntry | null, prompt: string | undefined, given: string[], opencodeMajor: number, context?: ProjectContext): Launch {
+export function buildLaunch(command: string, entry: McpEntry | null, prompt: string | undefined, given: string[], opencodeMajor: number, context?: ProjectContext, project?: ProjectServers): Launch {
   const task = prompt?.trim()
   const first = task && PROMPT_ARGS[command] ? PROMPT_ARGS[command](task) : []
   if (command === 'claude') return claudeLaunch(entry, first, given, context)
-  if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor, context)
+  if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor, context, project)
   if (command === 'codex' && entry) return codexLaunch(entry, given)
   if (command === 'agy' && entry) return { args: given, env: agyEnv(entry) }
   return { args: given, env: {} }

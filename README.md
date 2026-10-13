@@ -234,6 +234,13 @@ convenciones y cómo prefieres trabajar. Se ve como **Markdown** (*Editar* o dob
   Tutti) se siguen usando hasta que los guardes en el proyecto.
 - **Global:** tus preferencias para **todos** los proyectos, en `<config>/tutti/contexto-global.md` (nunca en un repositorio).
 
+**AGENTS.md apuntando a `.tutti`.** En la pestaña Tutti, la fila **AGENTS.md** crea (o completa) el `AGENTS.md` del proyecto con un bloque marcado
+(`<!-- tutti:start -->` … `<!-- tutti:end -->`) que lista lo que hay en `.tutti/` —steering, specs de `openspec/`, documentación y skills— y
+dice a los agentes que lo consulten. Así cualquier agente que lea el estándar `AGENTS.md` (Codex, OpenCode, Cursor, Copilot…) sabe dónde mirar,
+**también fuera de Tutti**. Es un puntero, no una copia: el contenido sigue en `.tutti/`. Al **crearlo**, un agente (el abierto o el que elijas) lo **rellena**: qué es el proyecto, los comandos exactos para instalar, ejecutar y probar, la estructura, las convenciones y lo que no debe hacer, siempre encima del bloque, y **remitiendo por su ruta a lo que ya está en `.tutti/`** (steering, documentación, specs, skills) en vez de copiarlo; si ya existía y no tiene texto propio, el botón **Rellenar con el agente** hace lo mismo. Solo toca su bloque (el resto del archivo es tuyo),
+avisa cuando la lista se queda desactualizada, y un `AGENTS.md` que solo tiene el bloque no cuenta como contexto propio (ese va en
+`.tutti/steering/contexto.md`). El bloque no se entrega repetido a los agentes que abres desde Tutti. Se puede quitar con un botón.
+
 Al abrir un agente desde Tutti recibe primero el global y luego el del proyecto: Claude Code como parte de su prompt de sistema y
 OpenCode como archivos de instrucciones. Funciona también si el agente se abre en una subcarpeta y sin el reparto de tareas.
 
@@ -284,10 +291,14 @@ Los `.md` tienen un botón **Vista / Código** en el editor; los de `.tutti` se 
 
 ### Servidores MCP
 
-Lee, añade y quita los servidores de **Claude Code, OpenCode, Gemini CLI, Codex y Antigravity** (globales, del proyecto y
-`.mcp.json`) usando la CLI de cada agente. En la lista, **cada servidor es una sola tarjeta**: al abrirla ves en qué agentes está
+Lee, añade y quita los servidores de **Claude Code, OpenCode, Gemini CLI, Qwen Code, Cursor Agent, Codex y Antigravity** (globales, del proyecto y
+`.mcp.json`) usando la CLI de cada agente (Cursor Agent no tiene `mcp add`: se escribe su `.cursor/mcp.json`). En la lista, **cada servidor es una sola tarjeta**: al abrirla ves en qué agentes está
 aplicado, con sus datos (los secretos ocultos hasta que lo pides), y puedes quitarlo de uno o copiarlo a otro. Codex y Antigravity
 solo guardan servidores globales, y la app lo tiene en cuenta al ofrecer destinos. Las secciones se pliegan y tienen su propio scroll.
+
+**Gestionar los servidores.** Al abrir uno: **Probar** lo arranca (o llama a su URL) como lo haría un agente y muestra si conecta, cuánto tarda y sus herramientas; **Editar** cambia su comando, URL, argumentos, variables o cabeceras en todos los agentes donde está (si el cambio falla, deja el anterior); y el interruptor de cada agente lo **desactiva** sin perder su configuración —Tutti lo quita del agente y la guarda en sus ajustes, no en el proyecto— para volver a **activarlo** cuando quieras.
+
+**Sincronizar entre agentes.** Sin inventar otro formato: la fuente es **Claude Code** —el `.mcp.json` del proyecto y sus MCP de usuario para los globales— y Tutti compara con ella cada agente instalado (OpenCode, Gemini CLI, Qwen Code, Cursor Agent y, en lo global, Codex y Antigravity). La sección **Sincronizar** (una sola, con *Proyecto* y *Global* dentro) solo muestra lo que necesita atención —un servidor que *falta*, es *distinto* o está *desactivado* en algún agente—; lo que ya está igual en todos se ve en la lista de instalados, y si no hay nada pendiente dice que todo está igual. **Añadir lo que falta** (siempre visible, desactivado si no hay nada que copiar) lo copia, **Estandarizar los N MCP locales** (en el proyecto) pasa a `.mcp.json` los locales de Claude y los que solo están en otros agentes —salvo los que llevan claves o tokens, porque `.mcp.json` se versiona—, y quita de `opencode.json` los que ya están igual allí (si el archivo solo tenía MCP, lo borra; si tiene más ajustes, los conserva): **OpenCode recibe los de `.mcp.json` al abrirlo desde Tutti**, así que no hace falta ese archivo. **Traer N de otros agentes** (global) pasa a la fuente lo que solo existe en otro, y un desfase se resuelve con **Usar el de Claude** o **Usar el del agente**. Tutti no crea ningún archivo propio: solo usa los de cada agente.
 
 <table>
 <tr>
