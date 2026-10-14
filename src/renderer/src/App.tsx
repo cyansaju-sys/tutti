@@ -131,7 +131,7 @@ export function App() {
         const all = [...st.panes, ...st.shells]
         if (!all.length) return
         const i = all.findIndex((p) => p.id === st.activePane)
-        st.set({ activePane: all[(i + (e.key === 'PageDown' ? 1 : -1) + all.length) % all.length].id, focus: 'pane' })
+        st.focusPane(all[(i + (e.key === 'PageDown' ? 1 : -1) + all.length) % all.length].id)
         return
       }
       if (key === 'H') { st.set({ tab: 'search', sidebarOpen: true, searchReplace: true, searchToken: st.searchToken + 1 }); return }

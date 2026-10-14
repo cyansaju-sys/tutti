@@ -11,13 +11,13 @@ import { TerminalPane } from './TerminalPane'
 export function PaneBox({ pane }: { pane: Pane }) {
   const t = useT()
   const active = useStore((s) => s.activePane === s.panes.find((p) => p.id === pane.id)?.id || s.activePane === pane.id)
-  const set = useStore((s) => s.set)
   const closePane = useStore((s) => s.closePane)
   const leader = useStore((s) => pane.kind === 'agent' && s.panes.length > 1 && s.panes[0].id === pane.id)
   const parent = useStore((s) => (pane.parentId ? s.panes.find((p) => p.id === pane.parentId) : undefined))
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" onMouseDown={() => set({ activePane: pane.id, focus: 'pane' })}>
-      <div className={clsx('flex shrink-0 items-center gap-2 border-b-2 px-2.5 py-1 transition-colors', active ? 'border-accent bg-panel' : 'border-line')}>
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" onMouseDown={() => useStore.getState().focusPane(pane.id)}>
+      {/* preventDefault: si no, al pulsar la cabecera el navegador quita el foco a la terminal justo después de dárselo */}
+      <div onMouseDown={(e) => e.preventDefault()} className={clsx('flex shrink-0 items-center gap-2 border-b-2 px-2.5 py-1 transition-colors', active ? 'border-accent bg-panel' : 'border-line')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
         {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}
@@ -142,7 +142,7 @@ export function TerminalSection() {
         <div className="relative min-h-0 flex-1">
           {shells.map((p) => (
             <div key={p.id} className={clsx('absolute inset-0 flex flex-col', p.id !== active && 'invisible pointer-events-none')}
-              onMouseDown={() => set({ shellActive: p.id, activePane: p.id, focus: 'pane' })}>
+              onMouseDown={() => useStore.getState().focusPane(p.id)}>
               <TerminalPane pane={p} active={p.id === active && activePane === p.id} />
             </div>
           ))}
@@ -151,7 +151,7 @@ export function TerminalSection() {
       {shells.length > 1 && (
         <div className="flex w-[140px] shrink-0 flex-col gap-px border-l border-line p-1 pt-2">
           {shells.map((p) => (
-            <div key={p.id} onClick={() => set({ shellActive: p.id, activePane: p.id, focus: 'pane' })}
+            <div key={p.id} onClick={() => useStore.getState().focusPane(p.id)}
               className={clsx('group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-colors', p.id === active ? 'bg-accent-bg text-text' : 'text-muted hover:bg-accent-bg')}>
               <MdTerminal size={14} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate">{p.title}</span>

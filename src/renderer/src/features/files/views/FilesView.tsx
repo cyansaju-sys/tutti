@@ -198,7 +198,7 @@ export function FilesView() {
     const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
     if (!pane) { toast(t('fs.noAgent'), 'error'); return }
     window.api.pty.write(pane.id, entries.map((e) => agentRef(pane.command, toPosix(relative(project!, e.path)))).join(' ') + ' ')
-    set({ activePane: pane.id, focus: 'pane' })
+    useStore.getState().focusPane(pane.id)
   }
 
   const run = async (job: Promise<{ ok: boolean; message: string }>, after: (message: string) => void): Promise<void> => {

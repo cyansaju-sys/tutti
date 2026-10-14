@@ -320,7 +320,7 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
     v.dispatch({ selection: { anchor: from, head: Math.min(from + reveal.length, line.to) }, effects: EditorView.scrollIntoView(from, { y: 'center' }) })
     v.focus()
   }, [reveal?.token])  // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (focusToken) view.current?.focus() }, [focusToken])
+  useEffect(() => { if (focusToken) view.current?.focus() }, [focusToken, path])          // también al pasar a otra pestaña (p. ej. al cerrar la activa)
 
   const v = view.current
   const hasSelection = !!v && !v.state.selection.main.empty

@@ -125,7 +125,7 @@ export function EditorArea() {
     if (!pane || !project) { toast(t('ed.noAgent'), 'error'); return }
     const rel = toPosix(relative(project, path))
     window.api.pty.paste(pane.id, selectionMessage(pane.command, rel, sel.startLine, sel.endLine, sel.text))
-    set({ activePane: pane.id, focus: 'pane' })
+    useStore.getState().focusPane(pane.id)
   }
   const close = (d: Doc): void => {
     if (isDirty(d) && !window.confirm(t('app.unsaved', { title: d.title }))) return

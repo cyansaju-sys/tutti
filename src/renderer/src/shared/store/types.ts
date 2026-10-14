@@ -67,6 +67,7 @@ export interface PanesSlice {
   addShell: () => Promise<void>
   closeShells: () => void
   closePane: (id: string) => void
+  focusPane: (id: string) => void                      // selecciona el panel y le pasa el teclado (aunque ya fuera el activo)
 }
 
 export interface UiSlice {
@@ -85,6 +86,7 @@ export interface UiSlice {
   searchReplace: boolean                 // Ctrl+Shift+H: el panel se abre con el campo de reemplazo
   searchToken: number                    // sube al pulsar Ctrl+Shift+F: el campo de búsqueda toma el foco
   focus: Focus
+  paneFocus: number                      // sube al cerrar un archivo o un panel: la terminal activa recupera el foco del teclado
   modal: Modal
   toasts: Toast[]
   maximized: boolean

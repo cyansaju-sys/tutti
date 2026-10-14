@@ -38,6 +38,7 @@ export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, g
     const shells = s.shells.filter((p) => p.id !== id)
     const shellActive = s.shellActive === id ? (shells.at(-1)?.id ?? null) : s.shellActive
     const activePane = s.activePane === id ? (shellActive ?? panes.at(-1)?.id ?? null) : s.activePane
-    return { panes, shells, shellActive, activePane, shellMax: shells.length ? s.shellMax : false }
+    return { panes, shells, shellActive, activePane, shellMax: shells.length ? s.shellMax : false, focus: 'pane', paneFocus: s.paneFocus + 1 }      // el teclado pasa al panel que queda
   }),
+  focusPane: (id) => set((s) => ({ activePane: id, focus: 'pane', paneFocus: s.paneFocus + 1, ...(s.shells.some((p) => p.id === id) && { shellActive: id }) })),
 })

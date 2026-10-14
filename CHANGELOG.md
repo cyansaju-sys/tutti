@@ -2,6 +2,12 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.3
+
+### Funcional
+
+- **El teclado va al agente que eliges:** al cerrar un archivo o un panel, al pulsar la cabecera de un agente, al ir a él desde las tareas delegadas o al mandarle algo desde la pestaña Tutti, el árbol o el editor, puedes seguir escribiéndole sin hacer clic en su terminal (si cierras un archivo y quedan otros, el foco va al editor). Antes el foco se perdía y no se podía escribir.
+
 ## 1.3.2
 
 ### Funcional

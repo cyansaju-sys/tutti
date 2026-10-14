@@ -25,6 +25,7 @@ export function useAskAgent() {
     if (agent.paneId) {
       window.api.pty.paste(agent.paneId, prompt)
       setTimeout(() => window.api.pty.write(agent.paneId!, '\r'), 500)
+      useStore.getState().focusPane(agent.paneId)          // el teclado pasa al agente: puedes seguir escribiéndole
     } else await openAgent({ name: agent.name, command: agent.command }, [], { prompt })
     return agent.name
   }

@@ -108,6 +108,8 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
   const mode = useStore((s) => s.themeMode)
   useEffect(() => { if (term.current) term.current.options.theme = TERMINAL_THEMES[mode] }, [mode])
   useEffect(() => { if (active) { term.current?.focus(); term.current?.scrollToBottom() } }, [active])
+  const paneFocus = useStore((s) => s.paneFocus)
+  useEffect(() => { if (paneFocus && isActive.current) term.current?.focus() }, [paneFocus])          // al cerrar un archivo o un panel
   const t = useT()
   const [menu, setMenu] = useState<{ anchor: DOMRect; selected: boolean } | null>(null)
   return (
