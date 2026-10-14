@@ -2,6 +2,12 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.3.3
+
+### Functional
+
+- **The keyboard goes to the agent you pick:** after closing a file or a panel, clicking an agent’s header, jumping to it from the delegated tasks or sending it something from the Tutti tab, the tree or the editor, you can keep typing without clicking its terminal (if you close a file and others remain, focus goes to the editor). Before, focus was lost and you could not type.
+
 ## 1.3.2
 
 ### Functional

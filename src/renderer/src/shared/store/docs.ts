@@ -85,7 +85,8 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const i = s.docs.findIndex((d) => d.path === path)
     const docs = s.docs.filter((d) => d.path !== path)
     const activeDoc = s.activeDoc === path ? (docs[Math.min(i, docs.length - 1)]?.path ?? null) : s.activeDoc
-    return { docs, activeDoc }
+    // sin archivos abiertos, el teclado vuelve al agente activo (si no, el foco se queda en el botón que ya no existe y no se puede escribir)
+    return docs.length ? { docs, activeDoc } : { docs, activeDoc, focus: 'pane', paneFocus: s.paneFocus + 1 }
   }),
   renameDocs: (from, to) => set((s) => {
     const move = (p: string): string => (p === from ? to : p.startsWith(from + '/') || p.startsWith(from + '\\') ? to + p.slice(from.length) : p)

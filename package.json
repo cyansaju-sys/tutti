@@ -1,6 +1,6 @@
 {
   "name": "tutti",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Editor multi-agente para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
   "author": "cyansaju",

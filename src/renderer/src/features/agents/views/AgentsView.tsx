@@ -22,7 +22,6 @@ function Tasks() {
   const [all, setAll] = useState(false)
   const [expanded, setExpanded] = useState<number | null>(null)
   const panes = useStore((s) => s.panes)
-  const set = useStore((s) => s.set)
   useEffect(() => {
     const load = (): void => { void window.api.orchestra.tasks().then((list) => { setTasks(list); setNow(Date.now()) }) }
     load()
@@ -55,7 +54,7 @@ function Tasks() {
                 </span>
                 <span className="min-w-0 flex-1 truncate">{task.agent}</span>
                 <span className="shrink-0 text-[10px] tabular-nums text-muted">{span((task.endedAt ?? now) - task.startedAt)}</span>
-                {open && <button title={t('ag.goTo')} onClick={(e) => { e.stopPropagation(); set({ activePane: task.agentId, focus: 'pane' }) }} className="grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent"><MdOpenInNew size={12} /></button>}
+                {open && <button title={t('ag.goTo')} onClick={(e) => { e.stopPropagation(); useStore.getState().focusPane(task.agentId) }} className="grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent"><MdOpenInNew size={12} /></button>}
               </div>
               <div className={clsx('mt-0.5 whitespace-pre-wrap break-words text-[11px] leading-snug text-muted', expanded !== task.id && 'line-clamp-2')}>{task.task}</div>
               <div className="mt-0.5 truncate text-[10px] text-muted/80">{t('ag.from', { caller: task.caller })}{task.model ? ` · ${task.model}` : ''}{task.difficulty ? ` · ${task.difficulty}` : ''}</div>
