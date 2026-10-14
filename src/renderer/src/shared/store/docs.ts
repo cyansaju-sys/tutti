@@ -7,7 +7,7 @@ import type { State, DocsSlice } from './types'
 export const isDirty = (d: Doc): boolean => d.text !== d.savedText
 
 export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get) => ({
-  docs: [], activeDoc: null, reveal: null,
+  docs: [], activeDoc: null, reveal: null, specPrefill: null,
 
   openDoc: async (path) => {
     if (get().docs.some((d) => d.path === path)) { set({ activeDoc: path, focus: 'editor' }); return }
@@ -38,8 +38,9 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const doc: Doc = { kind: 'steeringform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'stf.tabTitle') }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
-  openSpecForm: () => {
+  openSpecForm: (prefill) => {
     const path = 'spec:new'
+    if (prefill) set({ specPrefill: prefill })
     const doc: Doc = { kind: 'specform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'sf.tabTitle') }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },

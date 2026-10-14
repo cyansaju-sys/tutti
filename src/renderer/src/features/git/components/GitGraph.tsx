@@ -9,7 +9,7 @@ import { useStore } from '@/shared/store'
 import { Menu, type MenuItem } from '../../../shared/components/Menu'
 import { FIELD, Modal } from '../../../shared/components/ui'
 
-const COLORS = ['#8fa6c4', '#7ee0a1', '#e2c08d', '#ff8a9b', '#c792ea', '#4cc9b0', '#f0a674', '#82aaff']
+const COLORS = ['#9bb3ce', '#7ee0a1', '#e2c08d', '#ff8a9b', '#c792ea', '#4cc9b0', '#f0a674', '#82aaff']
 const STEP = 16, HEIGHT = 28, LIMIT = 400
 
 const when = (ms: number): string => {

@@ -6,12 +6,8 @@ import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { Terminal as Headless } from '@xterm/headless'
 import type { PtyOptions } from '../../../shared/types'
-import { extendedPath, which } from '../../utils/shellpath'
-
-const SESSION_VARS = [
-  'CLAUDECODE', 'CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_SESSION_ID', 'CLAUDE_CODE_ENTRYPOINT', 'CLAUDE_CODE_SESSION_ATTENDED',
-  'CLAUDE_CODE_EXECPATH', 'CLAUDE_CODE_MESSAGING_SOCKET', 'CLAUDE_CODE_MESSAGING_TOKEN', 'CLAUDE_AGENT_SDK_VERSION', 'CLAUDE_PID'
-]
+import { which } from '../../utils/shellpath'
+import { childEnv } from './env'
 
 export interface Meta { id: string; kind: 'agent' | 'shell'; name: string; command: string; cwd: string; parentId?: string }
 interface Session { term: IPty; killed: boolean; meta: Meta; screen: Headless; lastOutput: number }
@@ -29,16 +25,6 @@ const sessions = new Map<string, Session>()
 /** Libera la pantalla interna; puede llamarse varias veces (un fallo dentro de un evento de node-pty aborta el proceso). */
 const disposeScreen = (s: Session): void => { try { s.screen.dispose() } catch { /* ya liberada */ } }
 const waiting = new Map<string, Array<() => void>>()
-
-/** Entorno del agente: sin variables de sesión ajenas y con el PATH ampliado. */
-function childEnv(extra: Record<string, string> = {}): Record<string, string> {
-  const env: Record<string, string> = {}
-  for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !SESSION_VARS.includes(k) && !k.startsWith('ELECTRON_')) env[k] = v
-  env.PATH = extendedPath()
-  env.TERM = 'xterm-256color'
-  env.COLORTERM = 'truecolor'
-  return { ...env, ...extra }
-}
 
 /** Resuelve el ejecutable; lanza un Error con un mensaje legible si no se puede iniciar. */
 function resolve(opts: PtyOptions, args: string[]): { file: string; args: string[] } {

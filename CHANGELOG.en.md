@@ -6,6 +6,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 
 ### Functional
 
+- **Project roadmap:** the Tutti tab has a new section with the plan in phases (`.tutti/roadmap.md` or the `ROADMAP.md` you already have at the root). Each phase shows its progress, the current one is open and the **next** item is marked; each item is matched with its OpenSpec change (done, in progress with its tasks, no spec yet or unverified). **Where did we leave off?** asks the agent to review the roadmap, the tasks and git, check in the code what is done and propose the next steps without touching anything. From an item you create its spec with the form already filled in, archiving a change ticks its box, and if you have no roadmap yet you create it from a template or let the agent draft it.
 - **Remote MCP servers over SSE:** when adding or editing a remote you pick HTTP or SSE, and registry entries bring their own. Claude Code, Gemini CLI and Qwen Code install them with that transport (before, all went as HTTP and SSE ones did not connect). Codex, which only speaks HTTP, warns instead of installing it wrong.
 - **“Test” behaves like the agent:** it starts local servers from the project folder, expands `${VARIABLE}` and `${VARIABLE:-value}` like `.mcp.json`, tests SSE servers and, if a server asks you to sign in (OAuth), tells you so instead of failing.
 - **Codex MCPs are read in full:** a `config.toml` with `env = { ... }`, multi-line lists or comments no longer shows as “different” when syncing.
@@ -16,6 +17,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **Safer configuration files:** Tutti writes each agent’s files in one go, so an agent or another window never reads a half-written one. It keeps their permissions and, if the file is a link, writes to the original.
 - **The MCP list and sync load faster:** each configuration file is read only once.
 - **MCP messages show in your language** (some were always in Spanish before).
+- **Each agent’s real models when sharing out tasks:** for Claude Code, Codex, Gemini CLI, Qwen Code and Copilot CLI, Tutti reads the list from their `/model` (it opens it out of sight, in the project folder, and leaves without picking anything) instead of a fixed list that went out of date. It is kept for a day. If the agent asks to trust the folder or to sign in, Tutti does not answer for you and uses the fixed list.
 
 ## 1.3.1
 

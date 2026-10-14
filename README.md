@@ -9,17 +9,17 @@
 La IA y los agentes cambiaron la forma de programar. Tutti los reúne:<br />
 Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otro, cada uno con su instrumento, tocando juntos en una sola ventana.
 
-[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=flat-square&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
-![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=flat-square)
-![Electron](https://img.shields.io/badge/Electron-33-8fa6c4?style=flat-square)
-![Licencia](https://img.shields.io/badge/licencia-MIT-8fa6c4?style=flat-square)
+[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=flat-square&color=9bb3ce&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
+![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-9bb3ce?style=flat-square)
+![Electron](https://img.shields.io/badge/Electron-33-9bb3ce?style=flat-square)
+![Licencia](https://img.shields.io/badge/licencia-MIT-9bb3ce?style=flat-square)
 <br />
 
-[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=for-the-badge&color=8fa6c4&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
-![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-8fa6c4?style=for-the-badge)
-![Idiomas](https://img.shields.io/badge/ES%20·%20EN-8fa6c4?style=for-the-badge)
-![Licencia](https://img.shields.io/badge/MIT-8fa6c4?style=for-the-badge)
-[![Estrellas](https://img.shields.io/github/stars/cyansaju-sys/tutti?style=for-the-badge&color=8fa6c4&label=estrellas)](https://github.com/cyansaju-sys/tutti/stargazers)
+[![Release](https://img.shields.io/github/v/release/cyansaju-sys/tutti?style=for-the-badge&color=9bb3ce&label=release)](https://github.com/cyansaju-sys/tutti/releases/latest)
+![Plataformas](https://img.shields.io/badge/Linux%20·%20Windows-9bb3ce?style=for-the-badge)
+![Idiomas](https://img.shields.io/badge/ES%20·%20EN-9bb3ce?style=for-the-badge)
+![Licencia](https://img.shields.io/badge/MIT-9bb3ce?style=for-the-badge)
+[![Estrellas](https://img.shields.io/github/stars/cyansaju-sys/tutti?style=for-the-badge&color=9bb3ce&label=estrellas)](https://github.com/cyansaju-sys/tutti/stargazers)
 
 **[⬇ Instalar](#instalar)** &nbsp;·&nbsp; [Qué incluye](#qué-incluye) &nbsp;·&nbsp; [Atajos](#atajos) &nbsp;·&nbsp; [Desarrollo](#desarrollo) &nbsp;·&nbsp; [Privacidad](#privacidad)
 
@@ -27,7 +27,7 @@ Claude Code · OpenCode · Codex · Gemini CLI · Antigravity · y cualquier otr
 
 ![Varios agentes repartiéndose una tarea](docs/img/agentes.png)
 
-<sub>Ejemplo real: un Claude Code (el líder) reparte una tarea a OpenCode y a Antigravity; cada uno se abre en su propio editor, marcado «sub de …», y el apartado de tareas delegadas muestra su estado, modelo y duración.</sub>
+<sub>Ejemplo real: un Claude Code (el líder) le pasa una tarea a OpenCode, que se abre en su propio panel marcado «sub de Claude Code» y le contesta; a la izquierda, la pestaña Tutti con la documentación, el roadmap y las specs del proyecto.</sub>
 
 </div>
 
@@ -258,10 +258,11 @@ tres archivos base (`product.md`, `tech.md` y `structure.md`).
 
 ### La pestaña Tutti y la carpeta .tutti
 
-La pestaña **Tutti** (`Ctrl+Shift+J`) reúne en un sitio lo que los agentes necesitan saber de tu proyecto: **documentación, specs, hooks, steering, skills** y los servidores MCP instalados. Todo vive en `.tutti/`, una carpeta que Tutti crea en cada proyecto que abres (con un `README.md`); es texto plano, se versiona con git y la comparte el equipo. Las **subcarpetas solo aparecen cuando añades algo**.
+La pestaña **Tutti** (`Ctrl+Shift+J`) reúne en un sitio lo que los agentes necesitan saber de tu proyecto: **documentación, roadmap, specs, hooks, steering, skills** y los servidores MCP instalados. Todo vive en `.tutti/`, una carpeta que Tutti crea en cada proyecto que abres (con un `README.md`); es texto plano, se versiona con git y la comparte el equipo. Las **subcarpetas solo aparecen cuando añades algo**.
 
 ```
 .tutti/
+├─ roadmap.md  el plan por fases, cada una con sus specs
 ├─ specs/      una carpeta por función o error: requirements.md (EARS) o bugfix.md, design.md y tasks.md (casillas, con su avance)
 ├─ docs/       documentación por categorías (Diátaxis: tutorials, how-to, reference, explanation)
 ├─ steering/   contexto.md y tus guías para los agentes (product.md, tech.md…)
@@ -271,6 +272,7 @@ La pestaña **Tutti** (`Ctrl+Shift+J`) reúne en un sitio lo que los agentes nec
 
 Cada sección tiene su **+** y, si está vacía, un botón de ancho completo para crear el primer elemento. Crear una spec, un hook o un steering abre un **formulario como una pestaña del editor**.
 
+- **Roadmap**: el plan completo del proyecto por fases, cada una con varias specs. Es `.tutti/roadmap.md` (o, si no existe, el `ROADMAP.md` de la raíz): cada `##` es una fase y cada viñeta un ítem; si empieza con `` `nombre` ``, se vincula al cambio de OpenSpec con ese nombre. Tutti muestra cada fase con su avance, abre la actual y marca la **siguiente** tarea: un ítem está **hecho** si tiene `[x]` o su cambio se archivó, **en marcha** si su cambio existe (con sus tareas `n/m`), **sin spec** si aún no lo tiene y **sin verificar** si es una viñeta suelta. El botón **¿Dónde nos quedamos?** le pide al agente que lea el roadmap, las tareas y git, compruebe en el código qué está hecho de verdad y te proponga los siguientes pasos, sin tocar nada hasta que lo apruebes. Desde un ítem sin spec, el botón de la derecha abre el formulario de spec ya rellenado, y al **archivar** un cambio su casilla se marca sola. Si no hay roadmap, se crea con una plantilla o lo **redacta el agente** explorando el proyecto. AGENTS.md también apunta a él, así que funciona fuera de Tutti.
 - **Specs** (flujo de Kiro): ¿funcionalidad o error?, qué quieres y, si es una funcionalidad, ¿requisitos o diseño primero? Un error crea `bugfix.md` (actual, esperado, sin regresiones). Puedes empezar con plantillas o **pedírselo al agente abierto**: trabaja por fases y espera tu aprobación entre una y otra (o, con el flujo **Rápida**, los tres archivos de una vez). En la barra del editor de cada archivo de la spec, el agente puede **analizar** los requisitos, **actualizar** el diseño y las tareas cuando los cambias y **ejecutar las tareas** (la siguiente o todas).
 - **Steering** (modos de Kiro): `always` (por defecto), `fileMatch` + `fileMatchPattern`, `manual` o `auto` con `name` y `description`; lo que no va entero se lista con su ruta. `#[[file:ruta]]` y `#[[folder:ruta]]` dentro del texto se sustituyen por el contenido real. `fileMatch` mira los archivos con cambios en git y los abiertos en el editor, y puedes crear steering **globales** (para todos tus proyectos, fuera del repositorio). Crea de golpe `product.md`, `tech.md` y `structure.md` y el agente puede rellenarlos.
 - **Hooks** (formato de Kiro): `PostFileSave` ejecuta un comando (con el archivo en `$TUTTI_HOOK_FILE` y el contexto por stdin) o le escribe un prompt al agente; el **+** ofrece un formulario guiado o describírselo al agente, y se editan con el mismo formulario. `PreToolUse`, `PostToolUse` y `Stop` se muestran pero no se ejecutan. **No corren hasta que pulsas «Permitir hooks en este proyecto»**, porque ejecutan comandos del repositorio.

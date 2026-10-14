@@ -57,6 +57,14 @@ export interface OpenSpecState {
   changes: OpenSpecChange[]; archived: number
   specs: Array<{ name: string; file: string; requirements: number }>
 }
+/**
+ * Un ítem del roadmap. `done`: casilla marcada o su cambio archivado; `active`: su cambio está en marcha (con su avance); `pending`: aún sin
+ * spec; `unknown`: una viñeta sin casilla ni cambio, que solo se sabe mirando el código. `dir`: la carpeta de su cambio, si existe.
+ */
+export interface RoadmapItem { text: string; change: string | null; line: number; status: 'done' | 'active' | 'pending' | 'unknown'; dir: string | null; done: number; total: number }
+export interface RoadmapPhase { title: string; line: number; items: RoadmapItem[] }
+/** El roadmap del proyecto (.tutti/roadmap.md o el ROADMAP.md de la raíz). `current`: la primera fase sin terminar (-1 si no hay); `next`: lo que toca. */
+export interface RoadmapState { file: string; rel: string; exists: boolean; phases: RoadmapPhase[]; current: number; next: { phase: number; item: number } | null }
 /** Un archivo de .tutti/steering con lo que dice su cabecera (sin el cuerpo). */
 export interface SteeringInfo { file: string; base: string; name: string; inclusion: 'always' | 'fileMatch' | 'manual' | 'auto'; patterns: string[]; description: string; scope: 'project' | 'global' }
 /** Una parte de lo que reciben los agentes: el contexto global, el del proyecto o un archivo de steering. */
@@ -139,6 +147,7 @@ export interface Api {
     validate(project: string, change?: string): Promise<McpResult>
     archive(project: string, change: string): Promise<McpResult>
   }
+  roadmap: { state(project: string): Promise<RoadmapState> }
   hooks: {
     list(project: string): Promise<{ hooks: HookInfo[]; trusted: boolean }>
     trust(project: string, on: boolean): Promise<void>          // autoriza (o quita) que los hooks del proyecto se ejecuten

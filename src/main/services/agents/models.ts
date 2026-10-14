@@ -3,6 +3,8 @@ import { execFile } from 'node:child_process'
 import { closeSync, openSync, readdirSync, readSync, statSync, fstatSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { getSetting, setSetting } from '../settings'
+import { canProbe, probeModels } from './modelProbe'
 
 export type Tier = 'basic' | 'standard' | 'advanced'
 
@@ -48,7 +50,7 @@ export function currentModel(command: string, cwd: string): string | null {
   return command === 'claude' ? claudeModel(cwd) : null
 }
 
-// Modelos conocidos de los agentes que no tienen un comando para listarlos (pueden quedar desfasados con el tiempo)
+// Modelos conocidos de los agentes sin comando para listarlos: lo que se usa si su /model no se puede leer (pueden quedar desfasados)
 const STATIC_MODELS: Record<string, string[]> = {
   claude: ['fable', 'opus', 'sonnet', 'haiku', 'claude-fable-5-1', 'claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'],
   codex: ['gpt-5-codex', 'gpt-5', 'gpt-5-mini', 'o3', 'o4-mini'],
@@ -58,7 +60,32 @@ const STATIC_MODELS: Record<string, string[]> = {
 export const MODEL_FLAG: Record<string, string> = { claude: '--model', agy: '--model', codex: '--model', gemini: '--model', 'cursor-agent': '--model', auggie: '--model', forge: '--model', aider: '--model' }
 
 const MODELS_TTL = 5 * 60_000
-const modelCache = new Map<string, { at: number; list: string[] }>()
+/** Lo leído del /model de un agente vale un día: abrirlo cuesta unos segundos y los modelos cambian poco. */
+const PROBED_TTL = 24 * 60 * 60_000
+const PROBED_KEY = 'agentModels'
+const PROBE_RETRY = 30 * 60_000
+const modelCache = new Map<string, { at: number; list: string[]; ttl: number }>()
+const probing = new Map<string, Promise<string[]>>()
+
+type Probed = Record<string, { at: number; list: string[] }>
+const probedSaved = (): Probed => { const v = getSetting(PROBED_KEY); return typeof v === 'object' && v !== null ? (v as Probed) : {} }
+
+/**
+ * Modelos de un agente leídos de su /model (ver modelProbe.ts), guardados en los ajustes para no tener que abrirlo en cada arranque.
+ * Uno a la vez por agente; [] si no se pudo leer.
+ */
+async function probed(command: string, cwd: string, exe?: string): Promise<string[]> {
+  const saved = probedSaved()[command]
+  if (saved && Date.now() - saved.at < PROBED_TTL && saved.list.length) return saved.list
+  let running = probing.get(command)
+  if (!running) {
+    running = probeModels(command, cwd, exe).catch(() => []).finally(() => probing.delete(command))
+    probing.set(command, running)
+  }
+  const list = await running
+  if (list.length) setSetting(PROBED_KEY, { ...probedSaved(), [command]: { at: Date.now(), list } })
+  return list
+}
 const ANSI = /\x1b\[[0-9;?]*[A-Za-z]/g
 const HEADER = new Set(['available', 'models', 'model', 'provider', 'id', 'name', 'fetching', 'loading'])
 
@@ -77,19 +104,28 @@ const LIST_CMD: Record<string, { args: string[]; parse: (out: string) => string[
   forge: { args: ['list', 'model'], parse: lines }
 }
 
-/** Modelos que ofrece un agente (id y nivel): con su comando si lo tiene, si no una lista fija; vacío si no se conoce. */
-export async function availableModels(command: string, exe?: string): Promise<Array<{ id: string; tier: Tier }>> {
+/**
+ * Modelos que ofrece un agente (id y nivel): con su comando si lo tiene; si no, de su selector /model (abriéndolo en `cwd`, la carpeta
+ * del proyecto); y si tampoco, una lista fija. Vacío si no se conoce.
+ */
+export async function availableModels(command: string, exe?: string, cwd?: string): Promise<Array<{ id: string; tier: Tier }>> {
   const hit = modelCache.get(command)
   let list: string[]
-  if (hit && Date.now() - hit.at < MODELS_TTL) list = hit.list
+  if (hit && Date.now() - hit.at < hit.ttl) list = hit.list
   else {
     const cmd = LIST_CMD[command]
     if (cmd) {
       list = await new Promise<string[]>((resolve) => {
         execFile(exe ?? command, cmd.args, { timeout: 15_000, maxBuffer: 4_000_000 }, (err, out) => resolve(err ? [] : [...new Set(cmd.parse(out))]))
       })
-    } else list = STATIC_MODELS[command] ?? []
-    if (list.length || !cmd) modelCache.set(command, { at: Date.now(), list })
+      if (list.length) modelCache.set(command, { at: Date.now(), list, ttl: MODELS_TTL })
+    } else {
+      const tried = canProbe(command) && !!cwd
+      const read = tried ? await probed(command, cwd!, exe) : []
+      list = read.length ? read : STATIC_MODELS[command] ?? []
+      // sin leer se reintenta: pronto si ni se intentó (faltaba la carpeta); si falló, no se vuelve a abrir el agente en media hora
+      modelCache.set(command, { at: Date.now(), list, ttl: read.length ? PROBED_TTL : tried ? PROBE_RETRY : MODELS_TTL })
+    }
   }
   return list.map((id) => ({ id, tier: tier(id).tier }))
 }

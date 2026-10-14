@@ -4,9 +4,10 @@
  * del archivo es del usuario. Es un puntero: no copia contenido, así que no hay nada que se desfase salvo la lista.
  */
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import type { AgentsPointerState, McpResult } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
+import { roadmapFile } from '../roadmap'
 
 export const AGENTS_START = '<!-- tutti:start -->'
 export const AGENTS_END = '<!-- tutti:end -->'
@@ -31,6 +32,7 @@ export function agentsBlock(project: string): string {
     tm('m.ctx.agentsHead'), '',
     tm('m.ctx.agentsLead'), '',
     ...(steering.length ? [tm('m.ctx.agentsSteering', { files: some(steering) })] : []),
+    ...(existsSync(roadmapFile(project)) ? [tm('m.ctx.agentsRoadmap', { file: relative(project, roadmapFile(project)).split('\\').join('/') })] : []),
     ...(isDir(join(project, 'openspec')) ? [tm('m.ctx.agentsSpecs')] : []),
     ...(ls(join(tutti, 'docs')).length ? [tm('m.ctx.agentsDocs')] : []),
     ...(skills.length ? [tm('m.ctx.agentsSkills', { names: some(skills) })] : []),

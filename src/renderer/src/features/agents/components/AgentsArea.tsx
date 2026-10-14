@@ -53,7 +53,7 @@ export function AgentsArea() {
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-start justify-center gap-x-12 gap-y-8">
             <div className="flex w-[300px] max-w-full flex-col items-center">
-              <img src={`${import.meta.env.BASE_URL}icons/empty-agents${mode === 'light' ? '-light' : ''}.svg`} alt="" width={72} height={72} draggable={false} />
+              <img src={`${import.meta.env.BASE_URL}icons/logo-contorno${mode === 'light' ? '-light' : ''}.svg`} alt="Tutti" width={180} height={180} draggable={false} />
               <p className="mt-3 text-[12px] text-muted">{t('pane.pickAgent')}</p>
               <button onClick={() => set({ modal: 'agents' })} className="mt-3 flex items-center gap-2 rounded-lg border border-line px-5 py-2.5 text-[13px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
                 <MdSearch size={16} /> {t('pane.chooseAgent')}
