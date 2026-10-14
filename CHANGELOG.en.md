@@ -6,7 +6,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 
 ### Funcional
 
-- **You can type to the agent again after closing an unsaved file:** the “has unsaved changes” warning was a system dialog that, on Linux, left the terminal with a non-blinking cursor and not receiving Space. It is now a Tutti dialog (also when switching project with changes, replacing across the project and replacing the context). “Cancel” is focused so a stray Enter or Space does not discard anything, and the keyboard goes back to where it was.
+- **You can type to the agent again after closing an unsaved file:** *Bug:* when closing a file with unsaved changes (or switching project, replacing across the project or replacing the context), the warning was the system `window.confirm`. On Linux, once that dialog closed, Chromium’s focus was left half-done: the terminal lost its blinking cursor and did not receive Space or text typed with composition. *Fix:* the warning is now a Tutti dialog (`confirmAsk`, in `shared/lib/confirm.ts`). “Cancel” is focused so a stray Enter or Space does not discard anything, and when you answer, focus returns to the element that had it (the terminal or the editor).
 
 ## 1.3.3
 
