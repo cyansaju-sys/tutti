@@ -43,4 +43,11 @@ describe('MCP en la interfaz', () => {
     const remote = server({ config: { type: 'http', url: 'https://x', headers: { H: 'v' } } })
     expect(specFromServer(remote)).toMatchObject({ kind: 'remote', url: 'https://x', headers: { H: 'v' } })
   })
+  it('copiar un remoto conserva SSE y lee httpUrl o serverUrl', () => {
+    expect(specFromServer(server({ agent: 'claude', config: { type: 'sse', url: 'https://x/sse' } }))).toMatchObject({ url: 'https://x/sse', transport: 'sse' })
+    expect(specFromServer(server({ agent: 'gemini', config: { url: 'https://g/sse' } })).transport).toBe('sse')
+    expect(specFromServer(server({ agent: 'gemini', config: { httpUrl: 'https://g/mcp' } }))).toMatchObject({ url: 'https://g/mcp' })
+    expect(specFromServer(server({ agent: 'gemini', config: { httpUrl: 'https://g/mcp' } })).transport).toBeUndefined()
+    expect(specFromServer(server({ agent: 'agy', config: { serverUrl: 'https://a/mcp' } })).url).toBe('https://a/mcp')
+  })
 })

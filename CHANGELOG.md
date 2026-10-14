@@ -2,6 +2,21 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.2
+
+### Funcional
+
+- **Servidores MCP remotos por SSE:** al añadir o editar un remoto eliges HTTP o SSE, y los del registro traen el suyo. Claude Code, Gemini CLI y Qwen Code los instalan con ese transporte (antes todos iban como HTTP y los SSE no conectaban). Codex, que solo habla HTTP, avisa en lugar de instalarlo mal.
+- **«Probar» se comporta como el agente:** arranca los servidores locales desde la carpeta del proyecto, expande `${VARIABLE}` y `${VARIABLE:-valor}` como `.mcp.json`, prueba los SSE y, si un servidor pide iniciar sesión (OAuth), te lo dice en vez de dar un error.
+- **Los MCP de Codex se leen enteros:** su `config.toml` con `env = { ... }`, listas en varias líneas o comentarios ya no aparece como «distinto» al sincronizar.
+- **Editar un servidor de `.mcp.json`** lo cambia en su sitio: ya no se quita y se vuelve a añadir, y Antigravity y Codex no lo pierden entre medias.
+- **Copiar a otro agente un remoto de Gemini CLI o Antigravity** conserva su URL.
+- **Windows:** añadir y quitar MCP funciona con las CLI instaladas con npm (`claude.cmd`, `gemini.cmd`…).
+- **Las claves de los MCP desactivados, cifradas:** sus variables y cabeceras se guardan con el llavero del sistema, no en claro en los ajustes. Si no se pueden descifrar (por ejemplo, en otro equipo), Tutti no lo activa a medias: te pide editarlo para volver a escribirlas.
+- **Archivos de configuración más seguros:** Tutti escribe los de cada agente de golpe, así que un agente u otra ventana nunca leen uno a medias. Respeta sus permisos y, si el archivo es un enlace, escribe en el original.
+- **La lista de MCP y la sincronización cargan más rápido:** cada archivo de configuración se lee una sola vez.
+- **Los mensajes de los MCP salen en tu idioma** (antes algunos salían siempre en español).
+
 ## 1.3.1
 
 ### Funcional

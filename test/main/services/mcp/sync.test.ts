@@ -42,6 +42,11 @@ describe('sincronizar con Claude Code como fuente', () => {
     expect(syncState(dir, 'project', installed).servers.find((s) => s.name === 'otro')!.agents[0].state).toBe('ok')
     expect((await resolveSync(dir, 'project', 'nada', 'cursor', 'source')).ok).toBe(false)
   })
+  it('SSE: Cursor lo detecta solo (igual con su url) y Codex no lo admite', () => {
+    const dir = project({ viejo: { type: 'sse', url: 'https://x/sse' } }, { viejo: { url: 'https://x/sse' } })
+    const s = syncState(dir, 'project', (a) => a === 'claude' || a === 'cursor' || a === 'codex')
+    expect(s.servers[0].agents.map((a) => `${a.agent}:${a.state}`)).toEqual(['cursor:ok', 'codex:unsupported'])
+  })
 })
 
 /** Pasar algo a .mcp.json usa la CLI de Claude Code: sin ella esa prueba no se puede hacer. */

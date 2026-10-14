@@ -7,15 +7,10 @@
  *   Tutti guarda el suyo, `tutti-mcp`, en `.tutti/plugins/` y lo declara allí.
  * - Codex lee `.codex/config.toml` del proyecto (si el proyecto es de confianza) y arranca sus servidores desde la raíz.
  */
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { which } from '../../utils/shellpath'
-
-type Entry = Record<string, unknown>
-const isObject = (v: unknown): v is Entry => typeof v === 'object' && v !== null && !Array.isArray(v)
-function readJson(path: string): Entry {
-  try { return JSON.parse(readFileSync(path, 'utf8')) as Entry } catch { return {} }
-}
+import { type Entry, isObject, readJson, readMcpServers, writeAtomic, writeJson } from './files'
 
 /** Lanzador compartido, relativo a la raíz del proyecto. */
 export const LAUNCHER_PATH = '.tutti/mcp/launch.mjs'
@@ -47,10 +42,7 @@ export function pluginEntry(name: string, shared: Entry): Entry {
 }
 
 /** Servidores de `.mcp.json` del proyecto. */
-export function sharedServers(project: string): Entry {
-  const found = readJson(join(project, '.mcp.json')).mcpServers
-  return isObject(found) ? found : {}
-}
+export const sharedServers = (project: string): Entry => readMcpServers(join(project, '.mcp.json'))
 
 /** La configuración que muestra Tutti para una entrada del espejo: la de `.mcp.json` si la lanza desde allí. */
 export function resolveEntry(entry: Entry, shared: Entry): Entry {
@@ -60,8 +52,10 @@ export function resolveEntry(entry: Entry, shared: Entry): Entry {
 
 /** Escribe el lanzador (siempre al día con esta versión de Tutti). */
 function writeLauncher(project: string): void {
-  mkdirSync(join(project, '.tutti', 'mcp'), { recursive: true })
-  writeFileSync(join(project, LAUNCHER_PATH), LAUNCHER, 'utf8')
+  const file = join(project, LAUNCHER_PATH)
+  let current = ''
+  try { current = readFileSync(file, 'utf8') } catch { /* no existe */ }
+  if (current !== LAUNCHER) writeAtomic(file, LAUNCHER)
 }
 
 /**
@@ -80,12 +74,11 @@ export function mirrorToAgy(project: string, name: string, force = false): void 
   else if (name in servers) delete servers[name]
   else return
   data.mcpServers = servers
-  mkdirSync(plugin, { recursive: true })
   declarePluginsDir(project)
   const manifest = join(plugin, 'plugin.json')
-  if (!existsSync(manifest)) writeFileSync(manifest, JSON.stringify({ name: PLUGIN }, null, 2) + '\n', 'utf8')
+  if (!existsSync(manifest)) writeJson(manifest, { name: PLUGIN })
   writeLauncher(project)
-  writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
+  writeJson(file, data)
 }
 
 /** Las primeras versiones guardaban el plugin en `.agents/plugins/tutti-mcp`: se quita (solo si es el de Tutti) para no cargarlo dos veces. */
@@ -101,8 +94,7 @@ export function declarePluginsDir(project: string): void {
   const entries = Array.isArray(data.entries) ? data.entries : []
   if (entries.some((e) => isObject(e) && String(e.path).replace(/^\.\//, '').replace(/\/$/, '') === PLUGINS_DIR)) return
   data.entries = [...entries, { path: PLUGINS_DIR }]
-  mkdirSync(join(project, '.agents'), { recursive: true })
-  writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
+  writeJson(file, data)
 }
 
 const tomlKey = (k: string): string => (/^[A-Za-z0-9_-]+$/.test(k) ? k : JSON.stringify(k))
@@ -131,21 +123,21 @@ export function withoutCodexServer(text: string, name: string): string {
 }
 
 /**
- * Pone el servidor `name` en `.codex/config.toml` del proyecto tal como está en `.mcp.json`, o lo quita si ya no está allí,
+ * Pone el servidor `name` en `.codex/config.toml` del proyecto tal como está en `.mcp.json`, o lo quita si ya no está allí (o es SSE),
  * conservando el resto del archivo. Solo si Codex está instalado o el proyecto ya tiene ese archivo.
  */
 export function mirrorToCodex(project: string, name: string, force = false): void {
   const file = codexProjectConfig(project)
   if (!force && !existsSync(file) && !which('codex')) return
-  const shared = sharedServers(project)[name]
+  const found = sharedServers(project)[name]
+  const shared = isObject(found) && found.type !== 'sse' ? found : undefined      // Codex solo habla Streamable HTTP: un SSE no se le pone
   let text = ''
   try { text = readFileSync(file, 'utf8') } catch { /* no existe */ }
   const rest = withoutCodexServer(text, name).replace(/\s+$/, '')
   if (!isObject(shared) && rest === text.replace(/\s+$/, '')) return
   const next = isObject(shared) ? `${rest ? `${rest}\n\n` : ''}${codexBlock(name, shared)}` : `${rest}\n`
-  mkdirSync(join(project, '.codex'), { recursive: true })
   if (isObject(shared) && !isRemote(shared)) writeLauncher(project)
-  writeFileSync(file, next, 'utf8')
+  writeAtomic(file, next)
 }
 
 /**
@@ -162,7 +154,7 @@ export function dropCodexBridgeCopy(file: string): boolean {
   const end = lines.findIndex((l, i) => i > start && /^\s*\[/.test(l) && !/^\s*\[\s*mcp_servers\.("tutti"|tutti)\./.test(l))
   const block = lines.slice(start, end < 0 ? undefined : end).join('\n')
   if (!/^\s*command\s*=/m.test(block) || !block.includes('mcp-bridge.mjs')) return false
-  writeFileSync(file, withoutCodexServer(text, 'tutti'), 'utf8')
+  writeAtomic(file, withoutCodexServer(text, 'tutti'))
   return true
 }
 

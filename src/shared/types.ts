@@ -74,15 +74,17 @@ export interface RegistryField { name: string; description: string; required: bo
 /** Una forma de instalar un servidor del registro: local (comando) o remota (URL). */
 export interface RegistryOption {
   label: string; kind: 'remote' | 'local'
-  url?: string; command?: string; args?: string[]
+  url?: string; transport?: McpTransport; command?: string; args?: string[]
   env: RegistryField[]; headers: RegistryField[]
 }
 export interface RegistryServer { name: string; title: string; description: string; version: string; repository: string; options: RegistryOption[] }
 export interface RegistryPage { servers: RegistryServer[]; next: string; error: string }
+/** Cómo se habla con un servidor remoto: Streamable HTTP (el actual) o SSE (el antiguo). Sin indicar, HTTP. */
+export type McpTransport = 'http' | 'sse'
 /** Lo que se necesita para añadir un servidor. */
 export interface McpSpec {
   name: string; kind: 'remote' | 'local'
-  url?: string; headers?: Record<string, string>
+  url?: string; transport?: McpTransport; headers?: Record<string, string>
   command?: string; args?: string[]; env?: Record<string, string>
 }
 export type GitOp = 'tag' | 'branch' | 'checkout' | 'cherry-pick' | 'revert' | 'merge' | 'rebase' | 'reset-soft' | 'reset-mixed' | 'reset-hard'
