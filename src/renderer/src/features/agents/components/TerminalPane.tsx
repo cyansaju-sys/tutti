@@ -51,6 +51,8 @@ function wire(): void {
 export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) {
   const host = useRef<HTMLDivElement>(null)
   const term = useRef<Terminal | null>(null)
+  const isActive = useRef(active)          // para la terminal recién creada: se crea tras cargar las fuentes, cuando el efecto de `active` ya pasó
+  isActive.current = active
 
   useEffect(() => {
     wire()
@@ -67,6 +69,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     t.open(host.current!)
     term.current = t
     terms.set(pane.id, t)
+    if (isActive.current) t.focus()          // un agente recién abierto recibe el foco (si no, no parpadea y las teclas van a otro sitio)
     t.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true
       const key = e.key.toUpperCase()

@@ -21,7 +21,7 @@ import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
 import { asServer, listDisabled } from './services/mcp/disabled'
-import { disableServer, enableServer, probeServer, updateServer } from './services/mcp/manage'
+import { disableServer, enableServer, probeServer, updateServer, deleteServer } from './services/mcp/manage'
 import { applySync, pullSync, resolveSync, standardizeProject, syncState } from './services/mcp/sync'
 import { featuredServers, searchRegistry } from './services/mcp/registry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
@@ -161,6 +161,7 @@ function registerIpc(): void {
   ipcMain.handle('mcp:update', (_e, server, spec, project) => updateServer(server, spec, project))
   ipcMain.handle('mcp:disable', (_e, server, project) => disableServer(server, project))
   ipcMain.handle('mcp:enable', (_e, server, project) => enableServer(server, project))
+  ipcMain.handle('mcp:remove', (_e, server, project) => deleteServer(server, project))
   ipcMain.handle('mcp:sync-state', (_e, project, scope) => syncState(project, scope))
   ipcMain.handle('mcp:sync-apply', (_e, project, scope) => applySync(project, scope))
   ipcMain.handle('mcp:sync-standardize', (_e, project) => standardizeProject(project))
@@ -170,7 +171,6 @@ function registerIpc(): void {
   ipcMain.handle('mcp:featured', () => featuredServers())
   ipcMain.handle('mcp:registry', (_e, query: string, cursor: string) => searchRegistry(query, cursor))
   ipcMain.handle('mcp:add', (_e, agent, spec, scope, project) => mcp.addServer(agent, spec, scope, project))
-  ipcMain.handle('mcp:remove', (_e, server, project) => mcp.removeServer(server, project))
   ipcMain.handle('usage:collect', (_e, project: string | null, fetchLimits: boolean) => collectUsage(detectAgents(), project, fetchLimits && !process.env.TUTTI_NO_LIMITS_FETCH))   // TUTTI_NO_LIMITS_FETCH: pruebas sin red
   ipcMain.handle('usage:rename', (_e, session, name: string) => renameSession(session, name))
   ipcMain.handle('usage:remove', (_e, session) => deleteSession(session))

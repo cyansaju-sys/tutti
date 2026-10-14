@@ -6,6 +6,8 @@ import { detectAgents } from './agents'
 import { capableFor, exhausted, isDifficulty, capable, pickAgent, type Candidate, type Difficulty } from './assign'
 import { readContext } from '../context/context'
 import { projectRoot } from '../context/projectRoot'
+import { codexConfig } from '../mcp/mcp'
+import { dropCodexBridgeCopy } from '../mcp/mirror'
 import { launchServers } from '../mcp/sync'
 import { agyBridgeStatus, ensureAgyBridge } from './agyBridge'
 import { buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from './launch'
@@ -246,6 +248,7 @@ export async function startHub(window: () => BrowserWindow | null): Promise<void
   pty.setLaunchHook((opts): pty.Launch => {
     const entry = orchestra?.configFor(opts.id) ?? null
     if (entry && opts.command === 'agy') ensureAgyBridge()
+    if (entry && opts.command === 'codex') dropCodexBridgeCopy(codexConfig())      // una copia stdio de «tutti» impide pasarle el suyo por -c
     const prompt = opts.prompt?.trim()
     const context = opts.cwd ? readContext(projectRoot(opts.cwd, knownProjects())) ?? undefined : undefined
     const root = opts.cwd ? projectRoot(opts.cwd, knownProjects()) : null

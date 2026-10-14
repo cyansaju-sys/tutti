@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import type { McpServer } from '@shared/types'
-import { agentsMissing, mask, parsePairs, specFromServer, splitArgs } from '../../../../src/renderer/src/features/mcp/lib/mcp'
+import { agentsMissing, isAppServer, mask, removeTargets, parsePairs, specFromServer, splitArgs } from '../../../../src/renderer/src/features/mcp/lib/mcp'
 
 const server = (patch: Partial<McpServer>): McpServer => ({ name: 'x', agent: 'claude', scope: 'global', kind: 'remote', target: '', config: {}, source: '', ...patch })
 
 describe('MCP en la interfaz', () => {
+  it('el servidor «tutti» de la app (global) no se muestra; uno de proyecto con ese nombre, sí', () => {
+    expect(isAppServer({ name: 'tutti', scope: 'global' })).toBe(true)
+    expect(isAppServer({ name: 'Tutti', scope: 'global' })).toBe(true)
+    expect(isAppServer({ name: 'tutti', scope: 'shared' })).toBe(false)
+    expect(isAppServer({ name: 'context7', scope: 'global' })).toBe(false)
+  })
+  it('al quitar un servidor de .mcp.json, Antigravity y Codex no se borran aparte (lo siguen)', () => {
+    const sv = (agent: McpServer['agent'], scope: McpServer['scope'], disabled = false): McpServer => ({ name: 'x', agent, scope, kind: 'local', target: 'x', config: {}, source: '', disabled })
+    const group = [sv('claude', 'shared'), sv('agy', 'project'), sv('codex', 'project'), sv('gemini', 'project'), sv('codex', 'global'), sv('agy', 'project', true)]
+    expect(removeTargets(group).map((x) => `${x.agent}:${x.scope}${x.disabled ? ':off' : ''}`)).toEqual(['claude:shared', 'gemini:project', 'codex:global', 'agy:project:off'])
+    expect(removeTargets([sv('agy', 'project')])).toHaveLength(1)                  // sin .mcp.json, se borra como cualquier copia
+  })
   it('parsea pares con distintos separadores', () => {
     expect(parsePairs('Authorization: Bearer a:b\n\nX-Id: 1\nsin separador', [': '])).toEqual({ Authorization: 'Bearer a:b', 'X-Id': '1' })
     expect(parsePairs('A=1\nB = dos\n=vacio', ['='])).toEqual({ A: '1', B: 'dos' })

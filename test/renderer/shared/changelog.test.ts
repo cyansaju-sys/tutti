@@ -6,7 +6,13 @@ const text = `# Novedades\n\n## 1.1.0\n\n- **Uno:** algo\n- Dos\n\n## 1.0.4\n- T
 describe('novedades de cada versión', () => {
   it('lee las secciones y sus frases', () => {
     expect(parseChangelog(text)).toEqual([
-      { version: '1.1.0', items: ['**Uno:** algo', 'Dos'] }, { version: '1.0.4', items: ['Tres'] }, { version: '1.0.3', items: ['Cuatro'] }
+      { version: '1.1.0', groups: [{ title: '', items: ['**Uno:** algo', 'Dos'] }] }, { version: '1.0.4', groups: [{ title: '', items: ['Tres'] }] }, { version: '1.0.3', groups: [{ title: '', items: ['Cuatro'] }] }
+    ])
+  })
+  it('agrupa las frases bajo sus títulos ### (sin títulos vacíos)', () => {
+    expect(parseChangelog('## 1.3.1\n\n### Funcional\n\n- Uno\n- Dos\n\n### Estético\n\n- Tres\n\n### Vacío\n\n## 1.3.0\n- Cuatro\n')).toEqual([
+      { version: '1.3.1', groups: [{ title: 'Funcional', items: ['Uno', 'Dos'] }, { title: 'Estético', items: ['Tres'] }] },
+      { version: '1.3.0', groups: [{ title: '', items: ['Cuatro'] }] }
     ])
   })
   it('compara versiones numéricamente', () => {
