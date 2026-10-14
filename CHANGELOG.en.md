@@ -19,6 +19,10 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **MCP messages show in your language** (some were always in Spanish before).
 - **Each agent’s real models when sharing out tasks:** for Claude Code, Codex, Gemini CLI, Qwen Code and Copilot CLI, Tutti reads the list from their `/model` (it opens it out of sight, in the project folder, and leaves without picking anything) instead of a fixed list that went out of date. It is kept for a day. If the agent asks to trust the folder or to sign in, Tutti does not answer for you and uses the fixed list.
 
+### Aesthetic
+
+- **New logo:** the app icon, the Tutti tab icon, the `.tutti` folder icon and the one shown when no agents are open. The interface accent takes the logo’s blue; the dark backgrounds stay the same.
+
 ## 1.3.1
 
 ### Functional
