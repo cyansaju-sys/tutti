@@ -6,7 +6,7 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 
 ### Funcional
 
-- **Ya se puede escribir al agente después de cerrar un archivo sin guardar:** el aviso «tiene cambios sin guardar» era un diálogo del sistema que, en Linux, dejaba la terminal sin cursor parpadeante y sin recibir el Espacio. Ahora es un aviso de Tutti (también al cambiar de proyecto con cambios, reemplazar en el proyecto y reemplazar el contexto). Se enfoca «Cancelar» para que Enter o Espacio por descuido no descarten nada, y el teclado vuelve a donde estaba.
+- **Ya se puede escribir al agente después de cerrar un archivo sin guardar:** *Bug:* al cerrar un archivo con cambios sin guardar (o cambiar de proyecto, reemplazar en el proyecto o reemplazar el contexto), el aviso era el `window.confirm` del sistema. En Linux, al cerrarse ese diálogo, Chromium se quedaba con el foco a medias: la terminal perdía el cursor parpadeante y no recibía el Espacio ni lo que escribías con composición. *Solución:* el aviso ahora es un diálogo de Tutti (`confirmAsk`, en `shared/lib/confirm.ts`). Se enfoca «Cancelar» para que un Enter o Espacio por descuido no descarte nada, y al responder el foco vuelve al elemento que lo tenía (la terminal o el editor).
 
 ## 1.3.3
 
