@@ -4,6 +4,7 @@ import { MdAutoAwesome, MdChevronRight, MdEdit, MdSave, MdVisibility } from 'rea
 import type { ContextSource } from '@shared/types'
 import type { MsgKey } from '@shared/i18n'
 import { Markdown } from '@/features/files/components/Markdown'
+import { confirmAsk } from '@/shared/lib/confirm'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 
@@ -80,7 +81,7 @@ export function ContextView() {
 
   const generate = async (): Promise<void> => {
     if (writing || !project) return
-    if (text.trim() && !IS_TEMPLATE.test(text) && !window.confirm(t('ctx.replace'))) return
+    if (text.trim() && !IS_TEMPLATE.test(text) && !(await confirmAsk(t('ctx.replace')))) return
     setWriting(t('git.anAgent'))
     const off = window.api.context.onAgent(setWriting)
     const res = await window.api.context.generate(project)

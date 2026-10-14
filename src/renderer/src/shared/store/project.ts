@@ -1,17 +1,14 @@
 import type { StateCreator } from 'zustand'
+import { confirmAsk } from '@/shared/lib/confirm'
 import { tr } from './helpers'
 import { isDirty } from './docs'
 import type { ProjectConfig } from './types'
 import type { State, ProjectSlice } from './types'
 
-export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (set, get) => ({
-  project: null, recentProjects: [], git: null,
-
-  setProject: (path) => {
+export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (set, get) => {
+  /** Cierra lo del proyecto actual y abre `path`, recordando la configuración del que se deja. */
+  const switchProject = (path: string | null): void => {
     const prev = get().project
-    if (path === prev) return
-    const dirty = get().docs.filter((d) => !d.diffOf && isDirty(d))
-    if (dirty.length && !window.confirm(tr(get, 'store.discard', { n: dirty.length }))) return
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
     const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'specform', 'steeringform', 'skillform'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
@@ -34,11 +31,23 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     const recentProjects = [path, ...get().recentProjects.filter((p) => p !== path)].slice(0, 10)
     set({ recentProjects })
     void window.api.settings.set('recent_projects', recentProjects)
-  },
+  }
 
-  removeRecentProject: (path) => {
-    const recentProjects = get().recentProjects.filter((p) => p !== path)
-    set({ recentProjects })
-    void window.api.settings.set('recent_projects', recentProjects)
-  },
-})
+  return {
+    project: null, recentProjects: [], git: null,
+
+    setProject: (path) => {
+      if (path === get().project) return
+      const dirty = get().docs.filter((d) => !d.diffOf && isDirty(d))
+      if (!dirty.length) { switchProject(path); return }
+      // con archivos sin guardar se pregunta antes de descartarlos; la respuesta llega después, así que se vuelve a mirar el estado
+      void confirmAsk(tr(get, 'store.discard', { n: dirty.length })).then((yes) => { if (yes && path !== get().project) switchProject(path) })
+    },
+
+    removeRecentProject: (path) => {
+      const recentProjects = get().recentProjects.filter((p) => p !== path)
+      set({ recentProjects })
+      void window.api.settings.set('recent_projects', recentProjects)
+    },
+  }
+}
