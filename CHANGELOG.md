@@ -2,6 +2,12 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.4
+
+### Funcional
+
+- **Ya se puede escribir al agente después de cerrar un archivo sin guardar:** *Bug:* al cerrar un archivo con cambios sin guardar (o cambiar de proyecto, reemplazar en el proyecto o reemplazar el contexto), el aviso era el `window.confirm` del sistema. En Linux, al cerrarse ese diálogo, Chromium se quedaba con el foco a medias: la terminal perdía el cursor parpadeante y no recibía el Espacio ni lo que escribías con composición. *Solución:* el aviso ahora es un diálogo de Tutti (`confirmAsk`, en `shared/lib/confirm.ts`). Se enfoca «Cancelar» para que un Enter o Espacio por descuido no descarte nada, y al responder el foco vuelve al elemento que lo tenía (la terminal o el editor).
+
 ## 1.3.3
 
 ### Funcional
@@ -23,7 +29,6 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 - **Archivos de configuración más seguros:** Tutti escribe los de cada agente de golpe, así que un agente u otra ventana nunca leen uno a medias. Respeta sus permisos y, si el archivo es un enlace, escribe en el original.
 - **La lista de MCP y la sincronización cargan más rápido:** cada archivo de configuración se lee una sola vez.
 - **Los mensajes de los MCP salen en tu idioma** (antes algunos salían siempre en español).
-- **Ya se puede escribir al agente después de cerrar un archivo sin guardar:** el aviso «tiene cambios sin guardar» era un diálogo del sistema que, en Linux, dejaba la terminal sin cursor parpadeante y sin recibir el Espacio. Ahora es un aviso de Tutti (también al cambiar de proyecto con cambios, reemplazar en el proyecto y reemplazar el contexto). Se enfoca «Cancelar» para que Enter o Espacio por descuido no descarten nada, y el teclado vuelve a donde estaba.
 - **Modelos reales de cada agente al repartir tareas:** para Claude Code, Codex, Gemini CLI, Qwen Code y Copilot CLI, Tutti lee la lista de su `/model` (lo abre sin que lo veas, en la carpeta del proyecto, y sale sin elegir nada) en lugar de usar una lista fija que se quedaba desfasada. Se guarda un día. Si el agente pide confiar en la carpeta o iniciar sesión, Tutti no contesta por ti y usa la lista fija.
 
 ### Estético
