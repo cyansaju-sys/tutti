@@ -369,9 +369,12 @@ export function ShortcutsDialog() {
   )
 }
 
-/** Estructura mínima de **negrita** en las frases del changelog. */
-const bold = (text: string): React.ReactNode[] =>
-  text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i} className="font-semibold text-text">{part}</strong> : part))
+/** Lo mínimo de Markdown en las frases del changelog: **negrita** y `código`. */
+const inline = (text: string): React.ReactNode[] =>
+  text.split(/(\*\*.+?\*\*|`[^`]+`)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4 ? <strong key={i} className="font-semibold text-text">{part.slice(2, -2)}</strong>
+      : part.startsWith('`') && part.endsWith('`') && part.length > 2 ? <code key={i} className="rounded bg-ov/[0.06] px-1 font-mono text-[11px] text-text">{part.slice(1, -1)}</code>
+        : part)
 
 /** Novedades de la versión instalada (o de todas las que se saltó el usuario). */
 export function NewsDialog() {
@@ -393,9 +396,14 @@ export function NewsDialog() {
         {shown.map((entry) => (
           <section key={entry.version} className="mt-1">
             {shown.length > 1 && <h3 className="pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted">v{entry.version}</h3>}
-            <ul className="flex flex-col gap-2">
-              {entry.items.map((item, i) => <li key={i} className="flex gap-2 text-[12px] leading-snug text-muted"><span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" /><span>{bold(item)}</span></li>)}
-            </ul>
+            {entry.groups.map((group, g) => (
+              <div key={g}>
+                {group.title && <h4 className={clsx('pb-1.5 text-[12px] font-semibold text-text', g ? 'pt-3' : 'pt-1')}>{group.title}</h4>}
+                <ul className="flex flex-col gap-2">
+                  {group.items.map((item, i) => <li key={i} className="flex gap-2 text-[12px] leading-snug text-muted"><span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" /><span>{inline(item)}</span></li>)}
+                </ul>
+              </div>
+            ))}
           </section>
         ))}
         <div className="mt-4 flex justify-end">

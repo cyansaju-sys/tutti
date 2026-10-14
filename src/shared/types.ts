@@ -222,11 +222,11 @@ export interface Api {
     registry(query: string, cursor: string): Promise<RegistryPage>
     featured(): Promise<RegistryServer[]>
     add(agent: McpAgent, spec: McpSpec, scope: McpScope, project: string | null): Promise<McpResult>
-    remove(server: McpServer, project: string | null): Promise<McpResult>
     probe(server: McpServer, project: string | null): Promise<McpProbe>          // arranca o llama al servidor y pide sus herramientas
     update(server: McpServer, spec: McpSpec, project: string | null): Promise<McpResult>   // cambia un servidor en su agente y alcance
     disable(server: McpServer, project: string | null): Promise<McpResult>       // lo quita del agente y se apunta cómo estaba
     enable(server: McpServer, project: string | null): Promise<McpResult>
+    remove(server: McpServer, project: string | null): Promise<McpResult>        // lo borra del agente (o lo olvida, si estaba desactivado)
     sync: {
       state(project: string | null, scope: SyncScope): Promise<SyncState>
       apply(project: string | null, scope: SyncScope): Promise<McpResult>      // añade a cada agente lo que le falta de la fuente

@@ -55,8 +55,7 @@ const api: Api = {
   },
   mcp: {
     list: (p) => ipcRenderer.invoke('mcp:list', p), app: () => ipcRenderer.invoke('mcp:app'), registry: (q, c) => ipcRenderer.invoke('mcp:registry', q, c), featured: () => ipcRenderer.invoke('mcp:featured'), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
-    remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p),
-    probe: (s, p) => ipcRenderer.invoke('mcp:probe', s, p), update: (s, spec, p) => ipcRenderer.invoke('mcp:update', s, spec, p), disable: (s, p) => ipcRenderer.invoke('mcp:disable', s, p), enable: (s, p) => ipcRenderer.invoke('mcp:enable', s, p),
+    probe: (s, p) => ipcRenderer.invoke('mcp:probe', s, p), update: (s, spec, p) => ipcRenderer.invoke('mcp:update', s, spec, p), disable: (s, p) => ipcRenderer.invoke('mcp:disable', s, p), enable: (s, p) => ipcRenderer.invoke('mcp:enable', s, p), remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p),
     sync: { state: (p, sc) => ipcRenderer.invoke('mcp:sync-state', p, sc), apply: (p, sc) => ipcRenderer.invoke('mcp:sync-apply', p, sc), pull: (p, sc) => ipcRenderer.invoke('mcp:sync-pull', p, sc), standardize: (p) => ipcRenderer.invoke('mcp:sync-standardize', p), resolve: (p, sc, n, a, u) => ipcRenderer.invoke('mcp:sync-resolve', p, sc, n, a, u) }
   },
   orchestra: {

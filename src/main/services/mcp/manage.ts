@@ -58,4 +58,11 @@ export async function enableServer(server: McpServer, project: string | null): P
   return added.ok ? { ok: true, message: tm('m.mcp.enabled') } : added
 }
 
+/** Borra el servidor del agente; si estaba desactivado, olvida lo que Tutti tenía apuntado. */
+export async function deleteServer(server: McpServer, project: string | null): Promise<McpResult> {
+  if (!server.disabled) return removeServer(server, project)
+  removeDisabled(keyOf(server, project))
+  return { ok: true, message: tm('m.mcp.removed') }
+}
+
 export { asServer }

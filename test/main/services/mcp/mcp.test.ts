@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
-import { addServer, buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, samePath, validate } from '../../../../src/main/services/mcp/mcp'
+import { addServer, buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, removeServer, samePath, validate } from '../../../../src/main/services/mcp/mcp'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-mcp-'))
 
@@ -110,6 +110,35 @@ suite('Antigravity (agy)', () => {
   })
   it('serverUrl cuenta como remoto', () => {
     expect(describe({ serverUrl: 'https://s/mcp' })).toEqual({ kind: 'remote', target: 'https://s/mcp' })
+  })
+  it('proyecto: el plugin .tutti/plugins/tutti-mcp refleja .mcp.json, se lee con la configuración de allí y se lee cualquier plugin', async () => {
+    const root = dir()
+    writeFileSync(join(root, '.mcp.json'), JSON.stringify({ mcpServers: { loc: { type: 'stdio', command: 'npx', args: ['-y', 'srv'], env: { A: '1' } }, api: { type: 'http', url: 'https://x/mcp' } } }))
+    mkdirSync(join(root, '.agents', 'plugins', 'otro'), { recursive: true })
+    writeFileSync(join(root, '.agents', 'plugins', 'otro', 'mcp_config.json'), JSON.stringify({ mcpServers: { ajeno: { command: 'a' } } }))
+    // ya en .mcp.json: no se toca, solo se refleja
+    expect((await addServer('agy', { name: 'loc', kind: 'local', command: 'npx', args: ['-y', 'srv'], env: { A: '1' } }, 'project', root)).ok).toBe(true)
+    expect((await addServer('agy', { name: 'api', kind: 'remote', url: 'https://x/mcp' }, 'project', root)).ok).toBe(true)
+    const plugin = join(root, '.tutti', 'plugins', 'tutti-mcp')
+    expect(JSON.parse(readFileSync(join(plugin, 'plugin.json'), 'utf8'))).toEqual({ name: 'tutti-mcp' })
+    expect(JSON.parse(readFileSync(join(root, '.agents', 'plugins.json'), 'utf8'))).toEqual({ entries: [{ path: '.tutti/plugins' }] })
+    const servers = JSON.parse(readFileSync(join(plugin, 'mcp_config.json'), 'utf8')).mcpServers
+    expect(servers.loc).toEqual({ command: 'node', args: ['${PLUGIN_ROOT}/../../mcp/launch.mjs', 'loc'] })
+    expect(servers.api).toEqual({ url: 'https://x/mcp' })
+    const listed = listServers(root).filter((x) => x.agent === 'agy' && x.scope === 'project')
+    expect(listed.map((x) => x.name).sort()).toEqual(['ajeno', 'api', 'loc'])
+    expect(listed.find((x) => x.name === 'loc')!.target).toBe('npx -y srv')                // se muestra lo de .mcp.json
+    expect((await removeServer(listed.find((x) => x.name === 'ajeno')!, root)).ok).toBe(true)
+    expect(JSON.parse(readFileSync(join(root, '.agents', 'plugins', 'otro', 'mcp_config.json'), 'utf8')).mcpServers).toEqual({})
+  })
+  it('Codex en el proyecto: refleja .mcp.json en .codex/config.toml y se lee con la configuración de allí', async () => {
+    const root = dir()
+    writeFileSync(join(root, '.mcp.json'), JSON.stringify({ mcpServers: { loc: { type: 'stdio', command: 'npx', args: ['-y', 'srv'] } } }))
+    expect((await addServer('codex', { name: 'loc', kind: 'local', command: 'npx', args: ['-y', 'srv'] }, 'project', root)).ok).toBe(true)
+    const listed = listServers(root).filter((x) => x.agent === 'codex' && x.scope === 'project')
+    expect(listed.map((x) => [x.name, x.target])).toEqual([['loc', 'npx -y srv']])
+    expect((await removeServer(listed[0], root)).ok).toBe(true)
+    expect(listServers(root).filter((x) => x.agent === 'codex' && x.scope === 'project')).toEqual([])
   })
 })
 

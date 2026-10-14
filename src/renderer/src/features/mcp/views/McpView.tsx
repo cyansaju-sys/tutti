@@ -1,9 +1,9 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
+import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdErrorOutline, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdSync, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
 import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, RegistryServer, SyncScope, SyncState } from '@shared/types'
 import { FIELD, FIELD_SLIM, Modal } from '@/shared/components/ui'
-import { AGENT_NAMES, agentsMissing, GLOBAL_ONLY, isSecret, mask, parsePairs, prefillFrom, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
+import { AGENT_NAMES, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFrom, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
 import { useT } from '@/shared/lib/i18n'
 import { useResizeHeight } from '@/shared/lib/useResizeHeight'
 import { useStore } from '@/shared/store'
@@ -45,65 +45,45 @@ function Fold({ id, title, count, fill = false, resize = false, forceOpen = fals
 
 const SYNC_KEYS = { ok: 'mcp.syncOk', missing: 'mcp.syncMissing', differs: 'mcp.syncDiffers', disabled: 'mcp.syncDisabled', unsupported: 'mcp.syncUnsupported', launch: 'mcp.syncLaunch' } as const
 
-/**
- * Compara los agentes con la fuente (Claude Code: `.mcp.json` o sus MCP de usuario) y deja sincronizarlos. Una sola sección para proyecto y
- * global. Lista solo lo que necesita atención (lo que ya está igual en todos los agentes se ve en la lista de instalados), pero el botón
- * de añadir lo que falta siempre está, desactivado si no hay nada pendiente.
- */
-function SyncSection({ project, compact, onChanged }: { project: string | null; compact: boolean; onChanged: () => void }) {
-  const t = useT()
-  const toast = useStore((s) => s.toast)
+type SyncAgents = SyncState['servers'][number]['agents']
+const needsWork = (state: SyncAgents[number]['state']): boolean => state !== 'ok' && state !== 'launch'
+
+/** Cómo está cada servidor frente a la fuente (Claude Code: `.mcp.json` o sus MCP de usuario), en el proyecto y en global. */
+function useSync(project: string | null): { states: Array<{ scope: SyncScope; state: SyncState }>; load: () => Promise<void> } {
   const [states, setStates] = useState<Array<{ scope: SyncScope; state: SyncState }>>([])
-  const [busy, setBusy] = useState(false)
   const load = useCallback(async () => {
     const scopes: SyncScope[] = project ? ['project', 'global'] : ['global']
     const next = (await Promise.all(scopes.map(async (scope) => ({ scope, state: await window.api.mcp.sync.state(project, scope) })))).filter((x) => x.state.available)
     setStates((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
   }, [project])
   useEffect(() => { void load(); const i = setInterval(() => void load(), REFRESH_MS); return () => clearInterval(i) }, [load])
+  return { states, load }
+}
 
-  const blocks = states
-    .map(({ scope, state }) => ({ scope, state, todo: state.servers.filter((sv) => sv.agents.some((a) => a.state !== 'ok' && a.state !== 'launch')) }))
-    .filter((b) => b.state.servers.length || b.state.extras || b.state.local)
-  if (!blocks.length) return null
-  const run = async (action: Promise<{ ok: boolean; message: string }>): Promise<void> => {
-    setBusy(true)
-    const res = await action
-    setBusy(false)
-    toast(res.message, res.ok ? 'ok' : 'error')
-    void load(); onChanged()
-  }
-  const button = 'rounded-md bg-ov/[0.05] px-2 py-0.5 transition-colors hover:bg-accent-bg disabled:opacity-50'
-  const wide = 'mt-1 flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors enabled:hover:border-accent enabled:hover:bg-accent-bg enabled:hover:text-accent disabled:opacity-50'
-  const body = (
-    <div className="px-1.5 pb-1">
-      {blocks.map(({ scope, state, todo }) => (
-        <div key={scope} className="pb-1">
-          <p className="selectable truncate px-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted" title={state.source}>{t(SCOPE_KEYS[scope])}</p>
-          {!todo.length && !state.extras && !state.local && <p className="px-1 py-1 text-[11px] text-muted">{t('mcp.syncAllOk')}</p>}
-          {todo.map((sv) => (
-            <div key={sv.name} className="px-1 py-1">
-              <span className="block truncate text-[12px] font-semibold">{sv.name}</span>
-              <span className="block text-[11px] text-muted">{sv.agents.map((a) => `${AGENT_NAMES[a.agent]}: ${t(SYNC_KEYS[a.state])}`).join(' · ')}</span>
-              {sv.agents.filter((a) => a.state === 'differs').map((a) => (
-                <span key={a.agent} className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-                  <span className="text-muted">{AGENT_NAMES[a.agent]}:</span>
-                  <button disabled={busy} onClick={() => void run(window.api.mcp.sync.resolve(project, scope, sv.name, a.agent, 'source'))} className={button}>{t('mcp.syncUseSource')}</button>
-                  <button disabled={busy} onClick={() => void run(window.api.mcp.sync.resolve(project, scope, sv.name, a.agent, 'agent'))} className={button}>{t('mcp.syncUseAgent')}</button>
-                </span>
-              ))}
-            </div>
+const syncButton = 'rounded-md bg-ov/[0.05] px-2 py-0.5 transition-colors hover:bg-accent-bg disabled:opacity-50'
+const wideButton = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors enabled:hover:border-accent enabled:hover:bg-accent-bg enabled:hover:text-accent disabled:opacity-50'
+
+/** Lo que le falta a un servidor en otros agentes, bajo su tarjeta; un desfase se resuelve ahí mismo. */
+function SyncNotes({ pending, busy, onResolve }: {
+  pending: Array<{ scope: SyncScope; agents: SyncAgents }>; busy: boolean; onResolve: (scope: SyncScope, agent: McpAgent, use: 'source' | 'agent') => void
+}) {
+  const t = useT()
+  return (
+    <div className="flex flex-col gap-1 pb-1.5 pl-9 pr-2 text-[11px]">
+      {pending.map(({ scope, agents }) => (
+        <div key={scope}>
+          <span className="text-warn">{pending.length > 1 && `${t(SCOPE_KEYS[scope])}: `}{agents.filter((a) => needsWork(a.state)).map((a) => `${AGENT_NAMES[a.agent]}: ${t(SYNC_KEYS[a.state])}`).join(' · ')}</span>
+          {agents.filter((a) => a.state === 'differs').map((a) => (
+            <span key={a.agent} className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-muted">{AGENT_NAMES[a.agent]}:</span>
+              <button disabled={busy} onClick={() => onResolve(scope, a.agent, 'source')} className={syncButton}>{t('mcp.syncUseSource')}</button>
+              <button disabled={busy} onClick={() => onResolve(scope, a.agent, 'agent')} className={syncButton}>{t('mcp.syncUseAgent')}</button>
+            </span>
           ))}
-          <button disabled={busy || !todo.some((sv) => sv.agents.some((a) => a.state === 'missing'))} onClick={() => void run(window.api.mcp.sync.apply(project, scope))} className={wide}>{t('mcp.syncApply')}</button>
-          {scope === 'project' && state.local > 0
-            ? <button disabled={busy} onClick={() => void run(window.api.mcp.sync.standardize(project!))} className={wide}>{t('mcp.syncStandardize', { count: String(state.local) })}</button>
-            : state.extras > 0 && <button disabled={busy} onClick={() => void run(window.api.mcp.sync.pull(project, scope))} className={wide}>{t('mcp.syncPull', { count: String(state.extras) })}</button>}
         </div>
       ))}
     </div>
   )
-  const count = blocks.reduce((n, b) => n + b.todo.length + Math.max(b.state.extras, b.state.local), 0)
-  return compact ? <div className="sect-scroll max-h-60 overflow-y-auto">{body}</div> : <Fold id="sync" title={t('mcp.sync')} count={count || undefined}>{body}</Fold>
 }
 
 const Tag = ({ children }: { children: React.ReactNode }) => (
@@ -127,12 +107,11 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   const project = useStore((s) => s.project)
   const agents = useStore((s) => s.agents)
   const set = useStore((s) => s.set)
-  const toast = useStore((s) => s.toast)
   const [servers, setServers] = useState<McpServer[] | null>(null)
   const [details, setDetails] = useState<string | null>(null)          // nombre (en minúsculas) del servidor abierto
-  const [removing, setRemoving] = useState<McpServer[] | null>(null)
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<McpServer[] | null>(null)      // grupo que se está editando
+  const [removing, setRemoving] = useState<McpServer[] | null>(null)    // grupo que se va a quitar (pide confirmación)
   const [prefill, setPrefill] = useState<Prefill | null>(null)          // instalar desde el registro: el diálogo de añadir con los datos rellenos
   const [storeItem, setStoreItem] = useState<RegistryServer | null>(null)
   const [query, setQuery] = useState('')
@@ -147,7 +126,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })) }, [set])
   useEffect(() => { void refresh(); const t = setInterval(() => void refresh(), REFRESH_MS); return () => clearInterval(t) }, [refresh])
 
-  const visible = (servers ?? []).filter((s) => installed.includes(s.agent) && !(s.agent === 'agy' && s.name === 'tutti'))      // el de la app va en su propia sección
+  const visible = (servers ?? []).filter((s) => installed.includes(s.agent) && !isAppServer(s))      // el de la app no se gestiona aquí
   /** Un servidor por nombre, con todos los agentes (y alcances) donde está. */
   const groups = useMemo(() => {
     const map = new Map<string, McpServer[]>()
@@ -157,13 +136,53 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   const open = details ? groups.find((g) => g[0].name.toLowerCase() === details) : undefined
 
   const installedNames = useMemo(() => new Set((servers ?? []).map((x) => x.name.toLowerCase())), [servers])
-  const remove = async (targets: McpServer[]): Promise<void> => {
-    setRemoving(null)
-    const failed: string[] = []
-    for (const server of targets) { const res = await window.api.mcp.remove(server, project); if (!res.ok) failed.push(res.message) }
-    if (failed.length) toast(t('mcp.removeFailed', { message: failed[0] }), 'error')
-    void refresh()
+
+  // sincronizar con la fuente: lo pendiente va en la tarjeta de cada servidor y las acciones, al final de la lista
+  const toast = useStore((s) => s.toast)
+  const sync = useSync(project)
+  const [busy, setBusy] = useState(false)
+  const pending = useMemo(() => {
+    const map = new Map<string, Array<{ scope: SyncScope; agents: SyncAgents }>>()
+    for (const { scope, state } of sync.states) {
+      for (const sv of state.servers) if (sv.agents.some((a) => needsWork(a.state))) map.set(sv.name.toLowerCase(), [...(map.get(sv.name.toLowerCase()) ?? []), { scope, agents: sv.agents }])
+    }
+    return map
+  }, [sync.states])
+  const run = async (actions: Array<() => Promise<{ ok: boolean; message: string }>>): Promise<void> => {
+    setBusy(true)
+    const results: Array<{ ok: boolean; message: string }> = []
+    for (const action of actions) results.push(await action())
+    setBusy(false)
+    const failed = results.find((r) => !r.ok)
+    if (results.length) toast((failed ?? results[results.length - 1]).message, failed ? 'error' : 'ok')
+    void sync.load(); void refresh()
   }
+  /** Si el servidor está en `.mcp.json`: cómo lo recibe cada agente (el mismo estado que la sincronización). */
+  const followOf = (g: McpServer[]): Follow | undefined => {
+    const source = g.find((x) => x.agent === 'claude' && x.scope === 'shared')
+    const agents = source && sync.states.find((x) => x.scope === 'project')?.state.servers.find((sv) => sv.name.toLowerCase() === source.name.toLowerCase())?.agents
+    return source && agents ? { source, agents } : undefined
+  }
+  const remove = async (group: McpServer[]): Promise<void> => {
+    setRemoving(null)
+    // primero la fuente: al quitarla de .mcp.json, Antigravity y Codex la pierden solos
+    const targets = removeTargets(group).sort((a, b) => Number(b.agent === 'claude' && b.scope === 'shared') - Number(a.agent === 'claude' && a.scope === 'shared'))
+    await run(targets.map((x) => async () => {
+      const res = await window.api.mcp.remove(x, project)
+      return res.ok ? { ok: true, message: t('mcp.removed', { name: x.name }) } : { ok: false, message: t('mcp.removeFailed', { message: res.message }) }
+    }))
+  }
+  const missingIn = sync.states.filter(({ scope }) => [...pending.values()].some((p) => p.some((x) => x.scope === scope && x.agents.some((a) => a.state === 'missing'))))
+  const local = sync.states.find((x) => x.scope === 'project')?.state.local ?? 0
+  const pullFrom = sync.states.filter(({ scope, state }) => state.extras > 0 && !(scope === 'project' && local > 0))
+  const pullCount = pullFrom.reduce((n, x) => n + x.state.extras, 0)
+  const syncActions = sync.states.length > 0 && (
+    <div className="flex flex-col gap-1 px-1 pb-1 pt-1">
+      <button disabled={busy || !missingIn.length} onClick={() => void run(missingIn.map(({ scope }) => () => window.api.mcp.sync.apply(project, scope)))} className={wideButton}>{t('mcp.syncApply')}</button>
+      {local > 0 && <button disabled={busy} onClick={() => void run([() => window.api.mcp.sync.standardize(project!)])} className={wideButton}>{t('mcp.syncStandardize', { count: String(local) })}</button>}
+      {pullCount > 0 && <button disabled={busy} onClick={() => void run(pullFrom.map(({ scope }) => () => window.api.mcp.sync.pull(project, scope)))} className={wideButton}>{t('mcp.syncPull', { count: String(pullCount) })}</button>}
+    </div>
+  )
 
   return (
     <div className={clsx('flex flex-col', compact ? 'pl-3' : 'h-full px-2')}>
@@ -174,7 +193,6 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
       <div className={clsx(!compact && 'flex min-h-0 flex-1 flex-col overflow-y-auto pb-2')}>
         {showInstalled && !query.trim() && (
           <>
-        <SyncSection project={project} compact={compact} onChanged={() => void refresh()} />
         {servers === null && <p className="px-2 text-[11px] text-muted">{t('mcp.reading')}</p>}
         {servers && installed.length === 0 && <p className="px-2 text-[11px] text-muted">{t('mcp.noneSupported')}</p>}
         {servers && installed.length > 0 && visible.length === 0 && (compact
@@ -184,8 +202,10 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
         {groups.map((g) => {
           const first = g[0]
           const agentNames = [...new Set(g.map((x) => AGENT_NAMES[x.agent]))]
+          const todo = pending.get(first.name.toLowerCase())
           return (
-            <div key={first.name.toLowerCase()} className={clsx('group flex items-center gap-1 rounded-lg transition-colors hover:bg-accent-bg', g.every((x) => x.disabled) && 'opacity-55')}>
+            <div key={first.name.toLowerCase()} className="rounded-lg transition-colors hover:bg-accent-bg">
+            <div className={clsx('group flex items-center gap-1', g.every((x) => x.disabled) && 'opacity-55')}>
               <button onClick={() => setDetails(first.name.toLowerCase())} title={t('mcp.details')} className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-left">
                 {compact ? <MdPower size={15} className="shrink-0 text-accent" aria-hidden /> : <Avatar name={first.name} />}          {/* en la pestaña Tutti, un enchufe en lugar de las iniciales */}
                 <span className="min-w-0 flex-1">
@@ -205,8 +225,11 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
                 <MdSettings size={16} />
               </button>
             </div>
+            {todo && <SyncNotes pending={todo} busy={busy} onResolve={(scope, agent, use) => void run([() => window.api.mcp.sync.resolve(project, scope, first.name, agent, use)])} />}
+            </div>
           )
         })}
+        {syncActions}
         </InstalledWrap>}
           </>
         )}
@@ -220,11 +243,12 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
 
       {storeItem && <McpStoreDetail server={storeItem} onClose={() => setStoreItem(null)} onInstall={(option) => { setPrefill(prefillFrom(storeItem, option)); setStoreItem(null) }} />}
       {prefill && <AddDialog installed={installed} project={project} prefill={prefill} onClose={() => setPrefill(null)} onDone={() => void refresh()} />}
-      {open && <Details group={open} installed={installed} project={project} onClose={() => setDetails(null)} onChanged={() => void refresh()} onRemove={setRemoving} onEdit={(g) => { setDetails(null); setEditing(g) }} />}
+      {open && <Details group={open} installed={installed} project={project} follow={followOf(open)} onClose={() => setDetails(null)} onChanged={() => { void sync.load(); void refresh() }} onEdit={(g) => { setDetails(null); setEditing(g) }} onRemove={(g) => { setDetails(null); setRemoving(g) }} />}
       {removing && (
         <Modal onClose={() => setRemoving(null)} width={400} title={t('mcp.removeTitle')}>
           <div className="px-4 pb-4">
-            <p className="text-[12px] leading-relaxed text-muted">{removing.length === 1 ? t('mcp.removeBody', { name: removing[0].name, agent: AGENT_NAMES[removing[0].agent], scope: t(SCOPE_KEYS[removing[0].scope]) }) : t('mcp.removeMany', { name: removing[0].name, agents: [...new Set(removing.map((x) => AGENT_NAMES[x.agent]))].join(', ') })}</p>
+            <p className="text-[12px] leading-relaxed text-muted">{t('mcp.removeMany', { name: removing[0].name, agents: [...new Set(removeTargets(removing).map((x) => AGENT_NAMES[x.agent]))].join(', ') })}</p>
+            {removing.some((x) => x.agent === 'claude' && x.scope === 'shared') && <p className="pt-1.5 text-[12px] leading-relaxed text-muted">{t('mcp.removeShared')}</p>}
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setRemoving(null)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
               <button onClick={() => void remove(removing)} className="rounded-lg bg-danger/15 px-3 py-1.5 text-[12px] font-medium text-danger transition-colors hover:bg-danger/25">{t('mcp.remove')}</button>
@@ -238,8 +262,27 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   )
 }
 
-function Details({ group, installed, project, onClose, onChanged, onRemove, onEdit }: {
-  group: McpServer[]; installed: McpAgent[]; project: string | null; onClose: () => void; onChanged: () => void; onRemove: (targets: McpServer[]) => void; onEdit: (group: McpServer[]) => void
+/** Un servidor de `.mcp.json` (la fuente) y cómo lo recibe cada agente instalado. */
+type Follow = { source: McpServer; agents: SyncAgents }
+/** Agentes que siguen `.mcp.json` solos (Tutti les refleja cada cambio). */
+const MIRRORS: McpAgent[] = ['agy', 'codex']
+/** Un agente en «Aplicado en»: ficha con su estado por color (el detalle, al pasar el ratón) y sus acciones. */
+function Chip({ name, tone, tip, children }: { name: string; tone: 'ok' | 'warn' | 'off'; tip: string; children?: React.ReactNode }) {
+  return (
+    <span title={tip} className={clsx('flex items-center gap-1 rounded-full py-0.5 pl-2 pr-1 text-[12px]', tone === 'warn' ? 'bg-warn/15' : 'bg-ov/[0.05]', tone === 'off' && 'opacity-60')}>
+      {tone === 'warn' ? <MdErrorOutline size={14} className="shrink-0 text-warn" /> : <MdCheckCircle size={14} className={clsx('shrink-0', tone === 'ok' ? 'text-accent' : 'text-muted')} />}
+      <span className="font-medium">{name}</span>
+      {children}
+    </span>
+  )
+}
+const ChipButton = ({ title, disabled, onClick, children }: { title: string; disabled?: boolean; onClick: () => void; children: React.ReactNode }) => (
+  <button title={title} disabled={disabled} onClick={onClick} className="grid size-5 place-items-center rounded-full text-muted transition-colors hover:bg-ov/[0.1] hover:text-accent disabled:opacity-50">{children}</button>
+)
+const VIA_KEYS = { missing: 'mcp.viaMissing', differs: 'mcp.viaDiffers', disabled: 'mcp.viaDisabled', unsupported: 'mcp.syncUnsupported', launch: 'mcp.viaLaunch' } as const
+
+function Details({ group, installed, project, follow, onClose, onChanged, onEdit, onRemove }: {
+  group: McpServer[]; installed: McpAgent[]; project: string | null; follow?: Follow; onClose: () => void; onChanged: () => void; onEdit: (group: McpServer[]) => void; onRemove: (group: McpServer[]) => void
 }) {
   const t = useT()
   const server = group[0]
@@ -252,8 +295,7 @@ function Details({ group, installed, project, onClose, onChanged, onRemove, onEd
   const headers = (cfg.headers as Record<string, string>) ?? {}
   const env = { ...((cfg.environment as Record<string, string>) ?? {}), ...((cfg.env as Record<string, string>) ?? {}) }
   const hasSecrets = [...Object.keys(headers), ...Object.keys(env)].some(isSecret)
-  const projectOnly = server.scope !== 'global'          // un servidor de proyecto no se puede copiar a un agente que solo guarda globales
-  const missing = agentsMissing(server, all, SUPPORTED).filter((a) => installed.includes(a as McpAgent) && !(projectOnly && GLOBAL_ONLY.includes(a))) as McpAgent[]
+  const missing = agentsMissing(server, all, SUPPORTED).filter((a) => installed.includes(a as McpAgent)) as McpAgent[]
   const copy = async (text: string): Promise<void> => { await navigator.clipboard.writeText(text) }
 
   const runProbe = async (): Promise<void> => {
@@ -268,6 +310,17 @@ function Details({ group, installed, project, onClose, onChanged, onRemove, onEd
     onChanged()
     if (res.ok) onClose()
   }
+  const act = async (action: Promise<{ ok: boolean; message: string }>): Promise<void> => {
+    setBusy(true)
+    const res = await action
+    setBusy(false)
+    if (!res.ok) toast(res.message, 'error')
+    onChanged()
+  }
+  // con `follow`, cada agente que lo sigue tiene su fila; las demás copias (locales de Claude, globales) van como siempre
+  const followed = follow ? follow.agents.map((a) => ({ ...a, entry: group.find((x) => x.agent === a.agent && x.scope !== 'global') })) : []
+  const rest = follow ? group.filter((x) => x !== follow.source && !followed.some((f) => f.entry === x)) : group
+  const shown = follow ? [follow.source, ...rest] : group
   const copyTo = async (agent: McpAgent): Promise<void> => {
     const res = await window.api.mcp.add(agent, specFromServer(server), server.scope === 'shared' ? 'project' : server.scope, project)
     if (!res.ok) toast(t('mcp.addFailed', { message: res.message }), 'error')
@@ -289,10 +342,11 @@ function Details({ group, installed, project, onClose, onChanged, onRemove, onEd
   return (
     <Modal onClose={onClose} width={500} title={server.name}>
       <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-4 pb-4">
-        <div className="flex flex-wrap gap-1.5">{[...new Set(group.map((x) => x.scope))].map((sc) => <Tag key={sc}>{t(SCOPE_KEYS[sc])}</Tag>)}<Tag>{server.kind === 'remote' ? t('mcp.remote') : t('mcp.local')}</Tag></div>
+        <div className="flex flex-wrap gap-1.5">{[...new Set(shown.map((x) => x.scope))].map((sc) => <Tag key={sc}>{t(SCOPE_KEYS[sc])}</Tag>)}<Tag>{server.kind === 'remote' ? t('mcp.remote') : t('mcp.local')}</Tag></div>
         <div className="flex flex-wrap gap-2">
           <button disabled={probe === 'running'} onClick={() => void runProbe()} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg disabled:opacity-50"><MdPlayArrow size={15} className="text-accent" /> {probe === 'running' ? t('mcp.probing') : t('mcp.probe')}</button>
           <button onClick={() => onEdit(group)} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg"><MdEdit size={15} className="text-accent" /> {t('mcp.edit')}</button>
+          <button onClick={() => onRemove(group)} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] text-danger transition-colors hover:bg-danger/15"><MdDeleteOutline size={15} /> {t('mcp.remove')}</button>
         </div>
         {probe && probe !== 'running' && (
           <div className={clsx('rounded-lg px-3 py-2 text-[11px]', probe.ok ? 'bg-accent/10' : 'bg-danger/10')}>
@@ -303,31 +357,35 @@ function Details({ group, installed, project, onClose, onChanged, onRemove, onEd
         <Field label={server.kind === 'remote' ? t('mcp.url') : t('mcp.command')} value={server.target} copyable />
         {pairs(t('mcp.headers'), headers)}
         {pairs(t('mcp.envVars'), env)}
-        <Field label={t('mcp.savedIn')} value={[...new Set(group.map((x) => x.source))].join('\n')} copyable />
+        <Field label={t('mcp.savedIn')} value={[...new Set(shown.map((x) => x.source).filter(Boolean))].join('\n')} copyable />
         <div>
           <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">{t('mcp.appliedTo')}</div>
-          <div className="flex flex-col gap-1">
-            {group.map((x) => (
-              <div key={`${x.agent}${x.scope}${x.source}`} className="group flex items-center gap-2.5 rounded-lg bg-ov/[0.04] px-2.5 py-1.5">
-                <MdCheckCircle size={16} className={clsx('shrink-0', x.disabled ? 'text-muted' : 'text-accent')} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[12px] font-semibold">{AGENT_NAMES[x.agent]}</span>
-                  <span className="block truncate text-[10px] text-muted">{x.disabled && `${t('mcp.off')} · `}{t(SCOPE_KEYS[x.scope])}</span>
-                </span>
-                <button disabled={busy} title={t(x.disabled ? 'mcp.enableIn' : 'mcp.disableIn', { agent: AGENT_NAMES[x.agent] })} onClick={() => void toggle(x)}
-                  className={clsx('grid size-6 shrink-0 place-items-center rounded-md transition-colors hover:bg-ov/[0.08] disabled:opacity-50', x.disabled ? 'text-muted' : 'text-accent')}><MdPowerSettingsNew size={15} /></button>
-                <button title={t('mcp.removeFrom', { agent: AGENT_NAMES[x.agent] })} onClick={() => { onClose(); onRemove([x]) }}
-                  className="grid size-6 shrink-0 place-items-center rounded-md text-muted opacity-0 transition-all hover:bg-danger/15 hover:text-danger group-hover:opacity-100"><MdDeleteOutline size={15} /></button>
-              </div>
+          <div className="flex flex-wrap gap-1.5">
+            {shown.map((x) => (
+              <Chip key={`${x.agent}${x.scope}${x.source}`} name={AGENT_NAMES[x.agent]} tone={x.disabled ? 'off' : 'ok'}
+                tip={[x.disabled ? t('mcp.off') : '', x === follow?.source ? t('mcp.viaSource') : t(SCOPE_KEYS[x.scope]), x.source].filter(Boolean).join('\n')}>
+                <ChipButton disabled={busy} title={t(x.disabled ? 'mcp.enableIn' : 'mcp.disableIn', { agent: AGENT_NAMES[x.agent] })} onClick={() => void toggle(x)}><MdPowerSettingsNew size={13} /></ChipButton>
+              </Chip>
+            ))}
+            {follow && followed.map(({ agent, state, entry }) => (
+              <Chip key={agent} name={AGENT_NAMES[agent]} tone={state === 'ok' || state === 'launch' ? 'ok' : state === 'disabled' ? 'off' : 'warn'}
+                tip={[t(state === 'ok' ? (MIRRORS.includes(agent) ? 'mcp.viaMirror' : 'mcp.viaCopy') : VIA_KEYS[state]), entry?.source ?? ''].filter(Boolean).join('\n')}>
+                {state === 'missing' && <ChipButton disabled={busy} title={t('mcp.addTo', { agent: AGENT_NAMES[agent] })} onClick={() => void act(window.api.mcp.add(agent, specFromServer(follow.source), 'project', project))}><MdAdd size={14} /></ChipButton>}
+                {state === 'differs' && <ChipButton disabled={busy} title={t('mcp.syncUseSource')} onClick={() => void act(window.api.mcp.sync.resolve(project, 'project', follow.source.name, agent, 'source'))}><MdSync size={13} /></ChipButton>}
+                {entry && <ChipButton disabled={busy} title={t(entry.disabled ? 'mcp.enableIn' : 'mcp.disableIn', { agent: AGENT_NAMES[agent] })} onClick={() => void toggle(entry)}><MdPowerSettingsNew size={13} /></ChipButton>}
+              </Chip>
             ))}
           </div>
+          {follow && followed.some((f) => f.state !== 'ok' && f.state !== 'launch') && (
+            <p className="pt-1.5 text-[11px] text-warn">{followed.filter((f) => f.state !== 'ok' && f.state !== 'launch').map((f) => `${AGENT_NAMES[f.agent]}: ${t(VIA_KEYS[f.state as keyof typeof VIA_KEYS]).toLowerCase()}`).join(' · ')}</p>
+          )}
         </div>
         {hasSecrets && (
           <button onClick={() => setReveal(!reveal)} className="flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-muted transition-colors hover:bg-accent-bg">
             {reveal ? <MdVisibilityOff size={14} /> : <MdVisibility size={14} />} {reveal ? t('mcp.hideValues') : t('mcp.showValues')}
           </button>
         )}
-        {missing.length > 0 && (
+        {!follow && missing.length > 0 && (
           <div className="flex flex-wrap gap-2 border-t border-ov/[0.06] pt-3">
             {missing.map((a) => (
               <button key={a} onClick={() => void copyTo(a)} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.05] px-3 py-1.5 text-[12px] transition-colors hover:bg-accent-bg">
@@ -369,7 +427,7 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
     if (editing) {
       setBusy(true); setError('')
       const failed: string[] = []
-      for (const entry of editing) {
+      for (const entry of editTargets(editing)) {
         const res = await window.api.mcp.update(entry, spec, project)
         if (!res.ok) failed.push(`${AGENT_NAMES[entry.agent]}: ${res.message}`)
       }
@@ -378,12 +436,13 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
       if (failed.length) setError(failed.join('\n')); else onClose()
       return
     }
-    const chosen = scope === 'project' ? targets.filter((a) => !GLOBAL_ONLY.includes(a)) : targets
+    // en el proyecto solo se escribe .mcp.json (la fuente); Antigravity lo sigue solo y el resto con Sincronizar
+    const chosen: McpAgent[] = scope === 'project' ? ['claude'] : targets
     if (!chosen.length) { setError(t('mcp.pickOne')); return }
     setBusy(true); setError('')
     const failed: string[] = []
     for (const agent of chosen) {
-      const res = await window.api.mcp.add(agent, spec, scope, project)
+      const res = await window.api.mcp.add(agent, spec, scope === 'project' ? 'shared' : scope, project)
       if (!res.ok) failed.push(`${AGENT_NAMES[agent]}: ${res.message}`)
     }
     setBusy(false)
@@ -411,12 +470,12 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
         )}
         {prefill && prefill.fields.length > 0 && <p className="text-[11px] leading-snug text-muted">{t('st.fieldsHelp')}</p>}
         {!editing && <>
-        <div>
+        {scope === 'global' && <div>
           <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">{t('mcp.agents')}</div>
           <div className="flex flex-wrap gap-2">
-            {installed.map((a) => <Choice key={a} on={targets.includes(a) && !(scope === 'project' && GLOBAL_ONLY.includes(a))} disabled={scope === 'project' && GLOBAL_ONLY.includes(a)} label={AGENT_NAMES[a]} onClick={() => setTargets((t) => (t.includes(a) ? t.filter((x) => x !== a) : [...t, a]))} />)}
+            {installed.map((a) => <Choice key={a} on={targets.includes(a)} label={AGENT_NAMES[a]} onClick={() => setTargets((t) => (t.includes(a) ? t.filter((x) => x !== a) : [...t, a]))} />)}
           </div>
-        </div>
+        </div>}
         <div>
           <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">{t('mcp.where')}</div>
           <div className="flex flex-wrap gap-2">
@@ -424,11 +483,9 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
             <Choice on={scope === 'project'} label={t(SCOPE_KEYS.project)} onClick={() => setScope('project')} disabled={!project} />
           </div>
         </div>
-        {scope === 'project' && installed.some((a) => GLOBAL_ONLY.includes(a)) && (
-          <p className="text-[11px] text-muted">{t(installed.filter((a) => GLOBAL_ONLY.includes(a)).length > 1 ? 'mcp.onlyGlobalMany' : 'mcp.onlyGlobal', { agents: installed.filter((a) => GLOBAL_ONLY.includes(a)).map((a) => AGENT_NAMES[a]).join(t('mcp.and')), scope: t(SCOPE_KEYS.global) })}</p>
-        )}
+        {scope === 'project' && <p className="text-[11px] leading-snug text-muted">{t('mcp.projectHelp')}</p>}
         </>}
-        {editing && <p className="text-[11px] text-muted">{t('mcp.editHelp', { agents: [...new Set(editing.map((x) => AGENT_NAMES[x.agent]))].join(', ') })}</p>}
+        {editing && <p className="text-[11px] text-muted">{t('mcp.editHelp', { agents: [...new Set(editTargets(editing).map((x) => AGENT_NAMES[x.agent]))].join(', ') })}</p>}
         {error && <pre className="selectable whitespace-pre-wrap text-[11px] leading-snug text-danger">{error}</pre>}
         <div className="flex justify-end gap-2 pt-1">
           <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>

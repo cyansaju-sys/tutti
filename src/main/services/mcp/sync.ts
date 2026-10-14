@@ -13,7 +13,6 @@ import { specFromConfig, updateServer } from './manage'
 import { addServer, listServers, removeFromOpencodeFile, removeServer, SUPPORTED } from './mcp'
 
 const TARGETS: McpAgent[] = ['opencode', 'gemini', 'qwen', 'cursor', 'codex', 'agy']
-const GLOBAL_ONLY: McpAgent[] = ['codex', 'agy']
 /** Comando con el que se detecta cada agente, si no es su nombre. */
 const COMMAND: Partial<Record<McpAgent, string>> = { cursor: 'cursor-agent' }
 
@@ -34,7 +33,7 @@ const norm = (s: McpSpec): string => JSON.stringify([s.kind, s.url ?? '', s.comm
 const hasHeaders = (s: McpSpec): boolean => Object.keys(s.headers ?? {}).length > 0
 
 function collect(project: string | null, scope: SyncScope): { source: Map<string, McpServer>; others: McpServer[] } {
-  const all = listServers(project)
+  const all = listServers(project).filter((s) => !(s.scope === 'global' && s.name.toLowerCase() === 'tutti'))      // el de la app (orquestación) no se sincroniza
   const lower = (s: string): string => s.toLowerCase()
   const source = new Map(all.filter((s) => s.agent === 'claude' && s.scope === scopeFor('claude', scope)).map((s) => [lower(s.name), s]))
   const others = all.filter((s) => s.agent !== 'claude' && TARGETS.includes(s.agent) && s.scope === scopeFor(s.agent, scope))
@@ -45,7 +44,7 @@ export function syncState(project: string | null, scope: SyncScope, installed: I
   const empty: SyncState = { available: false, source: '', servers: [], extras: 0, local: 0 }
   if (scope === 'project' && !project) return empty
   if (!installed('claude')) return empty
-  const targets = TARGETS.filter((a) => installed(a) && !(scope === 'project' && GLOBAL_ONLY.includes(a)))
+  const targets = TARGETS.filter((a) => installed(a))
   const { source, others } = collect(project, scope)
   const servers = [...source.values()].map((src) => {
     const spec = specFromConfig(src.name, src.config)
@@ -54,7 +53,7 @@ export function syncState(project: string | null, scope: SyncScope, installed: I
       agents: targets.map((agent) => {
         if (scope === 'project' && agent === 'opencode') return { agent, state: 'launch' as const }          // lo recibe al abrirlo desde Tutti: no se escribe opencode.json
         const found = others.find((o) => o.agent === agent && o.name.toLowerCase() === src.name.toLowerCase())
-        if (agent === 'codex' && spec.kind === 'remote' && hasHeaders(spec)) return { agent, state: 'unsupported' as const }
+        if (agent === 'codex' && scope === 'global' && spec.kind === 'remote' && hasHeaders(spec)) return { agent, state: 'unsupported' as const }
         if (!found) return { agent, state: findDisabled({ agent, scope: scopeFor(agent, scope), name: src.name }, project) ? 'disabled' as const : 'missing' as const }
         return { agent, state: norm(specFromConfig(found.name, found.config)) === norm(spec) ? 'ok' as const : 'differs' as const }
       })
