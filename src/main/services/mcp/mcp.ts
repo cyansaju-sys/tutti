@@ -5,23 +5,22 @@
  * la lectura es directa de sus archivos de configuración.
  */
 import { execFile } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import type { McpAgent, McpResult, McpScope, McpServer, McpSpec } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
-import { extendedPath } from '../../utils/shellpath'
+import { extendedPath, which } from '../../utils/shellpath'
+import { type Entry, isObject, readJson, readMcpServers, writeAtomic, writeJson } from './files'
 import { codexProjectConfig, mirrorToAgy, mirrorToCodex, PLUGINS_DIR, resolveEntry, sharedServers, withoutCodexServer } from './mirror'
+import { parseToml } from './toml'
 
 export const SUPPORTED: Record<McpAgent, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity', cursor: 'Cursor Agent', qwen: 'Qwen Code' }
 export const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 
-type Entry = Record<string, unknown>
-
-function readJson(path: string): Record<string, unknown> {
-  try { return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown> } catch { return {} }
-}
-const isObject = (v: unknown): v is Entry => typeof v === 'object' && v !== null && !Array.isArray(v)
+const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e))
+const editFailed = (file: string, e: unknown): McpResult => ({ ok: false, message: tm('m.mcp.editFailed', { file, message: errorText(e) }) })
+const removed = (found: boolean): McpResult => (found ? { ok: true, message: tm('m.mcp.removed') } : { ok: false, message: tm('m.mcp.notInFile') })
 
 /** ('remote' | 'local', URL o comando) de una entrada de configuración. */
 export function describe(entry: Entry): { kind: 'remote' | 'local'; target: string } {
@@ -42,32 +41,16 @@ const agyProjectFiles = (project: string): string[] => [join(project, '.agents',
 })
 export const codexConfig = (): string => join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'config.toml')
 
-/** Servidores de `[mcp_servers.<nombre>]` en un config.toml de Codex (solo lo que hace falta: command, args, url, env, cabeceras). */
+/** Servidores de `mcp_servers` en un config.toml de Codex, con `http_headers` como `headers` (el nombre que usan los demás). */
 export function codexEntries(file: string): Array<[string, Entry]> {
   let text = ''
   try { text = readFileSync(file, 'utf8') } catch { return [] }
-  const out = new Map<string, Entry>()
-  let current: Entry | null = null
-  const value = (raw: string): unknown => {
-    const v = raw.trim()
-    if (v.startsWith('[')) return [...v.matchAll(/"((?:[^"\\]|\\.)*)"|'([^']*)'/g)].map((m) => m[1] ?? m[2])
-    const q = /^"((?:[^"\\]|\\.)*)"|^'([^']*)'/.exec(v)
-    return q ? (q[1] ?? q[2]) : v
-  }
-  for (const line of text.split(/\r?\n/)) {
-    const head = /^\s*\[\s*mcp_servers\.("([^"]+)"|[^.\]\s]+)(\.[A-Za-z_]+)?\s*\]\s*$/.exec(line)
-    if (head) {
-      const name = head[2] ?? head[1]
-      if (!out.has(name)) out.set(name, {})
-      const sub = head[3]?.slice(1)
-      current = sub ? ((out.get(name)![sub === 'http_headers' ? 'headers' : sub] ??= {}) as Entry) : out.get(name)!
-      continue
-    }
-    if (/^\s*\[/.test(line)) { current = null; continue }
-    const kv = /^\s*([A-Za-z0-9_-]+)\s*=\s*(.+?)\s*$/.exec(line)
-    if (kv && current) current[kv[1]] = value(kv[2])
-  }
-  return [...out.entries()]
+  const servers = parseToml(text).mcp_servers
+  if (!isObject(servers)) return []
+  return Object.entries(servers).filter((e): e is [string, Entry] => isObject(e[1])).map(([name, entry]) => {
+    const { http_headers: headers, ...rest } = entry
+    return [name, isObject(headers) ? { ...rest, headers } : rest]
+  })
 }
 
 export const qwenGlobalConfig = (): string => join(homedir(), '.qwen', 'settings.json')
@@ -97,60 +80,51 @@ export function opencodeEntries(file: string): Array<[string, Entry, 'servers' |
 }
 
 /** ¿Son la misma carpeta? Sigue los enlaces simbólicos: Claude guarda la ruta real y el proyecto puede abrirse por un enlace. */
-export function samePath(a: string, b: string): boolean {
-  const real = (p: string): string => {
-    try { return realpathSync.native(p) } catch { return resolve(p) }
-  }
-  const [x, y] = [real(a), real(b)]
-  return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y
+export const samePath = (a: string, b: string): boolean => realOf(a) === realOf(b)
+function realOf(p: string): string {
+  let real: string
+  try { real = realpathSync.native(p) } catch { real = resolve(p) }
+  return process.platform === 'win32' ? real.toLowerCase() : real
 }
 
 export function listServers(project: string | null): McpServer[] {
   const servers: McpServer[] = []
-  const add = (name: string, agent: McpAgent, scope: McpScope, entry: Entry, source: string): void => {
-    servers.push({ name, agent, scope, ...describe(entry), config: entry, source })
+  /** `shown`: la configuración que se muestra (la de `.mcp.json` para las entradas del espejo). */
+  const addAll = (agent: McpAgent, scope: McpScope, entries: Iterable<[string, unknown]>, source: string, shown: (e: Entry) => Entry = (e) => e): void => {
+    for (const [name, raw] of entries) {
+      const entry = shown(isObject(raw) ? raw : {})
+      servers.push({ name, agent, scope, ...describe(entry), config: entry, source })
+    }
   }
+  const scopes: McpScope[] = project ? ['global', 'project'] : ['global']
 
   const claudeFile = join(homedir(), '.claude.json')
   const claude = readJson(claudeFile)
-  const scopes: Array<[McpScope, Entry, string]> = [['global', isObject(claude.mcpServers) ? claude.mcpServers : {}, claudeFile]]
+  addAll('claude', 'global', Object.entries(isObject(claude.mcpServers) ? claude.mcpServers : {}), claudeFile)
   if (project) {
-    const projects = isObject(claude.projects) ? claude.projects : {}
-    for (const [key, data] of Object.entries(projects)) {
-      if (samePath(key, project) && isObject(data) && isObject(data.mcpServers)) scopes.push(['project', data.mcpServers, claudeFile])
+    const here = realOf(project)                                     // una vez: ~/.claude.json puede tener cientos de proyectos
+    for (const [key, data] of Object.entries(isObject(claude.projects) ? claude.projects : {})) {
+      if (isObject(data) && isObject(data.mcpServers) && realOf(key) === here) addAll('claude', 'project', Object.entries(data.mcpServers), claudeFile)
     }
     const shared = join(project, '.mcp.json')
-    const sharedServers = readJson(shared).mcpServers
-    scopes.push(['shared', isObject(sharedServers) ? sharedServers : {}, shared])
+    addAll('claude', 'shared', Object.entries(readMcpServers(shared)), shared)
   }
-  for (const [scope, entries, source] of scopes) for (const [name, entry] of Object.entries(entries)) add(name, 'claude', scope, isObject(entry) ? entry : {}, source)
-
-  const files: Array<[McpScope, string]> = [['global', opencodeGlobalConfig()]]
-  if (project) files.push(['project', join(project, 'opencode.json')])
-  for (const [scope, file] of files) for (const [name, entry] of opencodeEntries(file)) add(name, 'opencode', scope, entry, file)
-
-  for (const [name, entry] of Object.entries(isObject(readJson(geminiGlobalConfig()).mcpServers) ? (readJson(geminiGlobalConfig()).mcpServers as Entry) : {})) add(name, 'gemini', 'global', isObject(entry) ? entry : {}, geminiGlobalConfig())
-  if (project) {
-    const file = join(project, '.gemini', 'settings.json')
-    const found = readJson(file).mcpServers
-    for (const [name, entry] of Object.entries(isObject(found) ? found : {})) add(name, 'gemini', 'project', isObject(entry) ? entry : {}, file)
+  for (const scope of scopes) {
+    const file = scope === 'global' ? opencodeGlobalConfig() : join(project!, 'opencode.json')
+    addAll('opencode', scope, opencodeEntries(file).map(([name, entry]) => [name, entry]), file)
   }
-  for (const agent of ['qwen', 'cursor'] as const) {
-    for (const scope of project ? (['global', 'project'] as const) : (['global'] as const)) {
+  for (const agent of ['gemini', 'qwen', 'cursor'] as const) {
+    for (const scope of scopes) {
       const file = mcpServersFile(agent, scope, project)
-      const found = readJson(file).mcpServers
-      for (const [name, entry] of Object.entries(isObject(found) ? found : {})) add(name, agent, scope, isObject(entry) ? entry : {}, file)
+      addAll(agent, scope, Object.entries(readMcpServers(file)), file)
     }
   }
-  const agyServers = readJson(agyGlobalConfig()).mcpServers
-  for (const [name, entry] of Object.entries(isObject(agyServers) ? agyServers : {})) add(name, 'agy', 'global', isObject(entry) ? entry : {}, agyGlobalConfig())
+  addAll('agy', 'global', Object.entries(readMcpServers(agyGlobalConfig())), agyGlobalConfig())
   const shared = project ? sharedServers(project) : {}
-  for (const file of project ? agyProjectFiles(project) : []) {
-    const found = readJson(file).mcpServers
-    for (const [name, entry] of Object.entries(isObject(found) ? found : {})) add(name, 'agy', 'project', resolveEntry(isObject(entry) ? entry : {}, shared), file)
-  }
-  for (const [name, entry] of codexEntries(codexConfig())) add(name, 'codex', 'global', entry, codexConfig())
-  if (project) for (const [name, entry] of codexEntries(codexProjectConfig(project))) add(name, 'codex', 'project', resolveEntry(entry, shared), codexProjectConfig(project))
+  const viaShared = (e: Entry): Entry => resolveEntry(e, shared)
+  for (const file of project ? agyProjectFiles(project) : []) addAll('agy', 'project', Object.entries(readMcpServers(file)), file, viaShared)
+  addAll('codex', 'global', codexEntries(codexConfig()), codexConfig())
+  if (project) addAll('codex', 'project', codexEntries(codexProjectConfig(project)), codexProjectConfig(project), viaShared)
   return servers
 }
 
@@ -171,7 +145,7 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
     const cliScope = { global: 'user', project: 'local', shared: 'project' }[scope]
     const argv = ['claude', 'mcp', 'add', spec.name]               // el nombre va antes: -H y -e aceptan varios valores
     if (remote) {
-      argv.push(spec.url!, '--transport', 'http', '-s', cliScope)
+      argv.push(spec.url!, '--transport', spec.transport ?? 'http', '-s', cliScope)
       for (const [k, v] of headers) argv.push('-H', `${k}: ${v}`)
     } else {
       argv.push('-s', cliScope)
@@ -183,7 +157,7 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
   if (agent === 'gemini' || agent === 'qwen') {                    // Qwen Code es un derivado de Gemini CLI: mismos argumentos
     const argv = [agent, 'mcp', 'add', '-s', scope === 'global' ? 'user' : 'project']
     if (remote) {
-      argv.push('-t', 'http')
+      argv.push('-t', spec.transport ?? 'http')
       for (const [k, v] of headers) argv.push('-H', `${k}: ${v}`)
       argv.push(spec.name, spec.url!)
     } else {
@@ -218,12 +192,23 @@ export function buildAddArgv(agent: McpAgent, spec: McpSpec, scope: McpScope): s
   return argv
 }
 
+/**
+ * Ejecutable y argumentos con los que lanzar `argv`. En Windows las CLI instaladas con npm son `.cmd`, que Node no lanza sin shell:
+ * van por cmd.exe con cada argumento entre comillas (y las comillas de dentro, dobladas).
+ */
+export function launchArgv(argv: string[], resolved: string | null, win = process.platform === 'win32'): { file: string; args: string[]; verbatim: boolean } {
+  if (!win || !resolved || !/\.(cmd|bat)$/i.test(resolved)) return { file: resolved ?? argv[0], args: argv.slice(1), verbatim: false }
+  const quoted = [resolved, ...argv.slice(1)].map((a) => `"${a.replace(/"/g, '""')}"`).join(' ')
+  return { file: process.env.ComSpec || 'cmd.exe', args: ['/d', '/s', '/c', `"${quoted}"`], verbatim: true }
+}
+
 function run(argv: string[], cwd: string | null): Promise<McpResult> {
+  const { file, args, verbatim } = launchArgv(argv, process.platform === 'win32' ? which(argv[0]) : null)
   return new Promise((done) => {
-    execFile(argv[0], argv.slice(1), { cwd: cwd ?? undefined, timeout: 60_000, encoding: 'utf8', windowsHide: true, env: { ...process.env, PATH: extendedPath() } },
+    execFile(file, args, { cwd: cwd ?? undefined, timeout: 60_000, encoding: 'utf8', windowsHide: true, windowsVerbatimArguments: verbatim, env: { ...process.env, PATH: extendedPath() } },
       (err, stdout, stderr) => {
         const text = ((err ? stderr || stdout : stdout) || '').trim()
-        done({ ok: !err, message: text || (err ? String(err.message) : 'Hecho') })
+        done({ ok: !err, message: text || (err ? String(err.message) : tm('m.mcp.done')) })
       }).stdin?.end()
   })
 }
@@ -232,6 +217,7 @@ export async function addServer(agent: McpAgent, spec: McpSpec, scope: McpScope,
   const error = validate(spec)
   if (error) return { ok: false, message: error }
   if (!(agent in SUPPORTED)) return { ok: false, message: tm('m.mcp.unknownAgent', { agent }) }
+  if (agent === 'codex' && spec.kind === 'remote' && spec.transport === 'sse') return { ok: false, message: tm('m.mcp.codexSse') }
   if (agent === 'codex' && scope === 'global' && spec.kind === 'remote' && Object.keys(spec.headers ?? {}).length) return { ok: false, message: tm('m.mcp.codexHeaders') }
   if (scope !== 'global' && !project) return { ok: false, message: tm('m.mcp.needProject') }
   if (agent === 'cursor') return addToMcpServersFile(mcpServersFile('cursor', scope, project), spec)
@@ -253,10 +239,33 @@ function mirror(project: string, name: string, force?: 'agy' | 'codex'): McpResu
   try {
     mirrorToAgy(project, name, force === 'agy')
     mirrorToCodex(project, name, force === 'codex')
-    return { ok: true, message: 'Hecho' }
+    return { ok: true, message: tm('m.mcp.done') }
   } catch (e) {
-    return { ok: false, message: tm('m.mcp.mirrorFailed', { message: e instanceof Error ? e.message : String(e) }) }
+    return { ok: false, message: tm('m.mcp.mirrorFailed', { message: errorText(e) }) }
   }
+}
+
+/** Entrada de `.mcp.json` para un servidor, como la escribe `claude mcp add -s project`. */
+export const claudeEntry = (spec: McpSpec): Entry => spec.kind === 'remote'
+  ? { type: spec.transport ?? 'http', url: spec.url, ...(Object.keys(spec.headers ?? {}).length ? { headers: spec.headers } : {}) }
+  : { type: 'stdio', command: spec.command, args: spec.args ?? [], env: spec.env ?? {} }
+
+/**
+ * Cambia en `.mcp.json` la entrada de `spec.name` (conservando el resto del archivo) y lleva el cambio al espejo de Antigravity y
+ * Codex. A diferencia de quitar y volver a añadir, el servidor no desaparece entre medias ni se reescribe el espejo dos veces.
+ */
+export function writeSharedServer(project: string, spec: McpSpec): McpResult {
+  const error = validate(spec)
+  if (error) return { ok: false, message: error }
+  const file = join(project, '.mcp.json')
+  try {
+    const data = readJson(file)
+    data.mcpServers = { ...(isObject(data.mcpServers) ? data.mcpServers : {}), [spec.name]: claudeEntry(spec) }
+    writeJson(file, data)
+  } catch (e) {
+    return editFailed(file, e)
+  }
+  return mirror(project, spec.name)
 }
 
 /** Entrada de `mcpServers` (formato de Cursor, que también usa Antigravity) para un servidor. */
@@ -271,11 +280,10 @@ function addToMcpServersFile(file: string, spec: McpSpec): McpResult {
     const servers = isObject(data.mcpServers) ? data.mcpServers : {}
     servers[spec.name] = cursorEntry(spec)
     data.mcpServers = servers
-    mkdirSync(dirname(file), { recursive: true })
-    writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
-    return { ok: true, message: 'Hecho' }
+    writeJson(file, data)
+    return { ok: true, message: tm('m.mcp.done') }
   } catch (e) {
-    return { ok: false, message: `No se pudo editar ${file}: ${e instanceof Error ? e.message : String(e)}` }
+    return editFailed(file, e)
   }
 }
 
@@ -284,7 +292,7 @@ function removeFromMcpServersFile(file: string, name: string): boolean {
   const data = readJson(file)
   if (!isObject(data.mcpServers) || !(name in data.mcpServers)) return false
   delete data.mcpServers[name]
-  writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
+  writeJson(file, data)
   return true
 }
 
@@ -293,11 +301,11 @@ export function removeFromOpencodeFile(file: string, name: string): boolean {
   const data = readJson(file)
   const mcp = data.mcp
   if (!isObject(mcp)) return false
-  let removed = false
-  if (isObject(mcp.servers) && name in mcp.servers) { delete mcp.servers[name]; removed = true }
-  if (name !== 'servers' && name in mcp) { delete mcp[name]; removed = true }
-  if (removed) writeFileSync(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
-  return removed
+  let found = false
+  if (isObject(mcp.servers) && name in mcp.servers) { delete mcp.servers[name]; found = true }
+  if (name !== 'servers' && name in mcp) { delete mcp[name]; found = true }
+  if (found) writeJson(file, data)
+  return found
 }
 
 export async function removeServer(server: McpServer, project: string | null): Promise<McpResult> {
@@ -311,7 +319,7 @@ export async function removeServer(server: McpServer, project: string | null): P
   if (server.agent === 'gemini' || server.agent === 'qwen') return run([server.agent, 'mcp', 'remove', '-s', server.scope === 'global' ? 'user' : 'project', server.name], project)
   if (server.agent === 'cursor' || (server.agent === 'agy' && server.scope !== 'global')) {
     const file = server.agent === 'cursor' ? mcpServersFile('cursor', server.scope, project) : server.source || join(project ?? '', PLUGINS_DIR, 'tutti-mcp', 'mcp_config.json')
-    try { return removeFromMcpServersFile(file, server.name) ? { ok: true, message: 'Quitado' } : { ok: false, message: 'No estaba en el archivo' } } catch (e) { return { ok: false, message: `No se pudo editar ${file}: ${e instanceof Error ? e.message : String(e)}` } }
+    try { return removed(removeFromMcpServersFile(file, server.name)) } catch (e) { return editFailed(file, e) }
   }
   if (server.agent === 'agy') return run(['agy', 'mcp', 'remove', server.name], project)
   if (server.agent === 'codex' && server.scope !== 'global') {
@@ -319,18 +327,17 @@ export async function removeServer(server: McpServer, project: string | null): P
     try {
       const text = readFileSync(file, 'utf8')
       const next = withoutCodexServer(text, server.name)
-      if (next === text) return { ok: false, message: 'No estaba en el archivo' }
-      writeFileSync(file, next, 'utf8')
-      return { ok: true, message: 'Quitado' }
-    } catch (e) { return { ok: false, message: `No se pudo editar ${file}: ${e instanceof Error ? e.message : String(e)}` } }
+      if (next !== text) writeAtomic(file, next)
+      return removed(next !== text)
+    } catch (e) { return editFailed(file, e) }
   }
   if (server.agent === 'codex') return run(['codex', 'mcp', 'remove', server.name], project)
   // OpenCode no trae `mcp remove`: se edita su archivo
   const file = server.scope === 'global' ? opencodeGlobalConfig() : join(project ?? '', 'opencode.json')
   try {
-    if (!existsSync(file)) return { ok: false, message: `No existe ${file}` }
-    return removeFromOpencodeFile(file, server.name) ? { ok: true, message: 'Quitado' } : { ok: false, message: 'No estaba en el archivo' }
+    if (!existsSync(file)) return { ok: false, message: tm('m.mcp.noFile', { file }) }
+    return removed(removeFromOpencodeFile(file, server.name))
   } catch (e) {
-    return { ok: false, message: `No se pudo editar ${file}: ${e instanceof Error ? e.message : String(e)}` }
+    return editFailed(file, e)
   }
 }

@@ -15,6 +15,8 @@ export interface Pane {
 }
 /** Lo que se recuerda de cada proyecto al dejarlo: pestaña de la barra lateral y archivos abiertos. */
 export interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null }
+/** Lo que trae una spec nueva que se crea desde un ítem del roadmap. */
+export interface SpecPrefill { name: string; description: string }
 export interface Toast { id: number; kind: ToastKind; message: string }
 
 
@@ -41,7 +43,8 @@ export interface DocsSlice {
   openGraph: () => void
   openSkillForm: () => void                           // el formulario de una skill nueva
   openSteeringForm: () => void                        // el formulario de un steering nuevo
-  openSpecForm: () => void                            // el formulario guiado de una spec nueva
+  openSpecForm: (prefill?: SpecPrefill) => void       // el formulario guiado de una spec nueva (desde el roadmap, ya rellenado)
+  specPrefill: SpecPrefill | null                     // lo que el formulario de spec debe rellenar al abrirse; lo consume el formulario
   openHookForm: (edit?: { file: string; index: number; name?: string }) => void      // el formulario para crear un hook (o editar uno), como una pestaña más del editor
   openCommitDiff: (hash: string, parent: string | null, path: string, label: string) => Promise<void>
   renameDocs: (from: string, to: string) => void      // un archivo o carpeta cambió de nombre: sus pestañas lo siguen

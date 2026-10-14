@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdErrorOutline, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdSync, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
-import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, RegistryServer, SyncScope, SyncState } from '@shared/types'
+import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, McpTransport, RegistryServer, SyncScope, SyncState } from '@shared/types'
 import { FIELD, FIELD_SLIM, Modal } from '@/shared/components/ui'
 import { AGENT_NAMES, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFrom, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
 import { useT } from '@/shared/lib/i18n'
@@ -407,6 +407,7 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
   const [kind, setKind] = useState<'remote' | 'local'>(prefill?.kind ?? 'remote')
   const [name, setName] = useState(prefill?.name ?? '')
   const [url, setUrl] = useState(prefill?.url ?? '')
+  const [transport, setTransport] = useState<McpTransport>(prefill?.transport ?? 'http')
   const [headers, setHeaders] = useState(prefill?.headers ?? '')
   const [command, setCommand] = useState(prefill?.command ?? '')
   const [args, setArgs] = useState(prefill?.args ?? '')
@@ -422,7 +423,7 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
 
   const submit = async (): Promise<void> => {
     const spec: McpSpec = kind === 'remote'
-      ? { name: name.trim(), kind, url: url.trim(), headers: parsePairs(headers, [': ', ':']) }
+      ? { name: name.trim(), kind, url: url.trim(), ...(transport === 'sse' ? { transport } : {}), headers: parsePairs(headers, [': ', ':']) }
       : { name: name.trim(), kind, command: command.trim(), args: splitArgs(args), env: parsePairs(env, ['=']) }
     if (editing) {
       setBusy(true); setError('')
@@ -458,7 +459,11 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
         <input className={input} placeholder={t('mcp.namePlaceholder')} value={name} onChange={(e) => setName(e.target.value)} autoFocus={!editing} disabled={!!editing} spellCheck={false} />
         {kind === 'remote' ? (
           <>
-            <input className={input} placeholder="https://server.example.com/mcp" value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} />
+            <div className="flex gap-2">
+              <input className={clsx(input, 'flex-1')} placeholder="https://server.example.com/mcp" value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} />
+              <Choice on={transport === 'http'} label="HTTP" onClick={() => setTransport('http')} />
+              <Choice on={transport === 'sse'} label="SSE" onClick={() => setTransport('sse')} />
+            </div>
             <textarea className={clsx(input, 'min-h-[64px] resize-y')} placeholder={t('mcp.headersPlaceholder')} value={headers} onChange={(e) => setHeaders(e.target.value)} spellCheck={false} />
           </>
         ) : (

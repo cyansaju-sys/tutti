@@ -46,14 +46,14 @@ html = '''<!doctype html>
 <style>
   :root {
     --bg: #090b11; --bg2: #0d0f16; --panel: #11141d; --raised: #151925; --line: #2a2f3d;
-    --text: #e6e8ef; --muted: #8a90a6; --accent: #8fa6c4; --accent-2: #b4c6e0; --glow: rgba(143, 166, 196, .22);
+    --text: #e6e8ef; --muted: #8a90a6; --accent: #9bb3ce; --accent-2: #c3d3e5; --glow: rgba(155, 179, 206, .22);
     --hair: rgba(255, 255, 255, .06); --header-bg: rgba(9, 11, 17, .78); --on-accent: #0b0e15; --shadow: rgba(0, 0, 0, .8);
     --code-bg: #0d0f16; --warn: #e2c08d; --warn-bg: rgba(226, 192, 141, .10);
     color-scheme: dark;
   }
   :root[data-theme="light"] {
     --bg: #dfe3ea; --bg2: #e9ebf1; --panel: #f1f2f6; --raised: #f6f7fa; --line: #c8cdd9;
-    --text: #272c3b; --muted: #5b6277; --accent: #3f628f; --accent-2: #2f4f78; --glow: rgba(63, 98, 143, .20);
+    --text: #272c3b; --muted: #5b6277; --accent: #3a5878; --accent-2: #2b4562; --glow: rgba(58, 88, 120, .20);
     --hair: rgba(0, 0, 0, .08); --header-bg: rgba(223, 227, 234, .82); --on-accent: #f6f7fa; --shadow: rgba(40, 50, 75, .35);
     --code-bg: #e9ebf1; --warn: #8f5f00; --warn-bg: rgba(143, 95, 0, .09);
     color-scheme: light;
@@ -69,7 +69,8 @@ html = '''<!doctype html>
   header { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(14px); background: var(--header-bg); border-bottom: 1px solid var(--hair); }
   .bar { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 16px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; color: var(--text); }
-  .brand img { width: 28px; height: 28px; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+  .brand .mark { width: 30px; height: 30px; }
+  .mark { display: inline-block; background: var(--accent); -webkit-mask: url(logo-contorno.svg) 50% 75% / 112% no-repeat; mask: url(logo-contorno.svg) 50% 75% / 112% no-repeat; }  /* el archivo tal cual, recortado: 112% deja fuera su margen vacío y 50% 75% centra el dibujo */
   .brand small { color: var(--muted); font-weight: 500; font-size: 14px; }
   nav { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--muted); }
   nav a { color: var(--muted); } nav a:hover { color: var(--text); text-decoration: none; }
@@ -135,7 +136,7 @@ html = '''<!doctype html>
 <body>
 <header>
   <div class="wrap bar">
-    <a class="brand" href="index.html"><img src="icon.png" alt="" />Tutti <small>· <span class="es">Documentación</span><span class="en">Docs</span></small></a>
+    <a class="brand" href="index.html"><span class="mark" aria-hidden="true"></span>Tutti <small>· <span class="es">Documentación</span><span class="en">Docs</span></small></a>
     <nav>
       <a class="hide-sm" href="index.html"><span class="es">Inicio</span><span class="en">Home</span></a>
       <a class="hide-sm" href="index.html#instalar"><span class="es">Descargar</span><span class="en">Download</span></a>

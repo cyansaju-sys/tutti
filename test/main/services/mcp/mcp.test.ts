@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
-import { addServer, buildAddArgv, codexEntries, describe, listServers, opencodeEntries, removeFromOpencodeFile, removeServer, samePath, validate } from '../../../../src/main/services/mcp/mcp'
+import { addServer, buildAddArgv, codexEntries, describe, launchArgv, listServers, opencodeEntries, removeFromOpencodeFile, removeServer, samePath, validate } from '../../../../src/main/services/mcp/mcp'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-mcp-'))
 
@@ -163,5 +163,32 @@ suite('Cursor Agent y Qwen Code', () => {
     expect(file.mcpServers.api).toEqual({ url: 'https://x/mcp', headers: { A: 'b' } })
     const listed = listServers(root).filter((x) => x.agent === 'cursor' && x.scope === 'project').map((x) => x.name).sort()
     expect(listed).toEqual(['api', 'loc', 'viejo'])
+  })
+})
+
+suite('remotos por SSE', () => {
+  const sse = { name: 'viejo', kind: 'remote' as const, url: 'https://x/sse', transport: 'sse' as const }
+  it('Claude, Gemini CLI y Qwen Code lo instalan como SSE', () => {
+    expect(buildAddArgv('claude', sse, 'global')).toEqual(['claude', 'mcp', 'add', 'viejo', 'https://x/sse', '--transport', 'sse', '-s', 'user'])
+    expect(buildAddArgv('gemini', sse, 'global')).toContain('sse')
+    expect(buildAddArgv('qwen', sse, 'project')).toEqual(['qwen', 'mcp', 'add', '-s', 'project', '-t', 'sse', 'viejo', 'https://x/sse'])
+  })
+  it('Codex no admite SSE: se rechaza sin llamar a su CLI', async () => {
+    const r = await addServer('codex', sse, 'global', null)
+    expect(r.ok).toBe(false)
+    expect(r.message).toContain('SSE')
+  })
+})
+
+suite('lanzar las CLI', () => {
+  it('fuera de Windows, o con un .exe, va tal cual', () => {
+    expect(launchArgv(['claude', 'mcp', 'list'], null, false)).toEqual({ file: 'claude', args: ['mcp', 'list'], verbatim: false })
+    expect(launchArgv(['codex', 'x'], 'C:\\b\\codex.exe', true)).toEqual({ file: 'C:\\b\\codex.exe', args: ['x'], verbatim: false })
+  })
+  it('en Windows, un .cmd va por cmd.exe con cada argumento entre comillas', () => {
+    const { file, args, verbatim } = launchArgv(['claude', 'mcp', 'add', 'api', '-H', 'Authorization: Bearer "t"'], 'C:\\npm\\claude.cmd', true)
+    expect(file.toLowerCase()).toContain('cmd')
+    expect(verbatim).toBe(true)
+    expect(args).toEqual(['/d', '/s', '/c', '""C:\\npm\\claude.cmd" "mcp" "add" "api" "-H" "Authorization: Bearer ""t""""'])
   })
 })

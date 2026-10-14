@@ -7,6 +7,7 @@ import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensurePro
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
 import { archiveOpenspec, initOpenspec, openspecState, validateOpenspec } from './services/openspec'
+import { markRoadmapDone, roadmapState } from './services/roadmap'
 import { copyEntry, createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
@@ -95,7 +96,12 @@ function registerIpc(): void {
   ipcMain.handle('openspec:state', (_e, project: string) => openspecState(project))
   ipcMain.handle('openspec:init', (_e, project: string) => initOpenspec(project))
   ipcMain.handle('openspec:validate', (_e, project: string, change?: string) => validateOpenspec(project, change))
-  ipcMain.handle('openspec:archive', (_e, project: string, change: string) => archiveOpenspec(project, change))
+  ipcMain.handle('openspec:archive', async (_e, project: string, change: string) => {
+    const res = await archiveOpenspec(project, change)
+    if (res.ok) markRoadmapDone(project, change)          // el ítem del roadmap que lo nombra queda hecho
+    return res
+  })
+  ipcMain.handle('roadmap:state', (_e, project: string) => roadmapState(project))
   ipcMain.handle('hooks:list', (_e, project: string) => ({ hooks: loadHooks(project), trusted: isTrusted(project) }))
   ipcMain.handle('hooks:trust', (_e, project: string, on: boolean) => { setTrusted(project, on); if (on) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('hooks:watch', (_e, project: string | null) => { if (process.env.TUTTI_CAPTURE) return; if (project) startHooks(project, hooksHost); else stopHooks() })

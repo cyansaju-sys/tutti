@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { MsgKey } from '@shared/i18n'
 import { FIELD } from '@/shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
@@ -33,6 +33,10 @@ export function SpecFormView() {
   const openDoc = useStore((s) => s.openDoc)
   const closeDoc = useStore((s) => s.closeDoc)
   const [form, setForm] = useState<ChangeForm>(EMPTY_CHANGE_FORM)
+  const prefill = useStore((s) => s.specPrefill)
+  const setStore = useStore((s) => s.set)
+  // abierto desde un ítem del roadmap: su nombre y lo que dice (aunque el formulario ya estuviera abierto)
+  useEffect(() => { if (prefill) { setForm({ ...EMPTY_CHANGE_FORM, ...prefill }); setStore({ specPrefill: null }) } }, [prefill, setStore])
   const [tried, setTried] = useState(false)
   const set = (patch: Partial<ChangeForm>): void => setForm((f) => ({ ...f, ...patch }))
   const error = changeFormError(form)

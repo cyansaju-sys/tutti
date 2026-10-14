@@ -235,6 +235,18 @@ describe('AGENTS.md apuntando a .tutti', () => {
     expect(agents()).toContain('openspec')
     expect(agentsPointerState(project).upToDate).toBe(true)
   })
+  it('apunta al roadmap, sea el de .tutti o el ROADMAP.md de la raíz', () => {
+    writeAgentsPointer(project)
+    expect(agents()).not.toContain('roadmap')
+    writeFileSync(join(project, 'ROADMAP.md'), '## Fase 1\n')
+    expect(agentsPointerState(project).upToDate).toBe(false)
+    writeAgentsPointer(project)
+    expect(agents()).toContain('`ROADMAP.md`')
+    mkdirSync(join(project, '.tutti'), { recursive: true })
+    writeFileSync(join(project, '.tutti', 'roadmap.md'), '## Fase 1\n')
+    writeAgentsPointer(project)
+    expect(agents()).toContain('`.tutti/roadmap.md`')
+  })
   it('quitar deja el texto propio, o borra el archivo si solo estaba el bloque', () => {
     writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n')
     writeAgentsPointer(project)

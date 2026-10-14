@@ -13,7 +13,7 @@
   font-display: block;
 }
 
-/* Mismos colores que la versión anterior; el acento es morado. */
+/* Los fondos casi negros de siempre, con el acento del logo: azul claro (#9bb3ce) y pizarra (#546376). */
 @theme {
   --color-bg: #07080c;
   --color-bar: #0a0c12;
@@ -21,9 +21,9 @@
   --color-panel: #11141d;
   --color-raised: #151925;
   --color-line: #2a2f3d;
-  --color-accent: #8fa6c4;
+  --color-accent: #9bb3ce;
   --color-accent-bg: #222c3c;
-  --color-accent-dim: #3b4a63;
+  --color-accent-dim: #546376;
   --color-muted: #6b7088;
   --color-text: #e6e8ef;
   --color-ok: #7ee0a1;
@@ -57,7 +57,7 @@
 /* variables que usan el editor y el resto de colores que no salen de Tailwind */
 :root {
   color-scheme: dark;
-  --ed-line: #ffffff08; --ed-field: #ffffff0a; --ed-bracket: #3b4a6366; --ed-match: #3b4a6388; --ed-indent: #ffffff20; --ed-shadow: #000a;
+  --ed-line: #ffffff08; --ed-field: #ffffff0a; --ed-bracket: #54637666; --ed-match: #54637688; --ed-indent: #ffffff20; --ed-shadow: #000a;
   --syn-keyword: #c792ea; --syn-type: #4cc9b0; --syn-string: #7ccb8b; --syn-number: #f0b67f; --syn-func: #82aaff; --syn-tag: #f07178; --syn-attr: #ffcb6b;
 }
 /* tema claro: se activa con <html data-theme="light"> */
@@ -65,12 +65,12 @@
   color-scheme: light;
   /* tonos suaves, sin blanco puro: el fondo grande y brillante cansa la vista */
   --color-bg: #dfe3ea; --color-bar: #d7dce5; --color-surface: #f1f2f6; --color-panel: #e9ebf1; --color-raised: #f6f7fa;
-  --color-line: #c8cdd9; --color-accent: #3f628f; --color-accent-bg: #d0dbec; --color-accent-dim: #a9b8d0;
+  --color-line: #c8cdd9; --color-accent: #3a5878; --color-accent-bg: #d3deeb; --color-accent-dim: #9bb3ce;
   --color-muted: #5b6277; --color-text: #272c3b;
   --color-ok: #17803f; --color-warn: #8f5f00; --color-danger: #c92c47;
   --color-git-m: #8f5f00; --color-git-a: #1f8f4e; --color-git-d: #c0422d; --color-git-c: #c92c47;
   --color-ov: #000000; --color-pop: #f6f7fa;
-  --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #8aa3c944; --ed-match: #8aa3c96e; --ed-indent: #00000022; --ed-shadow: #0000002e;
+  --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #9bb3ce44; --ed-match: #9bb3ce6e; --ed-indent: #00000022; --ed-shadow: #0000002e;
   --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00;
 }
 :root[data-theme="light"] img[src*="icons/sidebar"] { filter: brightness(0.5) saturate(1.3); }

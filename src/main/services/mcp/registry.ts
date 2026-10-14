@@ -42,7 +42,7 @@ export function optionsOf(server: Raw): RegistryOption[] {
     const type = text(r.type)
     const url = text(r.url)
     if (!/^https?:\/\//.test(url) || url.includes('{') || !['streamable-http', 'sse', 'http'].includes(type)) continue
-    out.push({ label: `${tm('m.reg.remote')} · ${new URL(url).host}`, kind: 'remote', url, env: [], headers: list(r.headers).map(field).filter((f) => f.name) })
+    out.push({ label: `${tm('m.reg.remote')} · ${new URL(url).host}`, kind: 'remote', url, transport: type === 'sse' ? 'sse' : 'http', env: [], headers: list(r.headers).map(field).filter((f) => f.name) })
   }
   return out
 }

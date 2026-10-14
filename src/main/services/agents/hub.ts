@@ -151,11 +151,11 @@ const host: Host = {
     const leader = open[0]
     const project = leader?.cwd
     return {
-      open_agents: await Promise.all(open.map(async (m) => ({ ...describe(m, leader?.id), quota_used_percent: (await quotaOf(m.command)) ?? 'desconocido', available_models: await availableModels(m.command, detectAgents().find((a) => a.command === m.command)?.path) }))),
+      open_agents: await Promise.all(open.map(async (m) => ({ ...describe(m, leader?.id), quota_used_percent: (await quotaOf(m.command)) ?? 'desconocido', available_models: await availableModels(m.command, detectAgents().find((a) => a.command === m.command)?.path, m.cwd) }))),
       installed_agents: await Promise.all(detectAgents().map(async (a) => {
         const model = project ? currentModel(a.command, project) : null
         const level = tier(model).tier
-        return { agent: a.name, command: a.command, last_model: model ?? 'desconocido', tier: level, can_handle: capableFor({ tier: level }), available_models: await availableModels(a.command, a.path), quota_used_percent: (await quotaOf(a.command)) ?? 'desconocido' }
+        return { agent: a.name, command: a.command, last_model: model ?? 'desconocido', tier: level, can_handle: capableFor({ tier: level }), available_models: await availableModels(a.command, a.path, project), quota_used_percent: (await quotaOf(a.command)) ?? 'desconocido' }
       })),
       you_are: caller, lead: leader?.id ?? null
     }
@@ -200,7 +200,7 @@ const host: Host = {
       if (!command) return { ok: false, info: `No conozco el agente '${target}'. Usa list_agents para ver los disponibles.` }
       const flag = MODEL_FLAG[command]
       if (!flag) return { ok: false, info: `${command} no permite elegir el modelo al abrirlo desde aquí. Cámbialo a mano en su panel o pide otro agente (con model: ${Object.keys(MODEL_FLAG).join(', ')}).` }
-      const offered = await availableModels(command, detectAgents().find((a) => a.command === command)?.path)
+      const offered = await availableModels(command, detectAgents().find((a) => a.command === command)?.path, openTarget?.cwd ?? open[0]?.cwd)
       if (offered.length && !offered.some((m) => m.id === model)) return { ok: false, info: `${command} no ofrece el modelo '${model}'. Disponibles: ${offered.map((m) => m.id).join(', ')}.` }
       modelArgs = [flag, model]
       if (openTarget) {

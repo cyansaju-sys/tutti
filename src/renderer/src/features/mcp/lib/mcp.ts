@@ -1,5 +1,5 @@
 import type { MsgKey } from '@shared/i18n'
-import type { McpScope, McpServer, RegistryField, RegistryOption, RegistryServer } from '@shared/types'
+import type { McpScope, McpServer, McpSpec, McpTransport, RegistryField, RegistryOption, RegistryServer } from '@shared/types'
 
 export const SCOPE_KEYS: Record<McpScope, MsgKey> = { global: 'mcp.scope.global', project: 'mcp.scope.project', shared: 'mcp.scope.shared' }
 export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity', qwen: 'Qwen Code', cursor: 'Cursor Agent' }
@@ -67,12 +67,22 @@ export function removeTargets(group: McpServer[]): McpServer[] {
   return group.filter((s) => !((s.agent === 'agy' || s.agent === 'codex') && s.scope !== 'global' && !s.disabled))
 }
 
+/** Transporte de un remoto: `type: "sse"`, o en Gemini CLI y Qwen Code `url` sin tipo (allí `httpUrl` es HTTP). Como en el proceso principal. */
+export function transportOf(server: Pick<McpServer, 'agent' | 'config'>): McpTransport {
+  const cfg = server.config as Record<string, unknown>
+  if (cfg.type === 'sse') return 'sse'
+  return (server.agent === 'gemini' || server.agent === 'qwen') && cfg.url && !cfg.httpUrl && !cfg.type ? 'sse' : 'http'
+}
+
 /** Convierte un servidor ya configurado en lo que hace falta para añadirlo a otro agente. */
-export function specFromServer(server: McpServer): import('@shared/types').McpSpec {
+export function specFromServer(server: McpServer): McpSpec {
   const cfg = server.config as Record<string, unknown>
   const env = { ...((cfg.environment as Record<string, string>) ?? {}), ...((cfg.env as Record<string, string>) ?? {}) }
   const headers = { ...((cfg.headers as Record<string, string>) ?? {}) }
-  if (server.kind === 'remote') return { name: server.name, kind: 'remote', url: String(cfg.url ?? ''), headers, env }
+  if (server.kind === 'remote') {
+    const sse = transportOf(server) === 'sse'
+    return { name: server.name, kind: 'remote', url: String(cfg.url ?? cfg.httpUrl ?? cfg.serverUrl ?? ''), ...(sse ? { transport: 'sse' as const } : {}), headers, env }
+  }
   const command = cfg.command
   const parts = Array.isArray(command) ? command.map(String) : [String(command ?? ''), ...((cfg.args as unknown[]) ?? []).map(String)]
   return { name: server.name, kind: 'local', command: parts[0], args: parts.slice(1), headers, env }
@@ -93,7 +103,7 @@ export const quoteArg = (a: string): string => (/[\s"']/.test(a) ? `"${a.replace
 
 /** Lo que se le entrega al diálogo de «Añadir servidor» para instalar una entrada del registro. */
 export interface Prefill {
-  name: string; kind: 'remote' | 'local'; url: string; headers: string; command: string; args: string; env: string
+  name: string; kind: 'remote' | 'local'; url: string; transport: McpTransport; headers: string; command: string; args: string; env: string
   fields: RegistryField[]       // lo que el servidor pide (para explicarlo en el diálogo)
 }
 
@@ -101,7 +111,7 @@ const lines = (fields: RegistryField[], sep: string): string => fields.filter((f
 
 export function prefillFrom(server: RegistryServer, option: RegistryOption): Prefill {
   return {
-    name: shortName(server.name), kind: option.kind, url: option.url ?? '', headers: lines(option.headers, ': '),
+    name: shortName(server.name), kind: option.kind, url: option.url ?? '', transport: option.transport ?? 'http', headers: lines(option.headers, ': '),
     command: option.command ?? '', args: (option.args ?? []).map(quoteArg).join(' '), env: lines(option.env, '='), fields: [...option.env, ...option.headers]
   }
 }
@@ -111,7 +121,7 @@ export function prefillFromServer(server: McpServer): Prefill {
   const spec = specFromServer(server)
   const pairs = (m: Record<string, string> | undefined, sep: string): string => Object.entries(m ?? {}).map(([k, v]) => `${k}${sep}${v}`).join('\n')
   return {
-    name: server.name, kind: spec.kind, url: spec.url ?? '', headers: pairs(spec.headers, ': '),
+    name: server.name, kind: spec.kind, url: spec.url ?? '', transport: spec.transport ?? 'http', headers: pairs(spec.headers, ': '),
     command: spec.command ?? '', args: (spec.args ?? []).map(quoteArg).join(' '), env: pairs(spec.env, '='), fields: []
   }
 }

@@ -25,6 +25,11 @@ describe('registro de servidores MCP', () => {
     expect(options[1].headers[0].name).toBe('Authorization')
   })
 
+  it('apunta el transporte de cada remoto', () => {
+    const options = optionsOf({ remotes: [{ type: 'streamable-http', url: 'https://x.dev/mcp' }, { type: 'sse', url: 'https://x.dev/sse' }] })
+    expect(options.map((o) => o.transport)).toEqual(['http', 'sse'])
+  })
+
   it('se saltan los formatos que Tutti no sabe instalar', () => {
     expect(optionsOf({ packages: [{ registryType: 'oci', identifier: 'img', transport: { type: 'stdio' } }, { registryType: 'npm', identifier: 'x', transport: { type: 'sse', url: 'http://a' } }], remotes: [{ type: 'sse', url: 'https://x/{tenant}/mcp' }] })).toEqual([])
     expect(toServer({ server: { name: 'solo/oci', packages: [{ registryType: 'oci', identifier: 'img' }] } })).toBeNull()
