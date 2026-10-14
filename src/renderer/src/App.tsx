@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
-import { AgentPicker, AddAgentDialog, BranchPicker, GoLineDialog, NewsDialog, QuickOpenDialog, ShortcutsDialog } from '@/shared/components/Dialogs'
+import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShortcutsDialog } from '@/shared/components/Dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
 import { Toasts } from '@/shared/components/Toasts'
@@ -113,12 +114,13 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const st = useStore.getState()
-      if (st.modal) return
+      if (st.modal || useConfirm.getState().ask) return
       const key = e.key.toUpperCase()
       const doc = st.docs.find((d) => d.path === st.activeDoc)
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'W' && st.focus === 'editor' && doc) {
         e.preventDefault(); e.stopPropagation()
-        if (!isDirty(doc) || window.confirm(t('app.unsaved', { title: doc.title }))) st.closeDoc(doc.path)
+        if (!isDirty(doc)) st.closeDoc(doc.path)
+        else void confirmAsk(t('app.unsaved', { title: doc.title }), t('app.closeAnyway')).then((yes) => { if (yes) useStore.getState().closeDoc(doc.path) })
         return
       }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'P') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'quickOpen' }); return }
@@ -190,6 +192,7 @@ export function App() {
       {s.modal === 'branches' && s.project && <BranchPicker />}
       {s.modal === 'quickOpen' && <QuickOpenDialog />}
       {s.modal === 'goLine' && <GoLineDialog />}
+      <ConfirmDialog />
       <Toasts />
       <Tooltips />
     </div>

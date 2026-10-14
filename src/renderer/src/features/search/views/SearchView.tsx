@@ -2,6 +2,7 @@ import { clsx } from 'clsx'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { MdChevronRight, MdExpandMore, MdFindReplace, MdMoreHoriz, MdUnfoldLess } from 'react-icons/md'
 import type { SearchFile, SearchResult } from '@shared/types'
+import { confirmAsk } from '@/shared/lib/confirm'
 import { useT } from '@/shared/lib/i18n'
 import { iconFor } from '@/shared/lib/icons'
 import { basename } from '@/shared/lib/paths'
@@ -82,7 +83,7 @@ export function SearchView() {
     const targets = files.filter((f) => !dirty.has(f.path))
     const count = targets.reduce((n, f) => n + f.matches.length, 0)
     if (!targets.length) { toast(t('sr.dirty'), 'error'); return }
-    if (!window.confirm(t('sr.confirm', { count, files: targets.length, fileWord: t(targets.length === 1 ? 'sr.file' : 'sr.files'), text: replacement }))) return
+    if (!(await confirmAsk(t('sr.confirm', { count, files: targets.length, fileWord: t(targets.length === 1 ? 'sr.file' : 'sr.files'), text: replacement })))) return
     const r = await window.api.search.replace(project, { query, caseSensitive, wholeWord, regex }, replacement, targets.map((f) => f.path))
     if (r.error) { toast(r.error, 'error'); return }
     for (const f of targets) if (docs.some((d) => d.path === f.path)) void window.api.fs.read(f.path).then((data) => replaceDoc(f.path, data)).catch(() => undefined)

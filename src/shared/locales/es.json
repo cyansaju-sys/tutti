@@ -311,6 +311,8 @@
   "dlg.noExecMatch": "Ningún ejecutable coincide",
   "dlg.noExecFound": "No se encontraron ejecutables en tus carpetas",
   "dlg.cancel": "Cancelar",
+  "dlg.accept": "Aceptar",
+  "app.closeAnyway": "Cerrar sin guardar",
   "dlg.add": "Añadir",
   "br.current": "actual",
   "br.remoteGroup": "ramas remotas",

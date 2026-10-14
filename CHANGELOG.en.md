@@ -23,6 +23,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **Safer configuration files:** Tutti writes each agent’s files in one go, so an agent or another window never reads a half-written one. It keeps their permissions and, if the file is a link, writes to the original.
 - **The MCP list and sync load faster:** each configuration file is read only once.
 - **MCP messages show in your language** (some were always in Spanish before).
+- **You can type to the agent again after closing an unsaved file:** the “has unsaved changes” warning was a system dialog that, on Linux, left the terminal with a non-blinking cursor and not receiving Space. It is now a Tutti dialog (also when switching project with changes, replacing across the project and replacing the context). “Cancel” is focused so a stray Enter or Space does not discard anything, and the keyboard goes back to where it was.
 - **Each agent’s real models when sharing out tasks:** for Claude Code, Codex, Gemini CLI, Qwen Code and Copilot CLI, Tutti reads the list from their `/model` (it opens it out of sight, in the project folder, and leaves without picking anything) instead of a fixed list that went out of date. It is kept for a day. If the agent asks to trust the folder or to sign in, Tutti does not answer for you and uses the fixed list.
 
 ### Aesthetic

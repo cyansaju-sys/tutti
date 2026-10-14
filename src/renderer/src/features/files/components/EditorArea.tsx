@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAccountTree, MdClose, MdCode, MdTune, MdVisibility } from 'react-icons/md'
 import type { GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
+import { confirmAsk } from '@/shared/lib/confirm'
 import { t, useT } from '@/shared/lib/i18n'
 import { iconFor } from '@/shared/lib/icons'
 import { languageName } from '@/features/files/lib/languages'
@@ -128,8 +129,8 @@ export function EditorArea() {
     useStore.getState().focusPane(pane.id)
   }
   const close = (d: Doc): void => {
-    if (isDirty(d) && !window.confirm(t('app.unsaved', { title: d.title }))) return
-    closeDoc(d.path)
+    if (!isDirty(d)) { closeDoc(d.path); return }
+    void confirmAsk(t('app.unsaved', { title: d.title }), t('app.closeAnyway')).then((yes) => { if (yes) closeDoc(d.path) })
   }
   const statusOf = (d: Doc): string => {
     const rel = project ? toPosix(relative(project, d.diffOf ?? d.path)) : ''

@@ -311,6 +311,8 @@
   "dlg.noExecMatch": "No executable matches",
   "dlg.noExecFound": "No executables found in your folders",
   "dlg.cancel": "Cancel",
+  "dlg.accept": "Accept",
+  "app.closeAnyway": "Close without saving",
   "dlg.add": "Add",
   "br.current": "current",
   "br.remoteGroup": "remote branches",
