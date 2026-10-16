@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useCallback, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { MdAdd, MdChevronRight, MdEdit, MdExplore, MdSmartToy, MdTerminal } from 'react-icons/md'
 import type { MsgKey } from '@shared/i18n'
 import type { AgentsPointerState, DirEntry, HookInfo, OpenSpecState, RoadmapState, SteeringInfo } from '@shared/types'
@@ -20,29 +20,30 @@ const REFRESH_MS = 5000
 const EMPTY_BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent'
 type Kind = 'hooks' | 'steering' | 'skills' | 'docs'
 
-/** Sección plegable: el título con una flecha y, a la derecha, el botón + para añadir; se recuerda si estaba cerrada. */
-/** Con más de MAX_ROWS elementos (`rows`), el contenido de la sección tiene su propio scroll: alto de MAX_ROWS filas de `rowPx`. */
-const MAX_ROWS = 5
-function Fold({ id, title, count, rows = 0, rowPx = 28, onAdd, addTip, children }: { id: string; title: string; count?: number; rows?: number; rowPx?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
-  const key = `tutti.tutti.${id}.collapsed`
-  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
-  const toggle = (): void => setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })
+/** Acordeón: solo una sección abierta a la vez (se recuerda cuál); el resto se queda en su cabecera, así la columna no necesita scroll. */
+const OPEN_KEY = 'tutti.tutti.open'
+const Accordion = createContext<{ open: string | null; setOpen: (id: string | null) => void }>({ open: null, setOpen: () => {} })
+
+/** Sección del acordeón: el título con una flecha y, a la derecha, el botón + para añadir. La abierta ocupa el alto que sobra y hace scroll por dentro. */
+function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title: string; count?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
+  const { open, setOpen } = useContext(Accordion)
+  const isOpen = open === id
   return (
-    <section className="border-t border-line pb-1 first:border-t-0">
-      <div className="flex h-7 items-center">
-        <button onClick={toggle} aria-expanded={!collapsed} className="flex h-full min-w-0 flex-1 items-center gap-1 rounded px-1 text-left text-text transition-colors hover:text-accent">
-          <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
+    <section className={clsx('border-t border-line first:border-t-0', isOpen ? 'flex min-h-0 flex-1 flex-col pb-1' : 'shrink-0')}>
+      <div className="flex h-7 shrink-0 items-center">
+        <button onClick={() => setOpen(isOpen ? null : id)} aria-expanded={isOpen} className="flex h-full min-w-0 flex-1 items-center gap-1 rounded px-1 text-left text-text transition-colors hover:text-accent">
+          <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', isOpen && 'rotate-90')} />
           <h4 className="truncate text-[12px] font-semibold">{title}</h4>
           {count !== undefined && <span className="ml-1 rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
         </button>
         {onAdd && (
-          <button title={addTip} onClick={() => { setCollapsed(false); try { localStorage.setItem(key, '0') } catch { /* sin almacenamiento */ } onAdd() }}
+          <button title={addTip} onClick={() => { setOpen(id); onAdd() }}
             className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
             <MdAdd size={16} />
           </button>
         )}
       </div>
-      {!collapsed && (rows > MAX_ROWS ? <div className="sect-scroll overflow-y-auto" style={{ maxHeight: MAX_ROWS * rowPx }}>{children}</div> : children)}
+      {isOpen && <div className="sect-scroll min-h-0 flex-1 overflow-y-auto">{children}</div>}
     </section>
   )
 }
@@ -67,6 +68,8 @@ export function TuttiView() {
   const [agentsMd, setAgentsMd] = useState<AgentsPointerState | null>(null)          // el AGENTS.md del proyecto y su bloque que apunta a .tutti
   const [askTrust, setAskTrust] = useState(false)          // el diálogo que pide permitir los hooks del proyecto (al pulsar el interruptor de uno)
   const [hookChoice, setHookChoice] = useState(false)          // el diálogo «¿cómo quieres crear el hook?»
+  const [openSection, setOpenId] = useState<string | null>(() => { try { const v = localStorage.getItem(OPEN_KEY); return v === null ? 'docs' : v || null } catch { return 'docs' } })
+  const setOpen = useCallback((id: string | null): void => { setOpenId(id); try { localStorage.setItem(OPEN_KEY, id ?? '') } catch { /* sin almacenamiento */ } }, [])
   const [steeringInfo, setSteeringInfo] = useState<Record<string, SteeringInfo>>({})
   const [hooks, setHooks] = useState<{ list: HookInfo[]; trusted: boolean }>({ list: [], trusted: false })
   const [specInfo, setSpecs] = useState<Record<string, { files: DirEntry[]; done: number; total: number }>>({})   // por carpeta de spec
@@ -160,7 +163,7 @@ export function TuttiView() {
   const HooksSection = () => {
     const perFile = new Map<string, number>()
     return (
-      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} rows={hooks.list.length} rowPx={44} onAdd={() => setHookChoice(true)} addTip={t('tutti.add.hooks')}>
+      <Fold id="hooks" title={t('tutti.hooks')} count={hooks.list.length} onAdd={() => setHookChoice(true)} addTip={t('tutti.add.hooks')}>
         <ul>
           {hooks.list.map((h) => {
             const index = perFile.get(h.file) ?? 0
@@ -225,7 +228,7 @@ export function TuttiView() {
       await fill()
     }
     return (
-      <div className="border-t border-line px-1 pb-2 pt-1.5">
+      <div className="shrink-0 border-t border-line px-1 pb-2 pt-1.5">
         <div className="flex items-center gap-1.5">
           <img src={iconFor('AGENTS.md', false)} alt="" className="size-4 shrink-0" draggable={false} />
           <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{t('tutti.agentsTitle')}</span>
@@ -249,7 +252,7 @@ export function TuttiView() {
     const items: DirEntry[] = kind === 'docs' ? lists.docs.filter((e) => !e.isDir || specInfo[e.path]?.files.length) : lists[kind]
     const nothingYet = kind === 'docs' || items.length === 0
     return (
-    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} rows={items.length} onAdd={() => (kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
+    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} onAdd={() => (kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
       {creating === kind && !target && NameInput(kind)}
       {creating === 'docs' && kind === 'docs' && !target && (
         <div className="mx-1 mb-1.5 flex flex-wrap gap-1" role="radiogroup" aria-label={t('tutti.category')}>
@@ -303,7 +306,8 @@ export function TuttiView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-2 pb-2">
+    <Accordion.Provider value={{ open: openSection, setOpen }}>
+    <div className="flex h-full flex-col px-2 pb-2">
       <Section kind="docs" title={t('tutti.docs')} />
       <Fold id="roadmap" title={t('tutti.roadmap')} onAdd={roadmap && !roadmap.exists ? () => void createRoadmap(project, lang, openDoc).then((e) => { if (e) toast(e, 'error'); void refresh() }) : undefined} addTip={t('tutti.add.roadmap')}>
         <RoadmapBody state={roadmap} project={project} onChanged={() => void refresh()} />
@@ -331,5 +335,6 @@ export function TuttiView() {
       </Fold>
       {AgentsRow()}
     </div>
+    </Accordion.Provider>
   )
 }
