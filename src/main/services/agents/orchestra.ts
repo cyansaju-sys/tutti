@@ -21,7 +21,30 @@ Para repartir, llama a delegate_task con "difficulty" (easy, medium o hard) y la
 hazlo tú o pásalo a uno advanced. Para elegir modelo usa available_models sin inventar nombres; si viene vacío, busca en la web el comando con el que \
 ese agente lista sus modelos y ejecútalo. Cada tarea debe ser autosuficiente (archivos, objetivo, criterio de terminado) y sin que dos agentes editen \
 los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «[Tutti]»: sigue con lo tuyo y lee el resultado con read_agent_output \
-(wait_agent solo si no puedes avanzar sin él). Revisa siempre el resultado antes de darlo por bueno.`
+(wait_agent solo si no puedes avanzar sin él). Revisa siempre el resultado antes de darlo por bueno.
+
+Tarea grande o con varias partes: antes de repartir, escribe el plan (en .tutti/roadmap.md y, si es grande, en un cambio de OpenSpec) y revísalo: \
+¿está completo?, ¿cada parte tiene criterio de terminado?, ¿hay partes que tocan los mismos archivos? Deriva de él los roles y envíalos con propose_roles: \
+cada rol con id, name, responsibility, deliverables, done (criterio de terminado), files (los que solo ese rol edita), difficulty (easy, medium o hard) y dependsOn. \
+El agente y el modelo de cada rol los elige el usuario en el panel de la app (no los asignes tú; con el ajuste roles_assignment en auto, los asigna la app según \
+capacidad, límite de uso y modelos disponibles): un agente tiene un solo rol a la vez y, si el elegido no está libre, el rol espera. Si propose_roles devuelve errores, corrígelos y repítelo. Cuando el reparto te parezca bien llama a confirm_roles: la app \
+lanza los roles (tras la aprobación del usuario, si hace falta) cuando terminan sus dependencias y te avisa con «[Tutti]». Entonces revisa cada entregable \
+contra el criterio de terminado de su rol.`
+
+const ROLE_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', description: 'Identificador corto en minúsculas, números y guiones (p. ej. "api").' },
+    name: { type: 'string' },
+    responsibility: { type: 'string', description: 'Qué parte del plan hace este rol.' },
+    deliverables: { type: 'array', items: { type: 'string' }, description: 'Lo que debe entregar.' },
+    done: { type: 'string', description: 'Criterio de terminado: lo que comprobarás al revisar.' },
+    files: { type: 'array', items: { type: 'string' }, description: 'Archivos o carpetas que solo este rol edita. Vacío si solo lee.' },
+    difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] },
+    dependsOn: { type: 'array', items: { type: 'string' }, description: 'Ids de roles que deben terminar antes.' }
+  },
+  required: ['id', 'name', 'responsibility', 'deliverables', 'done', 'difficulty']
+}
 
 export const TOOLS = [
   {
@@ -47,6 +70,23 @@ export const TOOLS = [
       },
       required: ['task']
     }
+  },
+  {
+    name: 'propose_roles',
+    description: 'Propone los roles de un plan ya escrito y revisado. La app comprueba que sean válidos (sin ciclos ni archivos compartidos) y devuelve a qué agente y modelo asignaría cada uno, sin lanzar nada. Si hay errores, corrígelos y vuelve a llamarla; sustituye a la propuesta anterior mientras no haya roles en marcha.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', description: 'Resumen del plan o dónde está (roadmap, cambio de OpenSpec).' },
+        roles: { type: 'array', items: ROLE_SCHEMA }
+      },
+      required: ['roles']
+    }
+  },
+  {
+    name: 'confirm_roles',
+    description: 'Da por revisado el plan de roles propuesto. Si hace falta, la app espera la aprobación del usuario; después lanza cada rol en su agente y modelo cuando terminan sus dependencias y te avisa al terminar.',
+    inputSchema: { type: 'object', properties: {} }
   },
   {
     name: 'wait_agent',
@@ -78,7 +118,9 @@ export interface AgentOutput { agent_id: string; busy: boolean; idle_seconds: nu
 /** Lo que la app ofrece al servidor. */
 export interface Host {
   listAgents(caller: string): unknown | Promise<unknown>
-  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string }): Promise<{ ok: boolean; info: unknown }>
+  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string; role?: string }): Promise<{ ok: boolean; info: unknown }>
+  proposeRoles(caller: string, summary: string, roles: unknown): Promise<{ ok: boolean; info: unknown }>
+  confirmRoles(caller: string): Promise<{ ok: boolean; info: unknown }>
   output(agentId: string, lines: number): AgentOutput | null
   /** wait_agent ya entregó el resultado de este agente: no hace falta avisar al líder. */
   reported?(agentId: string): void
@@ -172,6 +214,14 @@ export class Orchestra {
       if (!task || (!args.agent && !difficulty)) return text('Faltan `task` y `agent` (o `difficulty` para que la app elija).', true)
       if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) return text('`difficulty` debe ser easy, medium o hard.', true)
       const { ok, info } = await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force), model: args.model === undefined ? undefined : String(args.model).trim() || undefined })
+      return text(info, !ok)
+    }
+    if (name === 'propose_roles') {
+      const { ok, info } = await this.host.proposeRoles(caller, String(args.summary ?? '').trim(), args.roles)
+      return text(info, !ok)
+    }
+    if (name === 'confirm_roles') {
+      const { ok, info } = await this.host.confirmRoles(caller)
       return text(info, !ok)
     }
     if (name === 'read_agent_output') {

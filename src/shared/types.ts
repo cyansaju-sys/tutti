@@ -35,7 +35,41 @@ export interface OpenPane { id: string; name: string; command: string; args?: st
 export interface TaskInfo {
   id: number; agentId: string; agent: string; callerId: string; caller: string
   task: string; model: string | null; difficulty: string | null; startedAt: number; endedAt: number | null
+  /** Id del rol del plan que cumple esta tarea, si salió de uno. */
+  role?: string | null
   status: 'working' | 'done' | 'closed'
+}
+/** Un rol del plan tal como lo ve el panel de agentes. */
+export interface RoleInfo {
+  id: string; name: string; responsibility: string; deliverables: string[]; done: string; files: string[]
+  difficulty: 'easy' | 'medium' | 'hard'; dependsOn: string[]
+  /** Agente y modelo elegidos a mano (si no, los elige Tutti). */
+  assign?: { agent: string; model?: string }
+  /** waiting: espera a otros roles · ready: ya puede empezar (falta agente) · running · done */
+  status: 'waiting' | 'ready' | 'running' | 'done'
+  agentId: string | null; agent: string | null; model: string | null
+  /** Por qué aún no arranca (sin agente libre, no se pudo lanzar…); solo si está listo y no ha empezado. */
+  note?: string
+}
+/** Lo que se puede cambiar de un rol que aún no empezó; `assign: null` vuelve al reparto automático. */
+export interface RoleEdit {
+  name?: string; responsibility?: string; deliverables?: string[]; done?: string; files?: string[]
+  difficulty?: 'easy' | 'medium' | 'hard'; dependsOn?: string[]; assign?: { agent: string; model?: string } | null
+}
+/** Un agente al que se puede asignar un rol, con los modelos que ofrece. `value` es el id del panel abierto o el comando del instalado. */
+export interface RoleAgentOption {
+  value: string; label: string; open: boolean; canSetModel: boolean
+  models: Array<{ id: string; tier: 'basic' | 'standard' | 'advanced' }>
+}
+/** El plan de roles del proyecto: proposed (el líder aún lo prepara), reviewed (espera al usuario) o approved (se reparte). */
+export interface RolePlanInfo {
+  status: 'proposed' | 'reviewed' | 'approved'; summary: string; roles: RoleInfo[]
+  /** Aprobado y repartiendo. Un plan aprobado que no está en marcha (p. ej. tras reiniciar la app) espera a que lo inicies. */
+  started: boolean
+  /** Lo que impide repartir ahora, si algo. */
+  problem?: string
+  /** Quién elige el agente y el modelo de cada rol: el usuario o la app. */
+  assignment: 'manual' | 'auto'
 }
 export interface PtyExit { id: string; code: number | null; error?: string }
 
@@ -251,6 +285,18 @@ export interface Api {
     onOpenPane(cb: (pane: OpenPane) => void): () => void
     tasks(): Promise<TaskInfo[]>
     clearTasks(): Promise<void>
+    /** El usuario aprueba el plan de roles que el líder dejó listo en el proyecto; false si no había ninguno por aprobar. */
+    approveRoles(project: string): Promise<boolean>
+    /** Pone en marcha el reparto de un plan ya aprobado (tras reiniciar la app, por ejemplo); false si no se pudo. */
+    startRoles(project: string): Promise<boolean>
+    /** El plan de roles del proyecto; null si no hay. */
+    roles(project: string): Promise<RolePlanInfo | null>
+    /** Descarta el plan de roles (y su archivo); false si hay roles en marcha. */
+    discardRoles(project: string): Promise<boolean>
+    /** Cambia un rol que aún no empezó; `errors` explica por qué no valió. */
+    updateRole(project: string, id: string, edit: RoleEdit): Promise<{ ok: boolean; errors: string[] }>
+    /** Los agentes (abiertos e instalados) y sus modelos, para asignar roles a mano. */
+    roleOptions(project: string): Promise<RoleAgentOption[]>
     onToast(cb: (message: string, kind: 'ok' | 'error' | 'info') => void): () => void
   }
   pty: {

@@ -16,9 +16,9 @@ const MARGIN = 14      // separación mínima del borde de la ventana
 
 /**
  * Menú desplegable anclado a un botón (`anchor` = su rectángulo en pantalla): se abre debajo, alineado a su borde derecho, y
- * pasa arriba si abajo no cabe. Se cierra con Esc, al pulsar fuera o al elegir algo. ↑↓ y Enter funcionan; → abre un submenú y ← lo cierra.
+ * pasa arriba si abajo no cabe (con `scroll`, una lista larga se desplaza en lugar de salirse; no vale con submenús, que se recortarían). Se cierra con Esc, al pulsar fuera o al elegir algo. ↑↓ y Enter funcionan; → abre un submenú y ← lo cierra.
  */
-export function Menu({ anchor, items, onClose, width = WIDTH }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void; width?: number }) {
+export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void; width?: number; scroll?: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   const shown = items.filter((i) => !i.hidden)
   const [index, setIndex] = useState(-1)          // nada resaltado hasta pasar el ratón o usar las flechas
@@ -89,7 +89,7 @@ export function Menu({ anchor, items, onClose, width = WIDTH }: { anchor: DOMRec
       <div
         ref={box} role="menu" onMouseDown={(e) => e.stopPropagation()}
         style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width }}
-        className="absolute animate-pop-in rounded-xl border border-ov/[0.08] bg-pop p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]"
+        className={clsx('absolute animate-pop-in rounded-xl border border-ov/[0.08] bg-pop p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]', scroll && 'sect-scroll max-h-[60vh] overflow-y-auto')}
       >
         {shown.map((item, i) => (
           <div key={item.label} className="relative">
