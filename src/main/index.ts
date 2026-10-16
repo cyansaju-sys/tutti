@@ -17,7 +17,7 @@ import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './servi
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { GitOp, PtyOptions, SearchOptions } from '../shared/types'
+import type { GitOp, PtyOptions, RoleEdit, SearchOptions } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -27,7 +27,7 @@ import { applySync, pullSync, resolveSync, standardizeProject, syncState } from 
 import { featuredServers, searchRegistry } from './services/mcp/registry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
-import { appMcpInfo, clearTasks, newId, startHub, stopHub, taskList } from './services/agents/hub'
+import { appMcpInfo, approveRoles, clearTasks, discardRoles, newId, roleOptions, rolesState, startHub, startRoles, stopHub, taskList, updateRole } from './services/agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -188,6 +188,12 @@ function registerIpc(): void {
   ipcMain.handle('orchestra:newId', () => newId())
   ipcMain.handle('orchestra:tasks', () => taskList())
   ipcMain.handle('orchestra:tasks-clear', () => clearTasks())
+  ipcMain.handle('orchestra:roles-approve', (_e, project: string) => approveRoles(project))
+  ipcMain.handle('orchestra:roles-start', (_e, project: string) => startRoles(project))
+  ipcMain.handle('orchestra:roles', (_e, project: string) => rolesState(project))
+  ipcMain.handle('orchestra:roles-discard', (_e, project: string) => discardRoles(project))
+  ipcMain.handle('orchestra:roles-update', (_e, project: string, id: string, edit: RoleEdit) => updateRole(project, id, edit))
+  ipcMain.handle('orchestra:roles-options', (_e, project: string) => roleOptions(project))
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())
   ipcMain.handle('agents:candidates', () => candidateExecutables())

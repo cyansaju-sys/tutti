@@ -64,8 +64,9 @@ export function buildLaunch(command: string, entry: McpEntry | null, prompt: str
   if (command === 'claude') return claudeLaunch(entry, first, given, context)
   if (command === 'opencode') return opencodeLaunch(entry, first, given, opencodeMajor, context, project)
   if (command === 'codex' && entry) return codexLaunch(entry, given)
-  if (command === 'agy' && entry) return { args: given, env: agyEnv(entry) }
-  return { args: given, env: {} }
+  // la tarea inicial va primero también aquí: deliverTask da por entregada la de los agentes con PROMPT_ARGS, y sin ella arrancarían sin nada que hacer
+  if (command === 'agy' && entry) return { args: [...first, ...given], env: agyEnv(entry) }
+  return { args: [...first, ...given], env: {} }
 }
 
 /** Antigravity recibe la URL y la clave de su sesión por entorno; el puente que registra Tutti (agyBridge) las lee. */

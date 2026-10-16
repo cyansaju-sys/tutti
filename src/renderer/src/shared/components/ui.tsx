@@ -1,7 +1,9 @@
 import { useT } from '@/shared/lib/i18n'
 import { clsx } from 'clsx'
-import { useEffect, useRef, type ReactNode } from 'react'
-import { MdClose } from 'react-icons/md'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { MdClose, MdUnfoldMore } from 'react-icons/md'
+import { Menu } from '@/shared/components/Menu'
 
 /** Botón de ícono sin borde: el estilo base de toda la barra. */
 export function IconButton({ title, onClick, children, className, danger }: {
@@ -73,7 +75,7 @@ export function Resizer({ onDrag, direction = 'x' }: { onDrag: (delta: number, d
 export function Modal({ onClose, children, width = 520, title, top }: { onClose: () => void; children: ReactNode; width?: number; title?: string; top?: boolean }) {
   const t = useT()
   useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }
+    const onKey = (e: KeyboardEvent): void => { if (e.key === 'Escape' && !document.querySelector('[role="menu"]')) { e.stopPropagation(); onClose() } }          // con un menú abierto encima, Esc es suyo
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
@@ -104,3 +106,20 @@ export function Kbd({ children }: { children: ReactNode }) {
 export const FIELD = 'w-full rounded-md bg-ov/[0.04] px-3 py-2 text-[12px] caret-accent outline-none placeholder:text-muted/70'
 /** Igual, más delgado: para los campos de la barra lateral (buscar, reemplazar, filtros). */
 export const FIELD_SLIM = 'w-full rounded-md bg-ov/[0.04] px-2.5 py-1 text-[12px] caret-accent outline-none placeholder:text-muted/70'
+
+/** Lista desplegable con el aspecto de la app (el `<select>` del sistema no sigue el tema): un campo que abre un menú con la opción elegida marcada. */
+export function Select({ value, options, onChange, disabled, title }: { value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void; disabled?: boolean; title?: string }) {
+  const [anchor, setAnchor] = useState<DOMRect | null>(null)
+  const current = options.find((o) => o.value === value)
+  return (
+    <>
+      <button type="button" disabled={disabled} title={title} aria-haspopup="listbox" onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}
+        className={clsx(FIELD, 'flex items-center justify-between gap-2 text-left', disabled ? 'cursor-default opacity-50' : 'hover:bg-ov/[0.07]')}>
+        <span className="truncate">{current?.label ?? value}</span>
+        <MdUnfoldMore size={15} className="shrink-0 text-muted" />
+      </button>
+      {/* en el body, no dentro del campo: dentro de un <label>, el clic en una opción le llegaba al botón y volvía a abrir la lista */}
+      {anchor && createPortal(<Menu anchor={anchor} width={Math.max(anchor.width, 160)} scroll onClose={() => setAnchor(null)} items={options.map((o) => ({ label: o.label, checked: o.value === value, onClick: () => onChange(o.value) }))} />, document.body)}
+    </>
+  )
+}

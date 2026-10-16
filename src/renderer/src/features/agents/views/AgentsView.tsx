@@ -57,7 +57,7 @@ function Tasks() {
                 {open && <button title={t('ag.goTo')} onClick={(e) => { e.stopPropagation(); useStore.getState().focusPane(task.agentId) }} className="grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent"><MdOpenInNew size={12} /></button>}
               </div>
               <div className={clsx('mt-0.5 whitespace-pre-wrap break-words text-[11px] leading-snug text-muted', expanded !== task.id && 'line-clamp-2')}>{task.task}</div>
-              <div className="mt-0.5 truncate text-[10px] text-muted/80">{t('ag.from', { caller: task.caller })}{task.model ? ` · ${task.model}` : ''}{task.difficulty ? ` · ${task.difficulty}` : ''}</div>
+              <div className="mt-0.5 truncate text-[10px] text-muted/80">{t('ag.from', { caller: task.caller })}{task.model ? ` · ${task.model}` : ''}{task.difficulty ? ` · ${task.difficulty}` : ''}{task.role ? ` · ${t('ag.role', { role: task.role })}` : ''}</div>
             </li>
           )
         })}

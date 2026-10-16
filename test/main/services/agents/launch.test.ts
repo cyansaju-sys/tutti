@@ -79,4 +79,9 @@ describe('Antigravity (puente MCP)', () => {
     expect(buildLaunch('agy', entry, undefined, ['--model', 'x'], 2)).toEqual({ args: ['--model', 'x'], env: { TUTTI_MCP_URL: entry.url, TUTTI_MCP_AUTH: 'Bearer clave' } })
     expect(buildLaunch('agy', null, undefined, [], 2).env).toEqual({})
   })
+
+  it('Antigravity recibe la tarea inicial como argumento, con y sin servidor de tareas, y antes de lo demás', () => {
+    expect(buildLaunch('agy', entry, ' haz algo ', ['--model', 'x'], 2).args).toEqual(['--prompt-interactive', 'haz algo', '--model', 'x'])
+    expect(buildLaunch('agy', null, 'haz algo', [], 2).args).toEqual(['--prompt-interactive', 'haz algo'])
+  })
 })

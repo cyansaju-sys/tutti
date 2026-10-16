@@ -2,6 +2,15 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.3.5
+
+### Functional
+
+- **Roles for big tasks:** an agent can now prepare a plan, review it and split it into **roles**, each with its responsibility, deliverables, definition of done and the files only it edits. **You choose each role's agent and model** (the plan cannot be approved until every role has an agent). If you would rather Tutti assign them according to difficulty, each model's capability and usage limits, set `"roles_assignment": "auto"` in `settings.json`. An agent does one role at a time: if the chosen one is busy, the role waits (on automatic it goes to another, opening a new one if needed). Roles that depend on others start when those finish, and the leader is notified as each one ends and when all are done.
+- **You approve the plan before it is handed out:** the leader leaves it reviewed and the **Explorer**, under the file tree, shows the **Role plan** (collapsible, like the project root) with each role, its agent and its model, and the **Approve and start** button. While you wait, the leader cannot hand out other tasks. You can also **discard the plan**, and if you close the app with an approved plan, **Start handing out** appears when you come back to resume it. If a role does not start, the panel says why. If you would rather it be handed out without asking, set `"roles_approval": false` in `settings.json`. The plan is saved in `.tutti/roles.json`.
+- **Edit roles and pick their agent and model by hand:** click a role of the plan that has not started to change its name, responsibility, deliverables, definition of done, files, difficulty and dependencies, and to assign it an agent (open or installed) and one of the models it offers. What you pick by hand is respected: if that agent is busy, the role waits instead of going to another. On automatic, Tutti still chooses.
+- **Delegated tasks show which role they come from.**
+
 ## 1.3.4
 
 ### Funcional

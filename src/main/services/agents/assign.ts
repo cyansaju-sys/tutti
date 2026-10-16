@@ -34,10 +34,10 @@ function cost(c: Candidate, d: Difficulty): number {
   return (c.busy ? 100 : 0) + (c.id ? 0 : 10) + Math.max(0, spare) * 5 + ((c.quota ?? 0) >= QUOTA_LOW ? 30 : 0)
 }
 
-export interface Assignment { chosen: Candidate | null; reason: string; ranking: Candidate[] }
+export interface Assignment<C extends Candidate = Candidate> { chosen: C | null; reason: string; ranking: C[] }
 
 /** Elige el mejor agente para la dificultad. Si ninguno llega al nivel pedido, devuelve el más capaz y lo avisa. */
-export function pickAgent(candidates: Candidate[], d: Difficulty): Assignment {
+export function pickAgent<C extends Candidate>(candidates: C[], d: Difficulty): Assignment<C> {
   const usable = candidates.filter((c) => !exhausted(c))
   const enough = usable.filter((c) => capable(c, d)).sort((a, b) => cost(a, d) - cost(b, d))
   if (enough.length) return { chosen: enough[0], ranking: enough, reason: tm('m.assign.enough', { tier: enough[0].tier, d }) }

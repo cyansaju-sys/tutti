@@ -63,6 +63,12 @@ const api: Api = {
     newId: () => ipcRenderer.invoke('orchestra:newId'),
     tasks: () => ipcRenderer.invoke('orchestra:tasks'),
     clearTasks: () => ipcRenderer.invoke('orchestra:tasks-clear'),
+    approveRoles: (project) => ipcRenderer.invoke('orchestra:roles-approve', project),
+    startRoles: (project) => ipcRenderer.invoke('orchestra:roles-start', project),
+    roles: (project) => ipcRenderer.invoke('orchestra:roles', project),
+    discardRoles: (project) => ipcRenderer.invoke('orchestra:roles-discard', project),
+    updateRole: (project, id, edit) => ipcRenderer.invoke('orchestra:roles-update', project, id, edit),
+    roleOptions: (project) => ipcRenderer.invoke('orchestra:roles-options', project),
     onOpenPane: (cb) => subscribe<[OpenPane]>('orchestra:open-pane', cb),
     onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb)
   },

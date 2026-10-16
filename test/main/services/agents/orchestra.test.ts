@@ -5,6 +5,8 @@ const calls: unknown[][] = []
 const host: Host = {
   listAgents: (caller) => ({ you_are: caller, open_agents: [] }),
   delegate: async (caller, target, task, fresh, opts) => { calls.push(opts?.difficulty ? [caller, target, task, fresh, opts] : [caller, target, task, fresh]); return target === 'malo' ? { ok: false, info: 'no existe' } : { ok: true, info: { agent_id: target } } },
+  proposeRoles: async (caller, summary, roles) => { calls.push([caller, 'propose', summary, roles]); return Array.isArray(roles) && roles.length ? { ok: true, info: { roles: [] } } : { ok: false, info: 'sin roles' } },
+  confirmRoles: async (caller) => { calls.push([caller, 'confirm']); return { ok: true, info: { status: 'approved' } } },
   output: (id) => (id === 'a2' ? { agent_id: 'a2', busy: false, idle_seconds: 9, text: 'listo' } : null)
 }
 let server: Orchestra | null = null
@@ -34,7 +36,7 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(await (await post(rpc('ping'))).json()).toMatchObject({ result: {} })
     const tools = await (await post(rpc('tools/list'))).json()
     expect(tools.result.tools.map((t: { name: string }) => t.name)).toEqual(TOOLS.map((t) => t.name))
-    expect(tools.result.tools).toHaveLength(4)
+    expect(tools.result.tools).toHaveLength(6)
   })
 
   it('las notificaciones no tienen respuesta y un método desconocido da error', async () => {
@@ -64,6 +66,26 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(wrong.result.isError).toBe(true)
     const none = await (await post(rpc('tools/call', { name: 'delegate_task', arguments: { task: 'x' } }))).json()
     expect(none.result.isError).toBe(true)
+  })
+
+  it('propose_roles y confirm_roles pasan quién llama y los roles tal cual; los errores llegan como isError', async () => {
+    const { post } = await start()
+    const roles = [{ id: 'api', name: 'API', responsibility: 'x', deliverables: ['y'], done: 'z', difficulty: 'easy' }]
+    const ok = await (await post(rpc('tools/call', { name: 'propose_roles', arguments: { summary: ' plan ', roles } }))).json()
+    expect(ok.result.isError).toBe(false)
+    expect(calls[0]).toEqual(['a1', 'propose', 'plan', roles])
+    const bad = await (await post(rpc('tools/call', { name: 'propose_roles', arguments: {} }))).json()
+    expect(bad.result.isError).toBe(true)
+    const confirmed = await (await post(rpc('tools/call', { name: 'confirm_roles', arguments: {} }))).json()
+    expect(confirmed.result.isError).toBe(false)
+    expect(calls[2]).toEqual(['a1', 'confirm'])
+  })
+
+  it('las instrucciones explican el flujo de roles', async () => {
+    const { post } = await start()
+    const init = await (await post(rpc('initialize'))).json()
+    expect(init.result.instructions).toContain('propose_roles')
+    expect(init.result.instructions).toContain('confirm_roles')
   })
 
   it('read_agent_output y wait_agent', async () => {

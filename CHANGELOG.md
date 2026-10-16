@@ -2,6 +2,15 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.5
+
+### Funcional
+
+- **Roles para las tareas grandes:** ahora un agente puede preparar un plan, revisarlo y repartirlo en **roles**, cada uno con su responsabilidad, sus entregables, su criterio de terminado y los archivos que solo él edita. **El agente y el modelo de cada rol los eliges tú** (el plan no se puede aprobar hasta que cada rol tenga agente). Si prefieres que Tutti los asigne según la dificultad, la capacidad de cada modelo y su límite de uso, pon `"roles_assignment": "auto"` en `settings.json`. Un agente hace un solo rol a la vez: si el elegido está ocupado, el rol espera (en automático pasa a otro, abriendo uno nuevo si hace falta). Los roles que dependen de otros arrancan cuando estos terminan, y el líder recibe un aviso al acabar cada uno y al terminar todos.
+- **Tú apruebas el plan antes de que se reparta:** el líder lo deja revisado y en el **Explorador**, bajo el árbol de archivos, aparece el **Plan de roles** (plegable, como la raíz del proyecto) con cada rol, su agente y su modelo, y el botón **Aprobar y repartir**. Mientras esperas, el líder no puede repartir otras tareas. También puedes **descartar el plan**, y si cierras la app con un plan aprobado, al volver aparece **Iniciar el reparto** para retomarlo. Si un rol no arranca, el panel dice por qué. Si prefieres que se reparta sin preguntar, pon `"roles_approval": false` en `settings.json`. El plan se guarda en `.tutti/roles.json`.
+- **Edita los roles y elige a mano su agente y su modelo:** pulsa un rol del plan que aún no ha empezado para cambiar su nombre, responsabilidad, entregables, criterio de terminado, archivos, dificultad y dependencias, y para asignarle un agente (abierto o instalado) y uno de los modelos que ofrece. Lo que eliges a mano se respeta: si ese agente está ocupado, el rol espera en lugar de pasar a otro. En automático lo sigue eligiendo Tutti.
+- **Las tareas delegadas indican de qué rol vienen.**
+
 ## 1.3.4
 
 ### Funcional
