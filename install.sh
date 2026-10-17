@@ -55,7 +55,7 @@ command -v curl >/dev/null 2>&1 || fail "falta curl"
 
 # --- qué descargar -----------------------------------------------------------------------------------------------------
 if [ -n "${TUTTI_ASSET_URL:-}" ]; then            # solo para pruebas del instalador
-  URL="$TUTTI_ASSET_URL"; TAG="${VERSION:-prueba}"; ICON_URL="${TUTTI_ICON_URL:-}"
+  URL="$TUTTI_ASSET_URL"; TAG="${VERSION:-prueba}"; ICON_URL="${TUTTI_ICON_URL:-}"; LAUNCHER_URL="${TUTTI_LAUNCHER_URL:-}"
 else
   API="https://api.github.com/repos/$REPO/releases/latest"
   [ -n "$VERSION" ] && API="https://api.github.com/repos/$REPO/releases/tags/v$VERSION"
@@ -64,6 +64,7 @@ else
   URL="$(printf '%s' "$JSON" | sed -n 's/.*"browser_download_url": *"\([^"]*\.AppImage\)".*/\1/p' | head -n 1)"
   [ -n "$URL" ] || fail "la release $TAG no trae un AppImage"
   ICON_URL="https://raw.githubusercontent.com/$REPO/$TAG/resources/icon.png"
+  LAUNCHER_URL="https://raw.githubusercontent.com/$REPO/$TAG/resources/bin/tutti"
 fi
 
 say "Descargando Tutti $TAG…"
@@ -78,14 +79,25 @@ ICON="utilities-terminal"
 if [ -n "$ICON_URL" ] && curl -fsSL "$ICON_URL" -o "$DIR/icon.png" 2>/dev/null; then ICON="$DIR/icon.png"; fi
 
 # Un AppImage necesita FUSE 2 para montarse; sin él se ejecuta extrayéndose a una carpeta temporal.
-RUN="exec \"$DIR/Tutti.AppImage\" \"\$@\""
-LIBS="$(ldconfig -p 2>/dev/null || true)"           # (sin `| grep -q`: con pipefail, grep cierra la tubería y daría un falso «no»)
+EXTRACT=0
+LIBS="$(ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null || true)"     # (sin `| grep -q`: con pipefail, grep cierra la tubería y daría un falso «no»)
 case "$LIBS" in
   *libfuse.so.2*) ;;
-  *) say "No encuentro FUSE 2 (libfuse2 / fuse2): Tutti arrancará un poco más lento. Instálalo para que abra al instante."
-     RUN="export APPIMAGE_EXTRACT_AND_RUN=1; $RUN" ;;
+  *) say "No encuentro FUSE 2 (libfuse2 / fuse2): Tutti arrancará un poco más lento. Instálalo para que abra al instante."; EXTRACT=1 ;;
 esac
-printf '#!/usr/bin/env bash\n%s\n' "$RUN" > "$BIN/tutti"; chmod +x "$BIN/tutti"
+
+# El comando `tutti` (resources/bin/tutti de esa versión; la app lo mantiene al día). Las versiones que no lo traen
+# reciben el lanzador simple de siempre, y la app lo cambia por el suyo al abrirse si ya lo tiene.
+APP="$DIR/Tutti.AppImage"
+if [ -n "$LAUNCHER_URL" ] && TEMPLATE="$(curl -fsSL "$LAUNCHER_URL" 2>/dev/null)" && [ -n "$TEMPLATE" ]; then
+  ESCAPED="$(printf '%s' "$APP" | sed 's/[\\"$`]/\\&/g')"
+  printf '%s\n' "${TEMPLATE//@APPIMAGE@/"$ESCAPED"}" > "$BIN/tutti"
+else
+  RUN="exec \"$APP\" \"\$@\""
+  [ "$EXTRACT" = 1 ] && RUN="export APPIMAGE_EXTRACT_AND_RUN=1; $RUN"
+  printf '#!/usr/bin/env bash\n%s\n' "$RUN" > "$BIN/tutti"
+fi
+chmod +x "$BIN/tutti"
 
 cat > "$DESKTOP" <<ENTRY
 [Desktop Entry]
@@ -105,5 +117,5 @@ Exec=$BIN/tutti --new-window
 ENTRY
 update_desktop_db
 
-say "Listo. Ejecuta «tutti» o búscalo en el menú de aplicaciones."
+say "Listo. Ejecuta «tutti» (o «tutti .» en la carpeta de un proyecto) o búscalo en el menú de aplicaciones."
 case ":$PATH:" in *":$BIN:"*) ;; *) say "Ojo: $BIN no está en tu PATH; añádelo a tu ~/.bashrc o ~/.zshrc." ;; esac

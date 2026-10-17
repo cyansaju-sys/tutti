@@ -2,6 +2,16 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.6
+
+### Funcional
+
+- **Abre proyectos desde la terminal:** `tutti .` abre la carpeta actual como proyecto y `tutti ~/ruta/al/proyecto` abre esa, como `code .` en VS Code. Con un archivo (`tutti src/main.ts`) se abre su repositorio git (o su carpeta, si no está en ninguno) y el archivo queda delante en el editor. La carpeta pasa a ser el último proyecto y entra en los recientes; si ya la habías abierto, vuelven su pestaña y sus archivos. `tutti` a secas sigue abriendo el último proyecto.
+- **El comando `tutti` ya no ocupa la terminal:** la app se abre aparte y puedes seguir usando la terminal. Si la ruta que le pasas no existe, te lo dice y no abre nada.
+- **El comando `tutti` también en Windows:** el instalador lo añade al `PATH` de tu usuario (lo ven las terminales que abras después de instalar) y lo quita al desinstalar.
+- **En Linux el comando se crea solo:** si descargaste el AppImage a mano, la primera vez que lo abres crea `~/.local/bin/tutti`, y lo mantiene al día si mueves el AppImage. Si ya tienes un `tutti` propio en esa ruta, no lo toca.
+- **`Ctrl+Q` cierra la aplicación**, igual que el botón ✕ de la barra de título. Está en la lista de atajos (`F1`).
+
 ## 1.3.5
 
 ### Funcional

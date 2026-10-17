@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# tutti-launcher: el comando `tutti` de la terminal. Lo crean install.sh y la propia app (que lo mantiene al día): no lo edites.
+#   tutti            abre el último proyecto
+#   tutti .          abre la carpeta actual como proyecto
+#   tutti <ruta>     una carpeta como proyecto, o un archivo con su repositorio
+APP="@APPIMAGE@"
+[ -x "$APP" ] || { echo "tutti: no encuentro $APP (reinstala con install.sh)" >&2; exit 1; }
+
+# Un AppImage necesita FUSE 2 para montarse; sin él se ejecuta extrayéndose a una carpeta temporal (abre más despacio).
+case "$(ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null)" in
+  *libfuse.so.2*) ;;
+  *) export APPIMAGE_EXTRACT_AND_RUN=1 ;;
+esac
+
+case "${1:-}" in --tutti-version) exec "$APP" "$@" ;; esac          # lo que imprime algo se queda en la terminal
+
+for arg in "$@"; do                                                # la ruta se comprueba aquí: la app ya no escribe en la terminal
+  case "$arg" in -*) ;; *) [ -e "$arg" ] || { echo "tutti: no existe $arg" >&2; exit 1; }; break ;; esac
+done
+
+nohup "$APP" "$@" >/dev/null 2>&1 &                                # la app se abre aparte y la terminal queda libre

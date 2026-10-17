@@ -28,6 +28,7 @@ import { applySync, pullSync, resolveSync, standardizeProject, syncState } from 
 import { featuredServers, searchRegistry } from './services/mcp/registry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
+import { ensureLauncher } from './services/cli'
 import { appMcpInfo, approveRoles, clearTasks, discardRoles, newId, roleOptions, rolesState, startHub, startRoles, stopHub, taskList, updateRole } from './services/agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
@@ -245,6 +246,7 @@ if (process.env.TUTTI_CAPTURE) app.setPath('appData', join(app.getPath('temp'), 
 
 app.whenReady().then(() => {
   if (!process.env.TUTTI_CAPTURE) migrateLegacyConfig()
+  if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) ensureLauncher()        // el comando `tutti` de la terminal
   Menu.setApplicationMenu(null)             // sin menú: los atajos los gestiona la propia app
   registerIpc()
   if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) setupUpdater(() => win)

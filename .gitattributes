@@ -1,0 +1,4 @@
+# los .cmd de Windows con CRLF: cmd.exe lee mal algunas líneas con LF
+*.cmd text eol=crlf
+# el lanzador de Linux con LF siempre: bash no admite CRLF y la app lo compara byte a byte para saber si está al día
+resources/bin/tutti text eol=lf

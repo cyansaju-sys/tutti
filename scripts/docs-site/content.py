@@ -19,8 +19,20 @@ sec('instalar', 'Instalar', 'Install', '''
 </table>
 <p>Variables: <code>TUTTI_HOME</code> (dónde se guarda el AppImage) y <code>TUTTI_REPO</code> (usuario/repositorio).</p>
 <h3>Windows</h3>
-<p>Descarga <strong>Tutti-Setup-X.Y.Z.exe</strong> de la <a href="https://github.com/cyansaju-sys/tutti/releases/latest">última release</a> y ábrelo. Se instala para tu usuario y crea el acceso directo.</p>
+<p>Descarga <strong>Tutti-Setup-X.Y.Z.exe</strong> de la <a href="https://github.com/cyansaju-sys/tutti/releases/latest">última release</a> y ábrelo. Se instala para tu usuario, crea el acceso directo y añade el comando <code>tutti</code> a tu <code>PATH</code>.</p>
 <div class="note">El instalador no está firmado: Windows puede mostrar el aviso de SmartScreen. Pulsa <strong>Más información → Ejecutar de todas formas</strong>.</div>
+<h3>Abrir desde la terminal</h3>
+<p>El comando <code>tutti</code> abre la app con un proyecto, como <code>code .</code> en VS Code. La app se abre aparte y la terminal queda libre.</p>
+<table>
+<tr><th>Comando</th><th>Qué abre</th></tr>
+<tr><td><code>tutti</code></td><td>El último proyecto</td></tr>
+<tr><td><code>tutti .</code></td><td>La carpeta actual como proyecto</td></tr>
+<tr><td><code>tutti ~/ruta/al/proyecto</code></td><td>Esa carpeta como proyecto</td></tr>
+<tr><td><code>tutti src/main.ts</code></td><td>El repositorio git del archivo (o su carpeta, si no está en ninguno) y el archivo en el editor</td></tr>
+<tr><td><code>tutti --new-window</code></td><td>Una ventana vacía, sin proyecto</td></tr>
+</table>
+<p>Cada <code>tutti</code> abre una ventana nueva, con sus propios agentes. La carpeta queda como último proyecto y en los recientes; si ya la habías abierto, vuelven su pestaña y sus archivos. Si la ruta no existe, el comando lo dice y no abre nada.</p>
+<p>En <strong>Linux</strong> el comando es <code>~/.local/bin/tutti</code>: lo crea <code>install.sh</code> y, si descargaste el AppImage a mano, la propia app la primera vez que la abres. La app lo mantiene al día (por ejemplo, si mueves el AppImage) y no toca un <code>tutti</code> que no sea suyo. En <strong>Windows</strong> el instalador añade <code>resources\\bin</code> (la carpeta con <code>tutti.cmd</code>) al <code>PATH</code> de tu usuario y lo quita al desinstalar; lo ven las terminales que abras después de instalar.</p>
 <h3>Actualizaciones</h3>
 <p>La app se actualiza sola. Cuando sale una release nueva aparece el botón <strong>Actualizar a vX.Y.Z</strong> arriba a la derecha: al pulsarlo descarga la versión, verifica su hash y se reinicia para aplicarla. La primera vez que la abres después de actualizar, un diálogo te cuenta las <strong>novedades</strong> (o las de todas las versiones que te saltaste); puedes volver a verlas pulsando el número de versión junto al nombre de la app.</p>
 <img src="img/actualizar.png" alt="Botón de actualización" loading="lazy" />
@@ -37,8 +49,20 @@ sec('instalar', 'Instalar', 'Install', '''
 </table>
 <p>Variables: <code>TUTTI_HOME</code> (where the AppImage is stored) and <code>TUTTI_REPO</code> (user/repository).</p>
 <h3>Windows</h3>
-<p>Download <strong>Tutti-Setup-X.Y.Z.exe</strong> from the <a href="https://github.com/cyansaju-sys/tutti/releases/latest">latest release</a> and open it. It installs for your user and creates the shortcut.</p>
+<p>Download <strong>Tutti-Setup-X.Y.Z.exe</strong> from the <a href="https://github.com/cyansaju-sys/tutti/releases/latest">latest release</a> and open it. It installs for your user, creates the shortcut and adds the <code>tutti</code> command to your <code>PATH</code>.</p>
 <div class="note">The installer is not signed: Windows may show the SmartScreen warning. Click <strong>More info → Run anyway</strong>.</div>
+<h3>Opening from the terminal</h3>
+<p>The <code>tutti</code> command opens the app with a project, like <code>code .</code> in VS Code. The app opens on its own and the terminal stays free.</p>
+<table>
+<tr><th>Command</th><th>What it opens</th></tr>
+<tr><td><code>tutti</code></td><td>The last project</td></tr>
+<tr><td><code>tutti .</code></td><td>The current folder as the project</td></tr>
+<tr><td><code>tutti ~/path/to/project</code></td><td>That folder as the project</td></tr>
+<tr><td><code>tutti src/main.ts</code></td><td>The file's git repository (or its folder, if it is not in one) and the file in the editor</td></tr>
+<tr><td><code>tutti --new-window</code></td><td>An empty window, with no project</td></tr>
+</table>
+<p>Each <code>tutti</code> opens a new window, with its own agents. The folder becomes the last project and goes into the recent ones; if you had opened it before, its tab and files come back. If the path does not exist, the command says so and opens nothing.</p>
+<p>On <strong>Linux</strong> the command is <code>~/.local/bin/tutti</code>: <code>install.sh</code> creates it and, if you downloaded the AppImage by hand, the app itself does the first time you open it. The app keeps it up to date (for example, if you move the AppImage) and leaves alone a <code>tutti</code> that is not its own. On <strong>Windows</strong> the installer adds <code>resources\\bin</code> (the folder with <code>tutti.cmd</code>) to your user's <code>PATH</code> and removes it when uninstalling; terminals you open after installing see it.</p>
 <h3>Updates</h3>
 <p>The app updates itself. When a new release comes out, the <strong>Update to vX.Y.Z</strong> button appears at the top right: clicking it downloads the version, verifies its hash and restarts to apply it. The first time you open the app after updating, a dialog tells you what is <strong>new</strong> (or what changed in every version you skipped); you can see it again by clicking the version number next to the app name.</p>
 <img src="img/actualizar.png" alt="Update button" loading="lazy" />
@@ -755,6 +779,7 @@ sec('atajos', 'Atajos de teclado', 'Keyboard shortcuts', '''
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></td><td>Mostrar u ocultar la barra lateral</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> · <kbd>A</kbd> · <kbd>G</kbd> · <kbd>J</kbd> · <kbd>K</kbd> · <kbd>X</kbd> · <kbd>U</kbd></td><td>Archivos · Agentes · Git · Tutti · Contexto · MCP · Consumo</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td><td>En terminales y agentes: copiar (con texto seleccionado) / pegar. También <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> y <kbd>Shift</kbd>+<kbd>Insert</kbd></td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Q</kbd></td><td>Cerrar la aplicación</td></tr>
 <tr><td><kbd>F1</kbd></td><td>Esta ayuda dentro de la app</td></tr>
 </table>
 <p>En los menús desplegables: <kbd>↑</kbd><kbd>↓</kbd> mueven, <kbd>→</kbd> abre un submenú, <kbd>←</kbd> lo cierra, <kbd>Enter</kbd> elige y <kbd>Esc</kbd> cierra.</p>
@@ -775,6 +800,7 @@ sec('atajos', 'Atajos de teclado', 'Keyboard shortcuts', '''
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></td><td>Show or hide the sidebar</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> · <kbd>A</kbd> · <kbd>G</kbd> · <kbd>J</kbd> · <kbd>K</kbd> · <kbd>X</kbd> · <kbd>U</kbd></td><td>Files · Agents · Git · Tutti · Context · MCP · Usage</td></tr>
 <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd></td><td>In terminals and agents: copy (with text selected) / paste. Also <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> and <kbd>Shift</kbd>+<kbd>Insert</kbd></td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Q</kbd></td><td>Close the application</td></tr>
 <tr><td><kbd>F1</kbd></td><td>This help inside the app</td></tr>
 </table>
 <p>In dropdown menus: <kbd>↑</kbd><kbd>↓</kbd> move, <kbd>→</kbd> opens a submenu, <kbd>←</kbd> closes it, <kbd>Enter</kbd> picks and <kbd>Esc</kbd> closes.</p>
@@ -858,6 +884,8 @@ sec('problemas', 'Solución de problemas', 'Troubleshooting', '''
 <dd>Falta <code>libfuse2</code> (en Arch, <code>fuse2</code>). Funciona igual, solo que más despacio.</dd>
 <dt>Windows muestra SmartScreen</dt>
 <dd>El instalador no está firmado. Pulsa <em>Más información → Ejecutar de todas formas</em>.</dd>
+<dt>La terminal no encuentra <code>tutti</code></dt>
+<dd>En Linux, <code>~/.local/bin</code> tiene que estar en tu <code>PATH</code> (añádelo en <code>~/.bashrc</code> o <code>~/.zshrc</code>); si descargaste el AppImage a mano, ábrelo una vez para que cree el comando. En Windows, abre una terminal nueva: las que ya estaban abiertas al instalar no ven el cambio del <code>PATH</code>.</dd>
 <dt>Un agente no ve las herramientas de Tutti</dt>
 <dd>Ábrelo <strong>desde Tutti</strong> (fuera de la app no recibe la configuración de su sesión). Comprueba que <code>"orchestration"</code> no esté en <code>false</code>.</dd>
 <dt>En Antigravity la tarjeta dice «No existe …»</dt>
@@ -879,6 +907,8 @@ sec('problemas', 'Solución de problemas', 'Troubleshooting', '''
 <dd><code>libfuse2</code> is missing (on Arch, <code>fuse2</code>). It works anyway, just more slowly.</dd>
 <dt>Windows shows SmartScreen</dt>
 <dd>The installer is not signed. Click <em>More info → Run anyway</em>.</dd>
+<dt>The terminal cannot find <code>tutti</code></dt>
+<dd>On Linux, <code>~/.local/bin</code> has to be in your <code>PATH</code> (add it in <code>~/.bashrc</code> or <code>~/.zshrc</code>); if you downloaded the AppImage by hand, open it once so it creates the command. On Windows, open a new terminal: the ones already open when you installed do not see the <code>PATH</code> change.</dd>
 <dt>An agent does not see Tutti's tools</dt>
 <dd>Open it <strong>from Tutti</strong> (outside the app it does not get its session's configuration). Make sure <code>"orchestration"</code> is not <code>false</code>.</dd>
 <dt>In Antigravity the card says “… does not exist”</dt>
