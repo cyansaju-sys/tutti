@@ -25,5 +25,5 @@ export const SECTIONS: Array<{ title: MsgKey; items: Array<[string, MsgKey]> }> 
     ['Ctrl + Shift + B', 'sc.toggleSidebar'], ['Ctrl + Shift + E', 'tab.files'], ['Ctrl + Shift + F', 'sc.searchProject'], ['Ctrl + Shift + H', 'sc.replaceProject'], ['Ctrl + Shift + A', 'sc.agents'],
     ['Ctrl + Shift + G', 'sc.git'], ['Ctrl + Shift + K', 'sc.context'], ['Ctrl + Shift + J', 'sc.tutti'], ['Ctrl + Shift + X', 'sc.mcp'], ['Ctrl + Shift + U', 'sc.usage']
   ] },
-  { title: 'sc.general', items: [['Ctrl + C / Ctrl + Shift + C', 'sc.copyTerminal'], ['Ctrl + V / Ctrl + Shift + V / Shift + Insert', 'sc.pasteAlt'], ['F1', 'sc.help']] }
+  { title: 'sc.general', items: [['Ctrl + C / Ctrl + Shift + C', 'sc.copyTerminal'], ['Ctrl + V / Ctrl + Shift + V / Shift + Insert', 'sc.pasteAlt'], ['Ctrl + Q', 'sc.quitApp'], ['F1', 'sc.help']] }
 ]

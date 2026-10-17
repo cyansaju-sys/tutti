@@ -83,7 +83,7 @@ const api: Api = {
   window: {
     minimize: () => ipcRenderer.send('window:minimize'), toggleMaximize: () => ipcRenderer.send('window:toggleMaximize'),
     close: () => ipcRenderer.send('window:close'),
-    openNew: () => ipcRenderer.send('window:new'), isEmpty: () => ipcRenderer.invoke('window:isEmpty'), onMaximized: (cb) => subscribe<[boolean]>('window:maximized', cb)
+    openNew: () => ipcRenderer.send('window:new'), isEmpty: () => ipcRenderer.invoke('window:isEmpty'), startProject: () => ipcRenderer.invoke('window:startProject'),onMaximized: (cb) => subscribe<[boolean]>('window:maximized', cb)
   }
 }
 

@@ -293,6 +293,7 @@
   "sc.mcp": "MCP servers",
   "sc.usage": "AI usage and history",
   "sc.help": "This help",
+  "sc.quitApp": "Close the application",
   "key.ctrlSpace": "Ctrl + Space",
   "key.pageNav": "Ctrl + Page Down / Page Up",
   "dlg.navigate": "navigate",

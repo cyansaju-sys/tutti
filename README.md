@@ -75,6 +75,10 @@ curl -fsSL https://github.com/cyansaju-sys/tutti/releases/latest/download/instal
 Descarga el AppImage de la última release en `~/.local/share/tutti/`, crea el comando `tutti` y la entrada del menú de
 aplicaciones. No hace falta ser administrador. Si falta `libfuse2` (Arch: `fuse2`) funciona igual, solo que abre más despacio.
 
+Desde la terminal, `tutti .` abre la carpeta actual como proyecto y `tutti ~/ruta/al/proyecto` abre esa; con un archivo
+(`tutti src/main.ts`) se abre su repositorio git (o su carpeta, si no está en ninguno) y el archivo en el editor. `tutti` a
+secas abre el último proyecto.
+
 Para quitarla: `install.sh --uninstall` (tus ajustes en `~/.config/tutti` se conservan).
 
 </td>
@@ -394,6 +398,7 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
 | `Ctrl+C` / `Ctrl+V` | En terminales y agentes: copiar (con texto seleccionado) / pegar. También `Ctrl+Shift+C`, `Ctrl+Shift+V` y `Shift+Insert` |
 | `Ctrl+Shift+E` · `F` · `A` · `G` · `J` · `K` · `X` · `U` | Archivos · Buscar · Agentes · Git · Tutti · Contexto · MCP · Consumo |
+| `Ctrl+Q` | Cerrar la aplicación |
 
 
 <br />
