@@ -293,6 +293,7 @@
   "sc.mcp": "Servidores MCP",
   "sc.usage": "Consumo e historial de IA",
   "sc.help": "Esta ayuda",
+  "sc.quitApp": "Cerrar la aplicación",
   "key.ctrlSpace": "Ctrl + Espacio",
   "key.pageNav": "Ctrl + Av Pág / Re Pág",
   "dlg.navigate": "navegar",

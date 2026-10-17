@@ -159,6 +159,9 @@ export interface AgentUsage {
 }
 export interface UsageData { agents: AgentUsage[]; history: SessionInfo[] }
 
+/** Lo pedido al lanzar `tutti <ruta>`: el proyecto que se abre y, si la ruta era un archivo, ese archivo. */
+export interface StartProject { project: string; file: string | null }
+
 /** Estado de las actualizaciones: `available` muestra el botón «Actualizar». */
 export type UpdateState =
   | { status: 'idle' }
@@ -314,6 +317,7 @@ export interface Api {
     close(): void
     openNew(): void
     isEmpty(): Promise<boolean>
+    startProject(): Promise<StartProject | null>      // ruta pasada en la línea de comandos (`tutti .`, `tutti archivo.ts`)
     onMaximized(cb: (maximized: boolean) => void): () => void
   }
 }

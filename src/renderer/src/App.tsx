@@ -35,7 +35,8 @@ export function App() {
     void (async () => {
       await loadIconTheme()
       const empty = await window.api.window.isEmpty()
-      const project = empty ? undefined : (await window.api.settings.get('project')) as string | undefined
+      const fromArgs = await window.api.window.startProject()          // `tutti .` o `tutti archivo`: se abre eso en vez del último proyecto
+      const project = empty || fromArgs ? undefined : (await window.api.settings.get('project')) as string | undefined
       const edit = await window.api.settings.get('edit_enabled')
       const savedTheme = await window.api.settings.get('theme')
       if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
@@ -44,6 +45,7 @@ export function App() {
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
+      if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined)            // lo guarda como último proyecto y en los recientes
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
       const current = await window.api.update.version()
       const seen = (await window.api.settings.get('last_seen_version')) as string | undefined
@@ -126,6 +128,7 @@ export function App() {
       }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'P') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'quickOpen' }); return }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'G') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'goLine' }); return }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'Q') { e.preventDefault(); e.stopPropagation(); window.api.window.close(); return }
       if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }
       if (!isGlobalShortcut(e)) return
       e.preventDefault(); e.stopPropagation()

@@ -6,8 +6,8 @@ import type { ProjectConfig } from './types'
 import type { State, ProjectSlice } from './types'
 
 export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (set, get) => {
-  /** Cierra lo del proyecto actual y abre `path`, recordando la configuración del que se deja. */
-  const switchProject = (path: string | null): void => {
+  /** Cierra lo del proyecto actual y abre `path`, recordando la configuración del que se deja; `open` es un archivo que se abre al final. */
+  const switchProject = (path: string | null, open?: string): void => {
     const prev = get().project
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
@@ -21,11 +21,14 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
       if (prev) configs[prev] = leaving
       void window.api.settings.set('project_configs', configs)
       const known = path ? configs[path] : undefined
-      if (!path || !known || get().project !== path) return       // proyecto nuevo: se queda limpio
-      set({ tab: known.tab })                                       // ya conocido: se recupera su configuración
-      for (const f of known.docs) await get().openDoc(f)
-      if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
-      set({ focus: 'tree' })
+      if (!path || get().project !== path) return
+      if (known) {                                                  // ya conocido: se recupera su configuración (uno nuevo se queda limpio)
+        set({ tab: known.tab })
+        for (const f of known.docs) await get().openDoc(f)
+        if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
+        set({ focus: 'tree' })
+      }
+      if (open && get().project === path) { await get().openDoc(open); set({ activeDoc: open, focus: 'editor' }) }       // `tutti archivo`: queda delante
     })()
     if (!path) return
     const recentProjects = [path, ...get().recentProjects.filter((p) => p !== path)].slice(0, 10)
@@ -36,12 +39,12 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
   return {
     project: null, recentProjects: [], git: null,
 
-    setProject: (path) => {
-      if (path === get().project) return
+    setProject: (path, open) => {
+      if (path === get().project) { if (open) void get().openDoc(open); return }
       const dirty = get().docs.filter((d) => !d.diffOf && isDirty(d))
-      if (!dirty.length) { switchProject(path); return }
+      if (!dirty.length) { switchProject(path, open); return }
       // con archivos sin guardar se pregunta antes de descartarlos; la respuesta llega después, así que se vuelve a mirar el estado
-      void confirmAsk(tr(get, 'store.discard', { n: dirty.length })).then((yes) => { if (yes && path !== get().project) switchProject(path) })
+      void confirmAsk(tr(get, 'store.discard', { n: dirty.length })).then((yes) => { if (yes && path !== get().project) switchProject(path, open) })
     },
 
     removeRecentProject: (path) => {

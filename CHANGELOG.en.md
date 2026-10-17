@@ -2,6 +2,16 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.3.6
+
+### Functional
+
+- **Open projects from the terminal:** `tutti .` opens the current folder as the project and `tutti ~/path/to/project` opens that one, like `code .` in VS Code. With a file (`tutti src/main.ts`) it opens its git repository (or its folder, if it is not in one) and the file comes up front in the editor. The folder becomes the last project and goes into the recent ones; if you had opened it before, its tab and files come back. `tutti` on its own still opens the last project.
+- **The `tutti` command no longer holds the terminal:** the app opens on its own and you can keep using the terminal. If the path you give it does not exist, it tells you and opens nothing.
+- **The `tutti` command on Windows too:** the installer adds it to your user's `PATH` (terminals you open after installing see it) and removes it when uninstalling.
+- **On Linux the command creates itself:** if you downloaded the AppImage by hand, the first time you open it creates `~/.local/bin/tutti`, and keeps it up to date if you move the AppImage. If you already have your own `tutti` at that path, it leaves it alone.
+- **`Ctrl+Q` closes the application**, just like the ✕ button in the title bar. It is in the shortcuts list (`F1`).
+
 ## 1.3.5
 
 ### Functional

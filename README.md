@@ -75,6 +75,9 @@ curl -fsSL https://github.com/cyansaju-sys/tutti/releases/latest/download/instal
 Descarga el AppImage de la última release en `~/.local/share/tutti/`, crea el comando `tutti` y la entrada del menú de
 aplicaciones. No hace falta ser administrador. Si falta `libfuse2` (Arch: `fuse2`) funciona igual, solo que abre más despacio.
 
+El comando es `~/.local/bin/tutti`. Si descargas el AppImage a mano, se crea la primera vez que lo abres. La app lo mantiene
+al día y, si ya tienes un `tutti` propio en esa ruta, no lo toca.
+
 Para quitarla: `install.sh --uninstall` (tus ajustes en `~/.config/tutti` se conservan).
 
 </td>
@@ -83,7 +86,8 @@ Para quitarla: `install.sh --uninstall` (tus ajustes en `~/.config/tutti` se con
 ### Windows
 
 Descarga **`Tutti-Setup-X.Y.Z.exe`** de la [última release](https://github.com/cyansaju-sys/tutti/releases/latest) y ábrelo.
-Se instala para tu usuario, sin permisos de administrador, y crea el acceso directo.
+Se instala para tu usuario, sin permisos de administrador, crea el acceso directo y añade el comando `tutti` a tu PATH (lo
+ven las terminales que abras después de instalar).
 
 > El instalador no está firmado: Windows puede mostrar el aviso de SmartScreen. Pulsa
 > **Más información → Ejecutar de todas formas**.
@@ -91,6 +95,10 @@ Se instala para tu usuario, sin permisos de administrador, y crea el acceso dire
 </td>
 </tr>
 </table>
+
+**Desde la terminal**, en los dos sistemas: `tutti .` abre la carpeta actual como proyecto y `tutti ~/ruta/al/proyecto` abre
+esa; con un archivo (`tutti src/main.ts`) se abre su repositorio git (o su carpeta, si no está en ninguno) y el archivo en el
+editor. `tutti` a secas abre el último proyecto. La app se abre aparte y la terminal queda libre.
 
 **Se actualiza sola.** Cuando sale una release nueva aparece un botón **Actualizar a vX.Y.Z** arriba a la derecha. Al pulsarlo
 descarga la versión nueva, verifica su hash y la app se reinicia para aplicarla.
@@ -394,6 +402,7 @@ merges atenuados y una fila de *cambios sin commit* que lleva a la sección Git.
 | `Ctrl+Shift+B` | Mostrar u ocultar la barra lateral |
 | `Ctrl+C` / `Ctrl+V` | En terminales y agentes: copiar (con texto seleccionado) / pegar. También `Ctrl+Shift+C`, `Ctrl+Shift+V` y `Shift+Insert` |
 | `Ctrl+Shift+E` · `F` · `A` · `G` · `J` · `K` · `X` · `U` | Archivos · Buscar · Agentes · Git · Tutti · Contexto · MCP · Consumo |
+| `Ctrl+Q` | Cerrar la aplicación |
 
 
 <br />

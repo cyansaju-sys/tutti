@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
-import { join, resolve, sep } from 'node:path'
+import { existsSync, statSync } from 'node:fs'
+import { dirname, join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
 import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
@@ -17,7 +18,7 @@ import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './servi
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { GitOp, PtyOptions, RoleEdit, SearchOptions } from '../shared/types'
+import type { GitOp, PtyOptions, RoleEdit, SearchOptions, StartProject } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -27,6 +28,7 @@ import { applySync, pullSync, resolveSync, standardizeProject, syncState } from 
 import { featuredServers, searchRegistry } from './services/mcp/registry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
+import { ensureLauncher } from './services/cli'
 import { appMcpInfo, approveRoles, clearTasks, discardRoles, newId, roleOptions, rolesState, startHub, startRoles, stopHub, taskList, updateRole } from './services/agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
@@ -34,6 +36,32 @@ if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un A
 
 let win: BrowserWindow | null = null
 const emptyWindow = process.argv.includes('--new-window')      // ventana nueva: arranca sin abrir el último proyecto
+
+/** El repositorio git que contiene `dir` (la carpeta con `.git` más cercana hacia arriba), o `dir` si no está en ninguno. */
+function repoRoot(dir: string): string {
+  for (let d = dir; ; d = dirname(d)) {
+    if (existsSync(join(d, '.git'))) return d
+    if (dirname(d) === d) return dir
+  }
+}
+
+/**
+ * Ruta pasada en la línea de comandos: una carpeta (`tutti .`, `tutti ~/proyecto`) se abre como proyecto; un archivo
+ * (`tutti src/main.ts`) abre su repositorio (o su carpeta) y el archivo en el editor.
+ */
+function projectFromArgs(): StartProject | null {
+  const [arg] = process.argv.slice(app.isPackaged ? 1 : 2).filter((a) => !a.startsWith('-'))      // en desarrollo argv[1] es la ruta de la app
+  if (!arg) return null
+  const path = resolve(process.env.OWD || process.cwd(), arg)          // un AppImage deja en OWD la carpeta desde la que se lanzó
+  try {
+    const st = statSync(path)
+    if (st.isDirectory()) return { project: path, file: null }
+    if (st.isFile()) return { project: repoRoot(dirname(path)), file: path }
+  } catch { /* no existe */ }
+  console.error(`tutti: no existe ${path}`)
+  return null
+}
+const startProject = projectFromArgs()
 
 /** Otra ventana de Tutti es otro proceso: cada una tiene sus agentes, su servidor de tareas y su proyecto. */
 function openNewWindow(): void {
@@ -211,12 +239,14 @@ function registerIpc(): void {
   ipcMain.on('window:close', () => win?.close())
   ipcMain.on('window:new', openNewWindow)
   ipcMain.handle('window:isEmpty', () => emptyWindow)
+  ipcMain.handle('window:startProject', () => startProject)
 }
 
 if (process.env.TUTTI_CAPTURE) app.setPath('appData', join(app.getPath('temp'), `tutti-captura-${process.pid}`))   // ajustes aislados
 
 app.whenReady().then(() => {
   if (!process.env.TUTTI_CAPTURE) migrateLegacyConfig()
+  if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) ensureLauncher()        // el comando `tutti` de la terminal
   Menu.setApplicationMenu(null)             // sin menú: los atajos los gestiona la propia app
   registerIpc()
   if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) setupUpdater(() => win)
