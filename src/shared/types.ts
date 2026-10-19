@@ -37,7 +37,28 @@ export interface TaskInfo {
   task: string; model: string | null; difficulty: string | null; startedAt: number; endedAt: number | null
   /** Id del rol del plan que cumple esta tarea, si salió de uno. */
   role?: string | null
-  status: 'working' | 'done' | 'closed'
+  /** working · needs_input: espera un permiso en su panel · done · blocked: pide una respuesta · failed · closed: se cerró sin avisar. */
+  status: 'working' | 'needs_input' | 'done' | 'blocked' | 'failed' | 'closed'
+  /** Lo que el agente dijo al acabar con report_done, si lo dijo. */
+  summary?: string | null
+  files?: string[]
+  /** Lo que preguntó con ask_leader y aún espera respuesta. */
+  question?: string | null
+}
+/** El rol del plan que lleva un panel de agente (lo que muestra su pestaña) y cómo va su tarea. */
+export interface PaneRole { id: string; name: string; status: TaskInfo['status'] }
+/** Lo que muestran las pestañas de los agentes, por id de panel: el rol que llevan y cuántos avisos de Tutti les esperan. */
+export interface PaneState {
+  /** El agente líder (null si solo hay uno abierto: no hace falta marcarlo). */
+  leader: string | null
+  roles: Record<string, PaneRole>; inbox: Record<string, number>
+}
+/** Una plantilla de plan para elegirla: sus roles y en qué orden van. */
+export interface PlanTemplateInfo { id: string; name: string; builtin: boolean; roles: Array<{ id: string; name: string; dependsOn: string[] }> }
+/** Rol reutilizable: un rol sin dependencias que el usuario guarda para usarlo en cualquier plan (y el líder con `template`). */
+export interface RoleTemplate {
+  id: string; name: string; responsibility: string; deliverables: string[]; done: string; files: string[]
+  difficulty: 'easy' | 'medium' | 'hard'; check?: string; assign?: { agent: string; model?: string }
 }
 /** Un rol del plan tal como lo ve el panel de agentes. */
 export interface RoleInfo {
@@ -45,16 +66,27 @@ export interface RoleInfo {
   difficulty: 'easy' | 'medium' | 'hard'; dependsOn: string[]
   /** Agente y modelo elegidos a mano (si no, los elige Tutti). */
   assign?: { agent: string; model?: string }
-  /** waiting: espera a otros roles · ready: ya puede empezar (falta agente) · running · done */
-  status: 'waiting' | 'ready' | 'running' | 'done'
+  /** waiting: espera a otros roles · ready: ya puede empezar (falta agente) · running · blocked: su agente pide una respuesta · failed: falló o se cerró (se relanza a mano) · review: terminó y espera que lo acepten · done: aceptado */
+  status: 'waiting' | 'ready' | 'running' | 'blocked' | 'failed' | 'review' | 'done'
+  /** Comando de comprobación del rol, si tiene. */
+  check?: string
+  /** Cuándo empezó (su primera tarea) y cuándo quedó aceptado; null si aún no. */
+  startedAt?: number | null; endedAt?: number | null
+  /** Solo en revisión: si la comprobación aún corre, qué dio y qué archivos tocó que no son suyos. */
+  review?: { checking: boolean; check?: { command: string; ok: boolean; output: string }; outside: string[] }
   agentId: string | null; agent: string | null; model: string | null
   /** Por qué aún no arranca (sin agente libre, no se pudo lanzar…); solo si está listo y no ha empezado. */
   note?: string
+  /** Lo que dijo su agente con report_done (el último intento) y los archivos que tocó. */
+  summary?: string | null
+  changed?: string[]
 }
 /** Lo que se puede cambiar de un rol que aún no empezó; `assign: null` vuelve al reparto automático. */
 export interface RoleEdit {
   name?: string; responsibility?: string; deliverables?: string[]; done?: string; files?: string[]
   difficulty?: 'easy' | 'medium' | 'hard'; dependsOn?: string[]; assign?: { agent: string; model?: string } | null
+  /** Comando de comprobación; vacío lo quita. */
+  check?: string
 }
 /** Un agente al que se puede asignar un rol, con los modelos que ofrece. `value` es el id del panel abierto o el comando del instalado. */
 export interface RoleAgentOption {
@@ -66,6 +98,8 @@ export interface RolePlanInfo {
   status: 'proposed' | 'reviewed' | 'approved'; summary: string; roles: RoleInfo[]
   /** Aprobado y repartiendo. Un plan aprobado que no está en marcha (p. ej. tras reiniciar la app) espera a que lo inicies. */
   started: boolean
+  /** Lo pausó el usuario: no se lanzan roles nuevos. */
+  paused: boolean
   /** Lo que impide repartir ahora, si algo. */
   problem?: string
   /** Quién elige el agente y el modelo de cada rol: el usuario o la app. */
@@ -296,11 +330,41 @@ export interface Api {
     roles(project: string): Promise<RolePlanInfo | null>
     /** Descarta el plan de roles (y su archivo); false si hay roles en marcha. */
     discardRoles(project: string): Promise<boolean>
+    /** Vuelve a repartir un rol que falló, se bloqueó o cuyo agente se cerró; false si no se podía. */
+    retryRole(project: string, id: string): Promise<boolean>
+    /** Añade un rol al plan (en blanco o desde un rol reutilizable con `template`); si no hay plan, lo crea listo para aprobar. */
+    addRole(project: string, role: RoleEdit & { id?: string; template?: string }): Promise<{ ok: boolean; errors: string[] }>
+    /** Quita del plan un rol que aún no empezó. */
+    removeRole(project: string, id: string): Promise<{ ok: boolean; errors: string[] }>
+    /** Los roles reutilizables del usuario. */
+    roleTemplates(): Promise<RoleTemplate[]>
+    /** Crea o cambia un rol reutilizable (con `previousId`, sustituye a ese). */
+    saveRoleTemplate(template: Partial<RoleTemplate>, previousId?: string): Promise<{ ok: boolean; errors: string[] }>
+    deleteRoleTemplate(id: string): Promise<void>
+    /** Pausa el reparto (los roles en marcha siguen); se reanuda con startRoles. */
+    pauseRoles(project: string): Promise<boolean>
+    /** Interrumpe a su agente y deja el rol como fallido, listo para relanzar. */
+    cancelRole(project: string, id: string): Promise<boolean>
+    planTemplates(): Promise<PlanTemplateInfo[]>
+    /** Crea el plan del proyecto desde una plantilla; `summary` dice qué hay que hacer. */
+    planFromTemplate(project: string, templateId: string, summary: string): Promise<{ ok: boolean; errors: string[] }>
+    /** Guarda los roles del plan actual como plantilla de plan. */
+    savePlanTemplate(project: string, name: string): Promise<{ ok: boolean; errors: string[] }>
+    deletePlanTemplate(id: string): Promise<void>
+    /** Acepta un rol en revisión; false si no estaba en revisión. */
+    acceptRole(project: string, id: string): Promise<boolean>
+    /** Rechaza un rol en revisión: el feedback vuelve a su agente (o a uno nuevo si ya no está). */
+    rejectRole(project: string, id: string, feedback: string): Promise<boolean>
     /** Cambia un rol que aún no empezó; `errors` explica por qué no valió. */
     updateRole(project: string, id: string, edit: RoleEdit): Promise<{ ok: boolean; errors: string[] }>
     /** Los agentes (abiertos e instalados) y sus modelos, para asignar roles a mano. */
     roleOptions(project: string): Promise<RoleAgentOption[]>
     onToast(cb: (message: string, kind: 'ok' | 'error' | 'info') => void): () => void
+    /** El rol y los avisos pendientes de cada panel de agente. */
+    paneState(): Promise<PaneState>
+    /** Hace líder a un agente abierto: reparte, recibe los avisos y dirige los planes en marcha. */
+    setLeader(id: string): Promise<boolean>
+    onPaneState(cb: (state: PaneState) => void): () => void
   }
   pty: {
     spawn(opts: PtyOptions): Promise<{ ok: boolean; error?: string }>

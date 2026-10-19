@@ -91,7 +91,10 @@ export function App() {
       st.addPane({ id: p.id, kind: 'agent', name: p.name, title: `${p.name} · ${p.cwd.split(/[\\/]/).filter(Boolean).pop() ?? ''}`, command: p.command, args: p.args ?? [], cwd: p.cwd, prompt: p.prompt, parentId: p.parentId })
     })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
-    return () => { offPane(); offToast() }
+    const applyPanes = ({ leader, roles, inbox }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneRoles: roles, paneInbox: inbox })
+    void window.api.orchestra.paneState().then(applyPanes)
+    const offRoles = window.api.orchestra.onPaneState(applyPanes)
+    return () => { offPane(); offToast(); offRoles() }
   }, [])
 
   // actualizaciones: el estado llega del proceso principal; al haber una release nueva se avisa una vez por versión

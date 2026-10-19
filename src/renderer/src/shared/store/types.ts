@@ -1,4 +1,4 @@
-import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
+import type { AgentInfo, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 
@@ -61,6 +61,12 @@ export interface PanesSlice {
   shellActive: string | null
   shellMax: boolean
   activePane: string | null
+  /** El rol del plan que lleva cada panel de agente (por id de panel); lo avisa la app. */
+  paneRoles: Record<string, PaneRole>
+  /** Avisos de Tutti que esperan a que cada agente esté libre (o a que dejes de escribir en su panel). */
+  paneInbox: Record<string, number>
+  /** El agente líder; null si solo hay uno abierto. */
+  paneLeader: string | null
   openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string; prompt?: string }) => Promise<void>
   addPane: (pane: Pane) => void
   toggleShell: () => Promise<void>

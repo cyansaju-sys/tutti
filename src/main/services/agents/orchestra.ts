@@ -26,14 +26,29 @@ los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «
 Tarea grande o con varias partes: antes de repartir, escribe el plan (en .tutti/roadmap.md y, si es grande, en un cambio de OpenSpec) y revísalo: \
 ¿está completo?, ¿cada parte tiene criterio de terminado?, ¿hay partes que tocan los mismos archivos? Deriva de él los roles y envíalos con propose_roles: \
 cada rol con id, name, responsibility, deliverables, done (criterio de terminado), files (los que solo ese rol edita), difficulty (easy, medium o hard) y dependsOn. \
+Mira antes list_role_templates: si el usuario guardó un rol que encaja (tests, revisión, docs…), úsalo con "template" y pon solo lo que cambie. \
 El agente y el modelo de cada rol los elige el usuario en el panel de la app (no los asignes tú; con el ajuste roles_assignment en auto, los asigna la app según \
 capacidad, límite de uso y modelos disponibles): un agente tiene un solo rol a la vez y, si el elegido no está libre, el rol espera. Si propose_roles devuelve errores, corrígelos y repítelo. Cuando el reparto te parezca bien llama a confirm_roles: la app \
-lanza los roles (tras la aprobación del usuario, si hace falta) cuando terminan sus dependencias y te avisa con «[Tutti]». Entonces revisa cada entregable \
-contra el criterio de terminado de su rol.`
+lanza los roles (tras la aprobación del usuario, si hace falta) cuando terminan sus dependencias y te avisa con «[Tutti]». Cada rol puede llevar un \
+"check" (comando que la app ejecuta al terminarlo, p. ej. los tests de su parte). Cuando un rol termina pasa a revisión y la app te avisa: revísalo \
+contra su criterio de terminado (get_role_result te da su resumen, sus archivos, sus cambios sin commit y el resultado del check) y llama a \
+accept_role si está bien o a reject_role con qué corregir; los roles que dependen de él no empiezan hasta que lo aceptes. Un rol que falla o se \
+bloquea no cuenta como terminado: resuelve el problema y relánzalo con retry_role.
+
+report_done es solo para trabajadores: úsala si la tarea te llegó de otro agente (con delegate_task) o de la app (un mensaje «[Rol …]»). \
+Al acabarla llama a report_done: status "done" si la terminaste, "blocked" si necesitas una respuesta para seguir (explica cuál en summary) o \
+"failed" si no pudiste hacerla; en summary, qué hiciste y si algo del criterio de terminado no se cumple. Sin report_done, quien te la pasó no sabe \
+con certeza que acabaste. Si eres el líder o la tarea te la dio el usuario directamente, no la llames: contéstale a él.
+
+Si mientras trabajas en una tarea delegada te falta información, pregunta con ask_leader en vez de suponer: la respuesta te llega escrita como \
+«[Tutti] Respuesta…». Si te preguntan a ti (aviso «[Tutti] … pregunta»), contesta con answer_agent. Las decisiones que afectan a otros agentes \
+(nombres, contratos de API, formatos, convenciones) déjalas con post_note y lee las de los demás con read_notes antes de decidir algo parecido. \
+Los avisos «[Tutti]» te llegan escritos cuando estás libre; si trabajas mucho rato seguido, consúltalos con get_updates.`
 
 const ROLE_SCHEMA = {
   type: 'object',
   properties: {
+    template: { type: 'string', description: 'Opcional: id de un rol reutilizable del usuario (ver list_role_templates). Rellena los campos que no pongas.' },
     id: { type: 'string', description: 'Identificador corto en minúsculas, números y guiones (p. ej. "api").' },
     name: { type: 'string' },
     responsibility: { type: 'string', description: 'Qué parte del plan hace este rol.' },
@@ -41,9 +56,11 @@ const ROLE_SCHEMA = {
     done: { type: 'string', description: 'Criterio de terminado: lo que comprobarás al revisar.' },
     files: { type: 'array', items: { type: 'string' }, description: 'Archivos o carpetas que solo este rol edita. Vacío si solo lee.' },
     difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] },
-    dependsOn: { type: 'array', items: { type: 'string' }, description: 'Ids de roles que deben terminar antes.' }
+    dependsOn: { type: 'array', items: { type: 'string' }, description: 'Ids de roles que deben terminar antes.' },
+    check: { type: 'string', description: 'Opcional: comando que la app ejecuta en la raíz del proyecto cuando el rol termina (p. ej. "npm test -- api"). Si falla, la app le devuelve la salida al agente para que lo arregle.' }
   },
-  required: ['id', 'name', 'responsibility', 'deliverables', 'done', 'difficulty']
+  // con `template` basta el id (o ni eso): la app rellena el resto y valida el plan entero
+  required: []
 }
 
 export const TOOLS = [
@@ -89,6 +106,73 @@ export const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'report_done',
+    description: 'Solo para trabajadores: avisa del resultado de la tarea que te pasó otro agente (con delegate_task) o la app (un rol del plan). Llámala al acabar esa tarea: así quien te la pasó sabe que terminaste y qué hiciste. No la uses para las tareas que te da el usuario directamente.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['done', 'blocked', 'failed'], description: 'done: terminada · blocked: necesitas una respuesta para seguir · failed: no se pudo hacer.' },
+        summary: { type: 'string', description: 'Qué hiciste y entregaste; si blocked, qué necesitas; si failed, por qué. Di si algo del criterio de terminado no se cumple.' },
+        files_changed: { type: 'array', items: { type: 'string' }, description: 'Archivos que creaste o editaste.' }
+      },
+      required: ['status', 'summary']
+    }
+  },
+  {
+    name: 'get_role_result',
+    description: 'Resultado de un rol del plan: estado, agente, el resumen que dejó con report_done, los archivos que tocó y sus cambios sin commit (git diff --stat). Úsala para revisar cada entregable sin leer la pantalla del agente.',
+    inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
+  },
+  {
+    name: 'list_role_templates',
+    description: 'Roles reutilizables que guardó el usuario (p. ej. tests, revisor, docs), con todos sus campos. Úsalos en propose_roles con "template": "<id>"; lo que pongas explícito manda sobre la plantilla.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'accept_role',
+    description: 'Solo el líder: da por bueno un rol en revisión (cumple su criterio de terminado). Los roles que dependen de él pueden empezar.',
+    inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
+  },
+  {
+    name: 'reject_role',
+    description: 'Solo el líder: rechaza un rol en revisión. El feedback le llega a su agente, que sigue con su contexto y vuelve a avisar al terminar; si su agente ya no está, el rol se relanza con otro llevando el feedback.',
+    inputSchema: {
+      type: 'object',
+      properties: { role_id: { type: 'string' }, feedback: { type: 'string', description: 'Qué falla y qué debe corregir, concreto y comprobable.' } },
+      required: ['role_id', 'feedback']
+    }
+  },
+  {
+    name: 'retry_role',
+    description: 'Vuelve a lanzar un rol del plan que falló, se bloqueó o cuyo agente se cerró. La app lo reparte de nuevo como si no hubiera empezado.',
+    inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
+  },
+  {
+    name: 'ask_leader',
+    description: 'Pregunta algo a quien te pasó la tarea (el líder) sin darla por terminada. Te quedas esperando: la respuesta te llega escrita como «[Tutti] Respuesta…». Úsala en vez de suponer cuando te falte información.',
+    inputSchema: { type: 'object', properties: { question: { type: 'string', description: 'La pregunta, concreta y con el contexto necesario para contestarla.' } }, required: ['question'] }
+  },
+  {
+    name: 'answer_agent',
+    description: 'Contesta a un agente que te preguntó con ask_leader o que se bloqueó (report_done con status blocked): sigue con su misma tarea y su contexto.',
+    inputSchema: { type: 'object', properties: { agent_id: { type: 'string' }, answer: { type: 'string' } }, required: ['agent_id', 'answer'] }
+  },
+  {
+    name: 'post_note',
+    description: 'Deja una nota en la pizarra compartida del proyecto (.tutti/notes.md) para los demás agentes: decisiones que les afectan (nombres, contratos de API, formatos, convenciones). Breve y concreta.',
+    inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }
+  },
+  {
+    name: 'read_notes',
+    description: 'Lee las últimas notas de la pizarra compartida del proyecto, con quién las dejó y cuándo.',
+    inputSchema: { type: 'object', properties: { limit: { type: 'integer', description: 'Cuántas (por defecto 30).' } } }
+  },
+  {
+    name: 'get_updates',
+    description: 'Devuelve los avisos «[Tutti]» que tienes pendientes (tareas terminadas, preguntas, revisiones) y los da por entregados. La app te los escribe cuando estás libre; úsala si llevas mucho rato trabajando.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
     name: 'wait_agent',
     description: 'Espera a que un agente termine (sin salida durante `quiet_seconds`) y devuelve las últimas líneas de su pantalla. Úsala solo si no puedes avanzar sin ese resultado: la app te avisa cuando un agente termina.',
     inputSchema: {
@@ -113,7 +197,20 @@ export const TOOLS = [
   }
 ]
 
-export interface AgentOutput { agent_id: string; busy: boolean; idle_seconds: number; text: string; finished?: boolean; note?: string }
+export type ReportStatus = 'done' | 'blocked' | 'failed'
+export const isReportStatus = (v: unknown): v is ReportStatus => v === 'done' || v === 'blocked' || v === 'failed'
+/** Lo que un agente dice de su tarea con report_done. */
+export interface TaskReport { status: ReportStatus; summary: string; files: string[] }
+
+export interface AgentOutput {
+  agent_id: string; busy: boolean; idle_seconds: number; text: string; finished?: boolean; note?: string
+  /** Lo que el agente avisó con report_done de su última tarea. */
+  report?: TaskReport
+  /** Está parado esperando un permiso o una respuesta en su panel. */
+  awaiting_input?: boolean
+  /** Preguntó con ask_leader y espera que le contesten con answer_agent. */
+  question?: string
+}
 
 /** Lo que la app ofrece al servidor. */
 export interface Host {
@@ -121,9 +218,22 @@ export interface Host {
   delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string; role?: string }): Promise<{ ok: boolean; info: unknown }>
   proposeRoles(caller: string, summary: string, roles: unknown): Promise<{ ok: boolean; info: unknown }>
   confirmRoles(caller: string): Promise<{ ok: boolean; info: unknown }>
+  report(caller: string, report: TaskReport): { ok: boolean; info: unknown }
+  retryRole(caller: string, roleId: string): { ok: boolean; info: unknown }
+  roleResult(caller: string, roleId: string): { ok: boolean; info: unknown }
+  roleTemplates(caller: string): { ok: boolean; info: unknown }
+  acceptRole(caller: string, roleId: string): { ok: boolean; info: unknown }
+  askLeader(caller: string, question: string): { ok: boolean; info: unknown }
+  answerAgent(caller: string, agentId: string, answer: string): { ok: boolean; info: unknown }
+  postNote(caller: string, text: string): { ok: boolean; info: unknown }
+  readNotes(caller: string, limit: number): { ok: boolean; info: unknown }
+  updates(caller: string): { ok: boolean; info: unknown }
+  rejectRole(caller: string, roleId: string, feedback: string): { ok: boolean; info: unknown }
   output(agentId: string, lines: number): AgentOutput | null
   /** wait_agent ya entregó el resultado de este agente: no hace falta avisar al líder. */
   reported?(agentId: string): void
+  /** El agente habló con el servidor: tiene report_done y se puede esperar a que avise. */
+  seen?(caller: string): void
 }
 
 interface RpcMessage { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> }
@@ -131,6 +241,12 @@ const text = (value: unknown, error = false): object => ({
   content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 1) }],
   isError: error
 })
+/** Los argumentos de una llamada; algunos modelos los mandan como texto JSON en vez de como objeto, y se aceptan igual. */
+function toolArgs(raw: unknown): Record<string, unknown> {
+  let value = raw
+  if (typeof value === 'string') { try { value = JSON.parse(value) } catch { return {} } }
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
 export class Orchestra {
@@ -188,6 +304,7 @@ export class Orchestra {
   async handle(message: RpcMessage, caller: string): Promise<object | null> {
     const { method, params = {}, id } = message
     if (process.env.TUTTI_MCP_LOG) console.log(`MCP ${caller} ${method}${method === 'tools/call' ? ' ' + String(params.name) : ''}`)   // depuración: qué piden los agentes
+    if (caller) this.host.seen?.(caller)
     if (id === undefined || id === null) return null
     try {
       let result: unknown
@@ -198,7 +315,7 @@ export class Orchestra {
         }
       } else if (method === 'ping') result = {}
       else if (method === 'tools/list') result = { tools: TOOLS }
-      else if (method === 'tools/call') result = await this.call(String(params.name), (params.arguments as Record<string, unknown>) ?? {}, caller)
+      else if (method === 'tools/call') result = await this.call(String(params.name), toolArgs(params.arguments), caller)
       else return { jsonrpc: '2.0', id, error: { code: -32601, message: `método desconocido: ${method}` } }
       return { jsonrpc: '2.0', id, result }
     } catch (e) {          // un fallo de una herramienta no debe tumbar el servidor
@@ -224,6 +341,62 @@ export class Orchestra {
       const { ok, info } = await this.host.confirmRoles(caller)
       return text(info, !ok)
     }
+    if (name === 'report_done') {
+      const summary = String(args.summary ?? '').trim()
+      if (!isReportStatus(args.status)) return text('`status` debe ser done, blocked o failed.', true)
+      if (!summary) return text('Falta `summary`: di qué hiciste (o qué necesitas, o por qué falló).', true)
+      const files = Array.isArray(args.files_changed) ? args.files_changed.filter((f): f is string => typeof f === 'string' && !!f.trim()).map((f) => f.trim()) : []
+      const { ok, info } = this.host.report(caller, { status: args.status, summary, files })
+      return text(info, !ok)
+    }
+    if (name === 'get_role_result') {
+      const { ok, info } = this.host.roleResult(caller, String(args.role_id ?? '').trim())
+      return text(info, !ok)
+    }
+    if (name === 'ask_leader') {
+      const question = String(args.question ?? '').trim()
+      if (!question) return text('Falta `question`.', true)
+      const { ok, info } = this.host.askLeader(caller, question)
+      return text(info, !ok)
+    }
+    if (name === 'answer_agent') {
+      const answer = String(args.answer ?? '').trim()
+      if (!answer) return text('Falta `answer`.', true)
+      const { ok, info } = this.host.answerAgent(caller, String(args.agent_id ?? '').trim(), answer)
+      return text(info, !ok)
+    }
+    if (name === 'post_note') {
+      const note = String(args.text ?? '').trim()
+      if (!note) return text('Falta `text`.', true)
+      const { ok, info } = this.host.postNote(caller, note)
+      return text(info, !ok)
+    }
+    if (name === 'read_notes') {
+      const { ok, info } = this.host.readNotes(caller, Math.min(Math.max(Number(args.limit) || 30, 1), 200))
+      return text(info, !ok)
+    }
+    if (name === 'get_updates') {
+      const { ok, info } = this.host.updates(caller)
+      return text(info, !ok)
+    }
+    if (name === 'list_role_templates') {
+      const { ok, info } = this.host.roleTemplates(caller)
+      return text(info, !ok)
+    }
+    if (name === 'accept_role') {
+      const { ok, info } = this.host.acceptRole(caller, String(args.role_id ?? '').trim())
+      return text(info, !ok)
+    }
+    if (name === 'reject_role') {
+      const feedback = String(args.feedback ?? '').trim()
+      if (!feedback) return text('Falta `feedback`: di qué debe corregir el agente.', true)
+      const { ok, info } = this.host.rejectRole(caller, String(args.role_id ?? '').trim(), feedback)
+      return text(info, !ok)
+    }
+    if (name === 'retry_role') {
+      const { ok, info } = this.host.retryRole(caller, String(args.role_id ?? '').trim())
+      return text(info, !ok)
+    }
     if (name === 'read_agent_output') {
       const out = this.host.output(String(args.agent_id ?? ''), Number(args.lines) || 80)
       return out ? text(out) : text('No existe ese agente.', true)
@@ -240,7 +413,9 @@ export class Orchestra {
     for (;;) {
       const out = this.host.output(id, Number(args.lines) || 80)
       if (!out) return text('No existe ese agente.', true)
-      if (out.idle_seconds >= quiet) { this.host.reported?.(id); return text({ ...out, finished: true }) }
+      if (out.question) return text({ ...out, finished: false, note: `No terminó: espera tu respuesta a su pregunta. Contéstale con answer_agent(agent_id: "${id}", answer: ...) y no hagas tú su tarea.` })
+      if (out.report || out.idle_seconds >= quiet) { this.host.reported?.(id); return text({ ...out, finished: true }) }
+      if (out.awaiting_input) return text({ ...out, finished: false, note: 'El agente espera un permiso o una respuesta del usuario en su panel.' })
       if (Date.now() >= deadline) return text({ ...out, finished: false, note: 'Se agotó la espera; el agente sigue trabajando.' })
       await sleep(500)
     }

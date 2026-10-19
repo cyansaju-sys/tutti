@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assignRoles, modelFor, reviewWarnings, validateRoles, type Role, type RoleCandidate } from '../../../../src/main/services/agents/roles'
+import { assignRoles, outsideFiles, modelFor, reviewWarnings, validateRoles, type Role, type RoleCandidate } from '../../../../src/main/services/agents/roles'
 
 const role = (patch: Partial<Role>): Role => ({
   id: 'api', name: 'API', responsibility: 'Endpoints', deliverables: ['rutas'], done: 'las rutas responden', files: [], difficulty: 'medium', dependsOn: [], ...patch
@@ -173,5 +173,20 @@ describe('revisión del plan', () => {
     const warnings = reviewWarnings(roles, a(roles, [cand({ id: 'a1', tier: 'basic' })]), plan)
     expect(warnings).toEqual([expect.stringContaining('«a» (hard)'), expect.stringContaining('«b»')])
     expect(warnings[1]).toContain('cola')
+  })
+})
+
+describe('archivos fuera de los del rol', () => {
+  it('lo que está dentro de sus carpetas o archivos no cuenta', () => {
+    expect(outsideFiles(['src/api/', 'docs/api.md'], ['src/api/routes.ts', './docs/api.md', 'src/db/x.ts'], '/p')).toEqual(['src/db/x.ts'])
+  })
+  it('las rutas absolutas dentro del proyecto se comparan como relativas', () => {
+    expect(outsideFiles(['src/api'], ['/p/src/api/a.ts', '/p/README.md'], '/p')).toEqual(['README.md'])
+  })
+  it('un rol sin archivos propios no debía tocar nada', () => {
+    expect(outsideFiles([], ['a.ts', 'a.ts'], '/p')).toEqual(['a.ts'])
+  })
+  it('un prefijo no es una carpeta: src/api no contiene src/apiv2', () => {
+    expect(outsideFiles(['src/api'], ['src/apiv2/x.ts'], '/p')).toEqual(['src/apiv2/x.ts'])
   })
 })

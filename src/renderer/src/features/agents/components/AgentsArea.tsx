@@ -1,26 +1,42 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
 import { Menu } from '../../../shared/components/Menu'
-import { MdAdd, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdFolderOpen, MdSearch, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdFolderOpen, MdSearch, MdTerminal } from 'react-icons/md'
 import { AgentIcon } from './AgentIcon'
 import { useStore, type Pane } from '@/shared/store'
 import { Kbd } from '../../../shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
 import { TerminalPane } from './TerminalPane'
 
+/** Color de la etiqueta del rol según cómo va su tarea, y el texto de ese estado. */
+const ROLE_CHIP = {
+  working: 'bg-accent/15 text-accent', needs_input: 'bg-accent/15 text-accent', blocked: 'bg-accent/15 text-accent',
+  done: 'bg-ok/15 text-ok', failed: 'bg-danger/15 text-danger', closed: 'bg-ov/[0.06] text-muted'
+} as const
+const ROLE_STATUS = { working: 'ag.working', needs_input: 'ag.needsInput', done: 'ag.done', blocked: 'ag.blocked', failed: 'ag.failed', closed: 'ag.closed' } as const
+
 export function PaneBox({ pane }: { pane: Pane }) {
   const t = useT()
   const active = useStore((s) => s.activePane === s.panes.find((p) => p.id === pane.id)?.id || s.activePane === pane.id)
   const closePane = useStore((s) => s.closePane)
-  const leader = useStore((s) => pane.kind === 'agent' && s.panes.length > 1 && s.panes[0].id === pane.id)
+  const leader = useStore((s) => pane.kind === 'agent' && s.paneLeader === pane.id)
+  const canLead = useStore((s) => pane.kind === 'agent' && !!s.paneLeader && s.paneLeader !== pane.id)
   const parent = useStore((s) => (pane.parentId ? s.panes.find((p) => p.id === pane.parentId) : undefined))
+  const role = useStore((s) => s.paneRoles[pane.id])
+  const pending = useStore((s) => s.paneInbox[pane.id] ?? 0)
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" onMouseDown={() => useStore.getState().focusPane(pane.id)}>
       {/* preventDefault: si no, al pulsar la cabecera el navegador quita el foco a la terminal justo después de dárselo */}
       <div onMouseDown={(e) => e.preventDefault()} className={clsx('flex shrink-0 items-center gap-2 border-b-2 px-2.5 py-1 transition-colors', active ? 'border-accent bg-panel' : 'border-line')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+        {role && <span title={t('pane.roleTip', { name: role.name, id: role.id, status: t(ROLE_STATUS[role.status]) })} className={clsx('min-w-0 max-w-[45%] shrink truncate rounded-full px-2 py-0.5 text-[10px] font-medium', ROLE_CHIP[role.status])}>{t('pane.role', { name: role.name })}</span>}
+        {pending > 0 && <span title={t('pane.inbox', { n: pending })} className="flex shrink-0 items-center gap-0.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"><MdMailOutline size={11} />{pending}</span>}
         {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}
+        {canLead && (
+          <button title={t('pane.makeLeader')} onClick={(e) => { e.stopPropagation(); void window.api.orchestra.setLeader(pane.id) }}
+            className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-accent"><MdFlag size={13} /></button>
+        )}
         <button title={t('pane.close')} onClick={(e) => { e.stopPropagation(); closePane(pane.id) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
           <MdClose size={13} />
         </button>
