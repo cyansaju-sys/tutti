@@ -307,7 +307,9 @@ export function FilesView() {
           ))}
         </div>
       </div>
-      {rootOpen && <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className={clsx('min-h-0 flex-1 overflow-y-auto px-1 pb-2 outline-none', dropOn === project && 'bg-accent/5 ring-1 ring-inset ring-accent/40')}
+      {/* un solo scroll para todo el explorador: el árbol y, debajo, los roles */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+      {rootOpen && <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className={clsx('px-1 pb-2 outline-none', dropOn === project && 'bg-accent/5 ring-1 ring-inset ring-accent/40')}
         onDragOver={(e) => { dropTarget(e, project) }} onDragLeave={(e) => { if (e.currentTarget === e.target) setDropOn(null) }} onDrop={(e) => dropped(e, project)}
         onClick={(e) => { if (e.target === e.currentTarget) setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) }}
         onContextMenu={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) } }}>
@@ -355,6 +357,7 @@ export function FilesView() {
         })}
       </div>}
       <RolesPlan />
+      </div>
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
           { label: t('fs.newFile'), icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },

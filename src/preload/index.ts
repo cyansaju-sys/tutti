@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Api, OpenPane, PtyExit, UpdateState } from '../shared/types'
+import type { Api, OpenPane, PaneState, PtyExit, UpdateState } from '../shared/types'
 
 const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => void): (() => void) => {
   const handler = (_e: unknown, ...args: unknown[]): void => cb(...(args as T))
@@ -67,10 +67,27 @@ const api: Api = {
     startRoles: (project) => ipcRenderer.invoke('orchestra:roles-start', project),
     roles: (project) => ipcRenderer.invoke('orchestra:roles', project),
     discardRoles: (project) => ipcRenderer.invoke('orchestra:roles-discard', project),
+    retryRole: (project, id) => ipcRenderer.invoke('orchestra:roles-retry', project, id),
+    addRole: (project, role) => ipcRenderer.invoke('orchestra:roles-add', project, role),
+    removeRole: (project, id) => ipcRenderer.invoke('orchestra:roles-remove', project, id),
+    roleTemplates: () => ipcRenderer.invoke('orchestra:templates'),
+    saveRoleTemplate: (template, previousId) => ipcRenderer.invoke('orchestra:templates-save', template, previousId),
+    deleteRoleTemplate: (id) => ipcRenderer.invoke('orchestra:templates-delete', id),
+    pauseRoles: (project) => ipcRenderer.invoke('orchestra:roles-pause', project),
+    cancelRole: (project, id) => ipcRenderer.invoke('orchestra:roles-cancel', project, id),
+    planTemplates: () => ipcRenderer.invoke('orchestra:plan-templates'),
+    planFromTemplate: (project, templateId, summary) => ipcRenderer.invoke('orchestra:plan-from-template', project, templateId, summary),
+    savePlanTemplate: (project, name) => ipcRenderer.invoke('orchestra:plan-templates-save', project, name),
+    deletePlanTemplate: (id) => ipcRenderer.invoke('orchestra:plan-templates-delete', id),
+    acceptRole: (project, id) => ipcRenderer.invoke('orchestra:roles-accept', project, id),
+    rejectRole: (project, id, feedback) => ipcRenderer.invoke('orchestra:roles-reject', project, id, feedback),
     updateRole: (project, id, edit) => ipcRenderer.invoke('orchestra:roles-update', project, id, edit),
     roleOptions: (project) => ipcRenderer.invoke('orchestra:roles-options', project),
     onOpenPane: (cb) => subscribe<[OpenPane]>('orchestra:open-pane', cb),
-    onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb)
+    onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb),
+    paneState: () => ipcRenderer.invoke('orchestra:pane-state'),
+    setLeader: (id) => ipcRenderer.invoke('orchestra:set-leader', id),
+    onPaneState: (cb) => subscribe<[PaneState]>('orchestra:pane-state', cb)
   },
   pty: {
     spawn: (o) => ipcRenderer.invoke('pty:spawn', o),

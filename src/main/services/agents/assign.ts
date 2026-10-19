@@ -13,6 +13,8 @@ export interface Candidate {
   busy: boolean
   /** Porcentaje usado del límite más ajustado (0-100); undefined si no se conoce. */
   quota?: number
+  /** Cuántas tareas de cada dificultad terminó bien y cuántas falló (ver history.ts). */
+  history?: Partial<Record<Difficulty, { ok: number; fail: number }>>
 }
 
 const LEVEL: Record<Tier, number> = { basic: 0, standard: 1, advanced: 2 }
@@ -28,10 +30,22 @@ export const exhausted = (c: Pick<Candidate, 'quota'>): boolean => (c.quota ?? 0
 /** Qué dificultades puede asumir un agente (para mostrarlo en list_agents). */
 export const capableFor = (c: Pick<Candidate, 'tier'>): Difficulty[] => (['easy', 'medium', 'hard'] as const).filter((d) => capable(c, d))
 
-/** Menor es mejor: libre antes que ocupado, ya abierto antes que nuevo, el justo para la tarea antes que uno sobrado, con cuota antes que sin ella. */
+export const MIN_HISTORY = 3          // con menos tareas de esa dificultad, el historial aún no dice nada
+
+/** Coste por historial: 0 si suele acertar en esa dificultad (o aún no hay datos), hasta 40 si casi siempre falla. */
+export function historyPenalty(c: Pick<Candidate, 'history'>, d: Difficulty): number {
+  const h = c.history?.[d]
+  const n = h ? h.ok + h.fail : 0
+  return h && n >= MIN_HISTORY ? Math.round((h.fail / n) * 40) : 0
+}
+
+/**
+ * Menor es mejor: libre antes que ocupado, ya abierto antes que nuevo, el justo para la tarea antes que uno sobrado, con cuota antes que sin
+ * ella y el que suele acertar en esa dificultad antes que el que suele fallar.
+ */
 function cost(c: Candidate, d: Difficulty): number {
   const spare = LEVEL[c.tier] - LEVEL[REQUIRED[d]]      // niveles de más: no se gasta un agente avanzado en algo fácil
-  return (c.busy ? 100 : 0) + (c.id ? 0 : 10) + Math.max(0, spare) * 5 + ((c.quota ?? 0) >= QUOTA_LOW ? 30 : 0)
+  return (c.busy ? 100 : 0) + (c.id ? 0 : 10) + Math.max(0, spare) * 5 + ((c.quota ?? 0) >= QUOTA_LOW ? 30 : 0) + historyPenalty(c, d)
 }
 
 export interface Assignment<C extends Candidate = Candidate> { chosen: C | null; reason: string; ranking: C[] }

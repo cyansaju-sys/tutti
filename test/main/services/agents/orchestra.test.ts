@@ -7,10 +7,27 @@ const host: Host = {
   delegate: async (caller, target, task, fresh, opts) => { calls.push(opts?.difficulty ? [caller, target, task, fresh, opts] : [caller, target, task, fresh]); return target === 'malo' ? { ok: false, info: 'no existe' } : { ok: true, info: { agent_id: target } } },
   proposeRoles: async (caller, summary, roles) => { calls.push([caller, 'propose', summary, roles]); return Array.isArray(roles) && roles.length ? { ok: true, info: { roles: [] } } : { ok: false, info: 'sin roles' } },
   confirmRoles: async (caller) => { calls.push([caller, 'confirm']); return { ok: true, info: { status: 'approved' } } },
-  output: (id) => (id === 'a2' ? { agent_id: 'a2', busy: false, idle_seconds: 9, text: 'listo' } : null)
+  report: (caller, report) => { calls.push([caller, 'report', report]); return { ok: true, info: 'recibido' } },
+  retryRole: (caller, roleId) => { calls.push([caller, 'retry', roleId]); return roleId === 'api' ? { ok: true, info: 'lista' } : { ok: false, info: 'no existe' } },
+  roleResult: (caller, roleId) => (roleId === 'api' ? { ok: true, info: { role: 'api', summary: 'rutas hechas' } } : { ok: false, info: 'no existe' }),
+  acceptRole: (caller, roleId) => { calls.push([caller, 'accept', roleId]); return { ok: roleId === 'api', info: roleId === 'api' ? 'aceptado' : 'no está en revisión' } },
+  rejectRole: (caller, roleId, feedback) => { calls.push([caller, 'reject', roleId, feedback]); return { ok: true, info: 'devuelto' } },
+  askLeader: (caller, question) => { calls.push([caller, 'ask', question]); return caller === 'a1' ? { ok: true, info: 'enviada' } : { ok: false, info: 'sin tarea' } },
+  answerAgent: (caller, agentId, answer) => { calls.push([caller, 'answer', agentId, answer]); return { ok: true, info: 'enviada' } },
+  postNote: (caller, text) => { calls.push([caller, 'note', text]); return { ok: true, info: 'guardada' } },
+  readNotes: (caller, limit) => { calls.push([caller, 'notes', limit]); return { ok: true, info: { notes: ['una'] } } },
+  updates: (caller) => ({ ok: true, info: { updates: [`para ${caller}`] } }),
+  roleTemplates: () => ({ ok: true, info: { templates: [{ id: 'tests' }] } }),
+  seen: (caller) => { seen.add(caller) },
+  output: (id) => (id === 'a2' ? { agent_id: 'a2', busy: false, idle_seconds: 9, text: 'listo' }
+    : id === 'a3' ? { agent_id: 'a3', busy: false, idle_seconds: 0, text: '…', report: { status: 'done', summary: 'hecho', files: [] } }
+    : id === 'a4' ? { agent_id: 'a4', busy: false, idle_seconds: 0, text: 'Do you want to proceed?', awaiting_input: true }
+    : id === 'a5' ? { agent_id: 'a5', busy: false, idle_seconds: 30, text: 'Esperando respuesta', question: '¿español o inglés?' }
+    : null)
 }
+const seen = new Set<string>()
 let server: Orchestra | null = null
-afterEach(() => { server?.stop(); server = null; calls.length = 0 })
+afterEach(() => { server?.stop(); server = null; calls.length = 0; seen.clear() })
 
 async function start(): Promise<{ post: (body: unknown, token?: string) => Promise<Response>; o: Orchestra }> {
   server = await new Orchestra(host).start()
@@ -36,7 +53,7 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(await (await post(rpc('ping'))).json()).toMatchObject({ result: {} })
     const tools = await (await post(rpc('tools/list'))).json()
     expect(tools.result.tools.map((t: { name: string }) => t.name)).toEqual(TOOLS.map((t) => t.name))
-    expect(tools.result.tools).toHaveLength(6)
+    expect(tools.result.tools).toHaveLength(17)
   })
 
   it('las notificaciones no tienen respuesta y un método desconocido da error', async () => {
@@ -96,6 +113,89 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(JSON.parse(waited.result.content[0].text).finished).toBe(true)
     const none = await (await post(rpc('tools/call', { name: 'read_agent_output', arguments: { agent_id: 'zz' } }))).json()
     expect(none.result.isError).toBe(true)
+  })
+
+  it('report_done valida estado y resumen y pasa quién avisa; retry_role pasa el rol', async () => {
+    const { post } = await start()
+    const ok = await (await post(rpc('tools/call', { name: 'report_done', arguments: { status: 'blocked', summary: ' falta la clave ', files_changed: ['src/a.ts', 3, ' '] } }))).json()
+    expect(ok.result.isError).toBe(false)
+    expect(calls[0]).toEqual(['a1', 'report', { status: 'blocked', summary: 'falta la clave', files: ['src/a.ts'] }])
+    const badStatus = await (await post(rpc('tools/call', { name: 'report_done', arguments: { status: 'ok', summary: 'x' } }))).json()
+    expect(badStatus.result.isError).toBe(true)
+    const noSummary = await (await post(rpc('tools/call', { name: 'report_done', arguments: { status: 'done' } }))).json()
+    expect(noSummary.result.isError).toBe(true)
+    expect(calls).toHaveLength(1)
+    const retried = await (await post(rpc('tools/call', { name: 'retry_role', arguments: { role_id: 'api' } }))).json()
+    expect(retried.result.isError).toBe(false)
+    const missing = await (await post(rpc('tools/call', { name: 'retry_role', arguments: { role_id: 'otro' } }))).json()
+    expect(missing.result.isError).toBe(true)
+  })
+
+  it('get_role_result devuelve el resultado del rol o un error si no existe', async () => {
+    const { post } = await start()
+    const ok = await (await post(rpc('tools/call', { name: 'get_role_result', arguments: { role_id: ' api ' } }))).json()
+    expect(JSON.parse(ok.result.content[0].text).summary).toBe('rutas hechas')
+    const bad = await (await post(rpc('tools/call', { name: 'get_role_result', arguments: { role_id: 'otro' } }))).json()
+    expect(bad.result.isError).toBe(true)
+  })
+
+  it('accept_role y reject_role pasan el rol; reject_role exige feedback', async () => {
+    const { post } = await start()
+    const ok = await (await post(rpc('tools/call', { name: 'accept_role', arguments: { role_id: 'api' } }))).json()
+    expect(ok.result.isError).toBe(false)
+    const bad = await (await post(rpc('tools/call', { name: 'accept_role', arguments: { role_id: 'otro' } }))).json()
+    expect(bad.result.isError).toBe(true)
+    const noFeedback = await (await post(rpc('tools/call', { name: 'reject_role', arguments: { role_id: 'api', feedback: '  ' } }))).json()
+    expect(noFeedback.result.isError).toBe(true)
+    const rejected = await (await post(rpc('tools/call', { name: 'reject_role', arguments: { role_id: 'api', feedback: ' faltan tests ' } }))).json()
+    expect(rejected.result.isError).toBe(false)
+    expect(calls).toEqual([['a1', 'accept', 'api'], ['a1', 'accept', 'otro'], ['a1', 'reject', 'api', 'faltan tests']])
+  })
+
+  it('ask_leader, answer_agent, post_note, read_notes y get_updates pasan quién llama; sin texto fallan', async () => {
+    const { post } = await start()
+    const call = async (name: string, args: object): Promise<{ isError: boolean; content: Array<{ text: string }> }> => (await (await post(rpc('tools/call', { name, arguments: args }))).json()).result
+    expect((await call('ask_leader', { question: ' ¿qué formato? ' })).isError).toBe(false)
+    expect((await call('ask_leader', { question: ' ' })).isError).toBe(true)
+    expect((await call('answer_agent', { agent_id: 'a2', answer: ' JSON ' })).isError).toBe(false)
+    expect((await call('answer_agent', { agent_id: 'a2' })).isError).toBe(true)
+    expect((await call('post_note', { text: ' la API usa snake_case ' })).isError).toBe(false)
+    expect((await call('post_note', {})).isError).toBe(true)
+    expect((await call('read_notes', { limit: 9999 })).isError).toBe(false)
+    expect(JSON.parse((await call('get_updates', {})).content[0].text).updates).toEqual(['para a1'])
+    expect(calls).toEqual([['a1', 'ask', '¿qué formato?'], ['a1', 'answer', 'a2', 'JSON'], ['a1', 'note', 'la API usa snake_case'], ['a1', 'notes', 200]])
+  })
+
+  it('list_role_templates devuelve los roles reutilizables', async () => {
+    const { post } = await start()
+    const res = await (await post(rpc('tools/call', { name: 'list_role_templates', arguments: {} }))).json()
+    expect(JSON.parse(res.result.content[0].text).templates[0].id).toBe('tests')
+  })
+
+  it('marca como conectado al agente que habla con el servidor', async () => {
+    const { post } = await start()
+    await post(rpc('initialize'))
+    expect(seen.has('a1')).toBe(true)
+  })
+
+  it('wait_agent vuelve en cuanto el agente avisa con report_done, y avisa si espera un permiso', async () => {
+    const { post } = await start()
+    const done = JSON.parse((await (await post(rpc('tools/call', { name: 'wait_agent', arguments: { agent_id: 'a3', timeout_seconds: 5 } }))).json()).result.content[0].text)
+    expect(done.finished).toBe(true)
+    expect(done.report.summary).toBe('hecho')
+    const asking = JSON.parse((await (await post(rpc('tools/call', { name: 'wait_agent', arguments: { agent_id: 'a4', timeout_seconds: 5 } }))).json()).result.content[0].text)
+    expect(asking.finished).toBe(false)
+    expect(asking.note).toMatch(/permiso/)
+    const question = JSON.parse((await (await post(rpc('tools/call', { name: 'wait_agent', arguments: { agent_id: 'a5', timeout_seconds: 5 } }))).json()).result.content[0].text)
+    expect(question.finished).toBe(false)
+    expect(question.note).toMatch(/answer_agent/)
+  })
+
+  it('acepta los argumentos como texto JSON (algunos modelos los mandan así)', async () => {
+    const { post } = await start()
+    const res = await (await post(rpc('tools/call', { name: 'post_note', arguments: '{"text":"nota"}' }))).json()
+    expect(res.result.isError).toBe(false)
+    expect(calls[0]).toEqual(['a1', 'note', 'nota'])
   })
 
   it('acepta lotes JSON-RPC', async () => {

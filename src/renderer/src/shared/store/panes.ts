@@ -6,7 +6,7 @@ import type { State, PanesSlice } from './types'
 let paneId = 1   // solo para la terminal (los agentes piden su id a la app)
 
 export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, get) => ({
-  panes: [], shells: [], shellActive: null, shellMax: false, activePane: null,
+  panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, paneRoles: {}, paneInbox: {}, paneLeader: null,
 
   openAgent: async (agent, args = [], opts = {}) => {
     const cwd = opts.cwd || get().project

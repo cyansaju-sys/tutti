@@ -19,6 +19,8 @@ export interface Role {
   dependsOn: string[]
   /** Agente y modelo elegidos a mano: se respetan por encima del reparto automático. `agent` es el id de un panel abierto o el comando de uno instalado. */
   assign?: { agent: string; model?: string }
+  /** Comando que la app ejecuta en la raíz del proyecto cuando el rol termina (p. ej. «npm test -- api»); si falla, el rol no se da por bueno. */
+  check?: string
 }
 
 const ID = /^[a-z][a-z0-9-]{0,30}$/
@@ -26,6 +28,20 @@ const ID = /^[a-z][a-z0-9-]{0,30}$/
 /** Rutas comparables: sin «./», sin barra final y sin «/**» o «/*» al final. */
 const norm = (p: string): string => p.trim().replace(/^\.\//, '').replace(/\/\*{1,2}$/, '').replace(/\/+$/, '')
 const overlaps = (a: string, b: string): boolean => a === b || a.startsWith(b + '/') || b.startsWith(a + '/')
+
+/**
+ * Archivos de `changed` que no son del rol (ninguno de `owned` los contiene). Las rutas absolutas dentro de `project` se pasan a relativas.
+ * Un rol sin archivos propios solo lee: cualquier cambio suyo queda fuera.
+ */
+export function outsideFiles(owned: string[], changed: string[], project: string): string[] {
+  const root = norm(project.split('\\').join('/'))
+  const rel = (p: string): string => {
+    const f = norm(p.split('\\').join('/'))
+    return f.startsWith(root + '/') ? f.slice(root.length + 1) : f
+  }
+  const mine = owned.map((o) => rel(o)).filter(Boolean)
+  return [...new Set(changed.map(rel).filter(Boolean))].filter((f) => !mine.some((o) => f === o || f.startsWith(o + '/')))
+}
 
 /** Qué está mal en los roles propuestos (vacío si valen). Los mensajes los lee el agente líder. */
 export function validateRoles(roles: Role[]): string[] {
