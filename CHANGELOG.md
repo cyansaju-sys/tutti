@@ -2,6 +2,21 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.7
+
+### Funcional
+
+- **Revisa cada rol antes de darlo por bueno:** cuando un rol termina queda **en revisión**. Desde el Plan de roles (o el líder) lo **aceptas**, y entonces arrancan los que dependen de él, o lo **rechazas** con lo que debe corregir: su agente sigue con su contexto y vuelve a avisar. Si su agente ya se cerró, el rol se relanza con otro y lleva tus indicaciones.
+- **Comprobación automática por rol:** a cada rol le puedes poner un comando (por ejemplo `npm test -- api`) que Tutti ejecuta al terminar. Si falla, le devuelve la salida al agente para que lo arregle. También avisa si un rol tocó archivos que no son suyos.
+- **Roles bloqueados o fallidos, a la vista:** el plan marca los roles que se bloquearon, fallaron o cuyo agente se cerró, y puedes **relanzarlos** o **cancelarlos**. También puedes **pausar el reparto** (los roles en marcha siguen) y reanudarlo.
+- **Ver el plan entero:** **Ver el plan** muestra las **dependencias** entre roles y una **línea de tiempo** de lo que lleva cada uno.
+- **Roles reutilizables y plantillas de plan:** guarda un rol (por ejemplo «tests» o «revisor») para usarlo en cualquier plan y proyecto, o guarda un plan entero como plantilla. Hay una incluida, **Implementar → tests → revisión**. Al crear un plan desde una plantilla escribes qué hay que hacer y todos los roles lo leen. Con **+** añades roles al plan (en blanco o reutilizables) y los quitas cuando quieras.
+- **Los agentes pueden preguntar en vez de suponer:** un agente con una tarea delegada puede preguntarle al líder sin darla por terminada, y sigue en cuanto recibe la respuesta. Al acabar, deja un resumen de lo que hizo y los archivos que cambió, que el líder revisa sin leer su pantalla.
+- **Pizarra compartida:** los agentes dejan en `.tutti/notes.md` las decisiones que afectan a los demás (nombres, contratos de API, convenciones) y las leen antes de trabajar.
+- **Avisos que no te interrumpen:** los avisos de Tutti para un agente esperan a que esté libre y a que dejes de escribir en su panel, y le llegan juntos. Si un agente se queda esperando tu permiso o una respuesta, Tutti te lo dice.
+- **Elige quién es el líder:** desde la cabecera de un agente lo haces **líder**: reparte las tareas, recibe los avisos y dirige el plan de roles. Cada panel muestra también el rol que está haciendo.
+- **Un reparto que aprende:** en automático, Tutti recuerda qué agente y modelo terminó bien o falló en cada dificultad y evita a quien suele fallar.
+
 ## 1.3.6
 
 ### Funcional
