@@ -2,6 +2,14 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.3.8
+
+### Security
+
+- **Electron 44:** Tutti moves from Electron 33 to 44 and picks up more than 30 Electron and Chromium security fixes, including flaws that let a page get around the isolation from the system or around the iframe sandbox.
+- **No known vulnerabilities in the dependencies:** the tools the app is built with (Vite 8, electron-builder 26, Vitest 4) were also updated, as they had critical alerts.
+
+
 ## 1.3.7
 
 ### Functional
