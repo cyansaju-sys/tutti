@@ -2,6 +2,13 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.8
+
+### Seguridad
+
+- **Electron 44:** Tutti pasa de Electron 33 a 44 e incorpora más de 30 correcciones de seguridad de Electron y Chromium, entre ellas fallos que permitían saltarse el aislamiento entre la página y el sistema o el sandbox de los iframes.
+- **Cero vulnerabilidades conocidas en las dependencias:** también se actualizaron las herramientas con las que se construye la app (Vite 8, electron-builder 26, Vitest 4), que tenían avisos críticos.
+
 ## 1.3.6
 
 ### Funcional
