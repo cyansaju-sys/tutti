@@ -2,6 +2,29 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.3.8
+
+### Security
+
+- **Electron 44:** Tutti moves from Electron 33 to 44 and picks up more than 30 Electron and Chromium security fixes, including flaws that let a page get around the isolation from the system or around the iframe sandbox.
+- **No known vulnerabilities in the dependencies:** the tools the app is built with (Vite 8, electron-builder 26, Vitest 4) were also updated, as they had critical alerts.
+
+
+## 1.3.7
+
+### Functional
+
+- **Review each role before accepting it:** when a role finishes it stays **in review**. From the Role plan (or the leader) you **accept** it, and the roles that depend on it start, or you **reject** it with what must be fixed: its agent carries on with its context and reports back. If its agent has already closed, the role is relaunched with another one, carrying your feedback.
+- **Automatic check per role:** you can give each role a command (for example `npm test -- api`) that Tutti runs when it finishes. If it fails, the output goes back to the agent so it can fix it. Tutti also warns if a role touched files that are not its own.
+- **Blocked or failed roles in plain sight:** the plan marks roles that got blocked, failed or whose agent closed, and you can **relaunch** or **cancel** them. You can also **pause handing out** (running roles go on) and resume it.
+- **See the whole plan:** **View the plan** shows the **dependencies** between roles and a **timeline** of each one's progress.
+- **Reusable roles and plan templates:** save a role (for example "tests" or "reviewer") to use in any plan and project, or save a whole plan as a template. One comes built in, **Implement → tests → review**. When you create a plan from a template you write what needs doing and every role reads it. With **+** you add roles to the plan (blank or reusable) and remove them whenever you like.
+- **Agents can ask instead of guessing:** an agent with a delegated task can ask the leader without marking it done, and carries on as soon as it gets the answer. When it finishes, it leaves a summary of what it did and the files it changed, which the leader reviews without reading its screen.
+- **Shared notes:** agents leave in `.tutti/notes.md` the decisions that affect the others (names, API contracts, conventions) and read them before working.
+- **Notices that do not interrupt you:** Tutti's notices for an agent wait until it is free and you stop typing in its panel, and arrive together. If an agent is waiting for your permission or an answer, Tutti tells you.
+- **Choose the leader:** from an agent's header you make it the **leader**: it hands out tasks, gets the notices and runs the role plan. Each panel also shows the role it is working on.
+- **Assignment that learns:** on automatic, Tutti remembers which agent and model finished well or failed at each difficulty and avoids the ones that tend to fail.
+
 ## 1.3.6
 
 ### Functional
