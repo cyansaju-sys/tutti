@@ -356,8 +356,8 @@ export function FilesView() {
           )
         })}
       </div>}
-      <RolesPlan />
       </div>
+      <RolesPlan />
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
           { label: t('fs.newFile'), icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },

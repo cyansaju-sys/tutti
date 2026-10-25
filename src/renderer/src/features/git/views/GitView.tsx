@@ -111,7 +111,7 @@ export function GitView() {
 
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
     <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
-      <button className="flex min-w-0 flex-1 items-center gap-2 text-left" onClick={() => void openDiff(`${project}/${f.path}`, isStaged)} title={t('git.viewChanges')}>
+      <button className={`flex min-w-0 flex-1 items-center gap-2 text-left ${isStaged ? 'opacity-65' : ''}`} onClick={() => void openDiff(`${project}/${f.path}`, isStaged)} title={t('git.viewChanges')}>
         <img src={iconFor(basename(f.path))} alt="" className="size-4 shrink-0" draggable={false} />
         <span className="truncate text-[12px]" style={{ color: GIT_COLOR[f.code] }}>{basename(f.path)}</span>
         <span className="truncate text-[10px] text-muted">{dirname(f.path) === f.path ? '' : dirname(f.path)}</span>
@@ -131,7 +131,7 @@ export function GitView() {
       >
         {isStaged ? <MdRemove size={15} /> : <MdAdd size={15} />}
       </button>
-      <span className="w-3 shrink-0 text-center text-[11px] font-semibold" style={{ color: GIT_COLOR[f.code] }}>{f.code}</span>
+      <span className={`w-3 shrink-0 text-center text-[11px] font-semibold ${isStaged ? 'opacity-65' : ''}`} style={{ color: GIT_COLOR[f.code] }}>{f.code}</span>
     </li>
   )
 

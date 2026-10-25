@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MdAccountTree, MdAdd, MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -84,11 +85,11 @@ export function TitleBar() {
         <IconButton title={t('title.close')} danger onClick={() => window.api.window.close()}><MdClose size={16} /></IconButton>
       </div>
       <MdKeyboardArrowDown className="hidden" />
-      {termMenu && (
+      {termMenu && createPortal(      // fuera de la barra: dentro de ella el menú heredaría la región de arrastre y la ventana entera se tragaría los clics
         <Menu width={220} anchor={termMenu} onClose={() => setTermMenu(null)} items={[
           { label: t('title.newTerminal'), icon: <MdAdd size={15} />, onClick: () => void addShell() },
           { label: shell ? t('title.closeTerminals') : t('title.openTerminal'), separator: true, icon: <MdTerminal size={15} />, onClick: () => void toggleShell() }
-        ]} />
+        ]} />, document.body
       )}
     </div>
   )
