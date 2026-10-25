@@ -2,6 +2,17 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.3.9
+
+### Functional
+
+- **The title bar's «Terminal» menu no longer locks up the window:** opening it turned the whole window into a drag area that swallowed every click, including the menu's own. It now responds normally.
+
+### Aesthetic
+
+- **The role plan takes a third of the explorer:** when expanded, it sits at the bottom with 4 of 12 of the panel's height, separated from the file tree by a thin line; the tree scrolls on its own. With few files it no longer hugs them and leaves an empty gap below.
+- **Staged files look dimmer:** in the Git view, staged changes are shown less intensely than the ones that are not, so you can tell them apart at a glance.
+
 ## 1.3.8
 
 ### Security

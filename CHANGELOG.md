@@ -2,6 +2,17 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.3.9
+
+### Funcional
+
+- **El menú «Terminal» de la barra de título ya no bloquea la ventana:** al abrirlo, la ventana entera se comportaba como zona de arrastre y se tragaba los clics, incluidos los del propio menú. Ahora responde con normalidad.
+
+### Estético
+
+- **El Plan de roles ocupa un tercio del explorador:** cuando está desplegado, se queda abajo con 4 de 12 de la altura del panel, separado del árbol de archivos por una línea fina; el árbol hace scroll por su cuenta. Con pocos archivos ya no queda pegado a ellos con un hueco vacío debajo.
+- **Los archivos preparados se ven más tenues:** en la vista de Git, los cambios preparados se muestran con menos intensidad que los que aún no lo están, para distinguirlos de un vistazo.
+
 ## 1.3.8
 
 ### Seguridad

@@ -241,7 +241,7 @@ export function RolesPlan() {
   ]
   const deleteTemplate = (tp: RoleTemplate): void => act(window.api.orchestra.deleteRoleTemplate(tp.id))
   return (
-    <section>
+    <section className={clsx('shrink-0 overflow-y-auto border-t border-ov/[0.08] pt-1', open && 'h-4/12')}>      {/* desplegado ocupa 4 de 12 del panel; el árbol de archivos, el resto */}
       <div className="flex items-center justify-between pl-3 pr-2 pb-1">
         <button onClick={toggle} aria-expanded={open} className="flex min-w-0 items-center gap-0.5 rounded px-1 py-1 text-left transition-colors hover:text-accent">
           <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', open && 'rotate-90')} />
