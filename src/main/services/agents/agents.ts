@@ -118,6 +118,8 @@ export function candidateExecutables(home: string = homedir(), path: string = ex
 
 /** Shell del usuario: $SHELL en Linux/macOS, PowerShell o cmd en Windows. */
 export function defaultShell(): string {
+  const defaultShell = getSetting('default_shell')
+  if (defaultShell != null && defaultShell) return String(defaultShell)
   if (process.platform === 'win32') return which('pwsh') ?? which('powershell') ?? process.env.COMSPEC ?? 'cmd'
   return process.env.SHELL || which('bash') || 'sh'
 }
