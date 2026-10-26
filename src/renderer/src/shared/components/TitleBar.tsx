@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MdAccountTree, MdAdd, MdCallSplit, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdChatBubbleOutline, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 import { Chip, IconButton } from './ui'
@@ -41,43 +41,32 @@ function UpdateButton() {
 
 export function TitleBar() {
   const t = useT()
-  const git = useStore((s) => s.git)
   const shell = useStore((s) => s.shells.length > 0)
   const editEnabled = useStore((s) => s.editEnabled)
   const set = useStore((s) => s.set)
   const setEdit = useStore((s) => s.setEdit)
+  const chatOpen = useStore((s) => s.chatOpen)
   const toggleShell = useStore((s) => s.toggleShell)
   const addShell = useStore((s) => s.addShell)
-  const openGraph = useStore((s) => s.openGraph)
 
   const [termMenu, setTermMenu] = useState<DOMRect | null>(null)
-  const [version, setVersion] = useState('')
-  useEffect(() => { void window.api.update.version().then(setVersion) }, [])
   useEffect(() => window.api.window.onMaximized((maximized) => set({ maximized })), [set])
 
   return (
     <div className="drag flex h-[34px] shrink-0 items-center justify-between bg-bg pl-3 pr-1" onDoubleClick={() => window.api.window.toggleMaximize()}>
       <div className="flex items-center gap-3">
-        <span className="text-[12px] font-medium text-muted">Tutti{version && <button onClick={() => set({ modal: 'news', newsSince: null })} title={t('title.news')} className="no-drag ml-1.5 text-[10px] font-normal opacity-60 transition-opacity hover:text-accent hover:opacity-100">v{version}</button>}</span>
+        <span className="text-[12px] font-medium text-muted">Tutti</span>
         <Chip icon={<MdTerminal size={14} />} label={t('title.terminal')} active={shell} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTermMenu(new DOMRect(r.left, r.bottom, 220, 0)) }} title={t('title.terminalTip')} />
-        {git?.isRepo && (
-          <Chip
-            icon={<MdCallSplit size={14} />}
-            label={git.branch}
-            onClick={() => set({ modal: 'branches' })}
-            title={t('title.changeBranch')}
-          />
-        )}
         <Chip
           icon={editEnabled ? <MdEdit size={14} /> : <MdEditOff size={14} />}
           label={editEnabled ? t('title.editing') : t('title.readOnly')}
           onClick={() => setEdit(!editEnabled)}
           title={t('title.editTip')}
         />
-        {git?.isRepo && <Chip icon={<MdAccountTree size={14} />} label={t('title.commits')} onClick={() => openGraph()} title={t('title.commitsTip')} />}
       </div>
       <div className="flex items-center gap-0.5">
         <UpdateButton />
+        <IconButton title={t('title.chat')} onClick={() => set({ chatOpen: !chatOpen })} className={chatOpen ? 'bg-accent-bg text-accent' : undefined}><MdChatBubbleOutline size={15} /></IconButton>
         <IconButton title={t('title.newWindow')} onClick={() => window.api.window.openNew()}><MdOpenInNew size={15} /></IconButton>
         <IconButton title={t('title.shortcuts')} onClick={() => set({ modal: 'shortcuts' })}><MdKeyboard size={16} /></IconButton>
         <IconButton title={t('title.minimize')} onClick={() => window.api.window.minimize()}><MdRemove size={16} /></IconButton>

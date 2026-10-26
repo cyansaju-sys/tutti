@@ -8,6 +8,8 @@ import { McpView } from '@/features/mcp/views/McpView'
 import { useAskAgent } from '@/features/tutti/lib/useAskAgent'
 import { OpenSpecBody } from '@/features/tutti/components/OpenSpecBody'
 import { createRoadmap, RoadmapBody } from '@/features/tutti/components/RoadmapBody'
+import { AgentsContext } from '@/features/tutti/components/AgentsContext'
+import { SpecDialog } from '@/features/tutti/components/SpecDialog'
 import { HookChoiceDialog } from '@/features/tutti/components/HookChoiceDialog'
 import { agentsMdPrompt } from '@/features/tutti/lib/agentsMd'
 import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
@@ -56,6 +58,7 @@ export function TuttiView() {
   const toast = useStore((s) => s.toast)
   const openHookForm = useStore((s) => s.openHookForm)
   const openSpecForm = useStore((s) => s.openSpecForm)
+  const specDialog = useStore((s) => s.specDialog)
   const openSteeringForm = useStore((s) => s.openSteeringForm)
   const openSkillForm = useStore((s) => s.openSkillForm)
   const ask = useAskAgent()
@@ -228,13 +231,9 @@ export function TuttiView() {
       await fill()
     }
     return (
-      <div className="shrink-0 border-t border-line px-1 pb-2 pt-1.5">
-        <div className="flex items-center gap-1.5">
-          <img src={iconFor('AGENTS.md', false)} alt="" className="size-4 shrink-0" draggable={false} />
-          <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{t('tutti.agentsTitle')}</span>
-          {agentsMd.exists && <button onClick={() => void openDoc(agentsMd.file)} className="text-[11px] text-muted underline-offset-2 transition-colors hover:text-accent hover:underline">{t('tutti.agentsOpen')}</button>}
-        </div>
-        <p className="px-0.5 pt-0.5 text-[11px] leading-snug text-muted">{t('tutti.agentsWhat')}</p>
+      <Fold id="agentsmd" title={t('tutti.agentsTitle')}>
+      <div className="px-1 pb-2">
+        <p className="px-0.5 pt-0.5 text-[11px] leading-snug text-muted">{t('tutti.agentsWhat')}{agentsMd.exists && <> <button onClick={() => void openDoc(agentsMd.file)} className="underline underline-offset-2 transition-colors hover:text-accent">{t('tutti.agentsOpen')}</button></>}</p>
         <p className={clsx('px-0.5 pt-1 text-[11px] font-medium', ok ? 'text-accent' : 'text-text')}>{t(status as MsgKey)}</p>
         <div className="flex flex-wrap gap-1.5 pt-1.5">
           {!agentsMd.exists && <button onClick={() => void create()} className="rounded-md bg-accent-bg px-2.5 py-1 text-[11px] font-medium text-accent transition-colors hover:brightness-110">{t('tutti.agentsCreate')}</button>}
@@ -242,7 +241,9 @@ export function TuttiView() {
           {agentsMd.exists && !ok && <button onClick={() => void act(() => window.api.context.agents.write(project))} className="rounded-md bg-accent-bg px-2.5 py-1 text-[11px] font-medium text-accent transition-colors hover:brightness-110">{t(!agentsMd.hasBlock ? 'tutti.agentsAdd' : 'tutti.agentsUpdate')}</button>}
           {agentsMd.hasBlock && <button onClick={() => void act(() => window.api.context.agents.remove(project))} className="rounded-md px-2 py-1 text-[11px] text-muted transition-colors hover:text-danger">{t('tutti.agentsRemove')}</button>}
         </div>
+        <AgentsContext project={project} version={`${agentsMd.exists}${agentsMd.hasBlock}${agentsMd.upToDate}${lists.steering.length}`} onChanged={() => void refresh()} />
       </div>
+      </Fold>
     )
   }
 
@@ -316,6 +317,7 @@ export function TuttiView() {
         <OpenSpecBody state={os} project={project} onChanged={() => void refresh()} />
       </Fold>
       {HooksSection()}
+      {specDialog && <SpecDialog prefill={specDialog} />}
       {hookChoice && <HookChoiceDialog onClose={() => setHookChoice(false)} />}
       {askTrust && (
         <Modal onClose={() => setAskTrust(false)} width={400} title={t('tutti.hookTrustTitle')}>
@@ -331,7 +333,7 @@ export function TuttiView() {
       <Section kind="steering" title={t('tutti.steering')} />
       <Section kind="skills" title={t('tutti.skills')} />
       <Fold id="mcp" title={t('tutti.mcp')} onAdd={() => setAddMcp((n) => n + 1)} addTip={t('mcp.addTip')}>
-        <McpView compact part="installed" addSignal={addMcp} />
+        <McpView compact addSignal={addMcp} />
       </Fold>
       {AgentsRow()}
     </div>

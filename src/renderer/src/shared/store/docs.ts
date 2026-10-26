@@ -7,7 +7,7 @@ import type { State, DocsSlice } from './types'
 export const isDirty = (d: Doc): boolean => d.text !== d.savedText
 
 export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get) => ({
-  docs: [], activeDoc: null, reveal: null, specPrefill: null,
+  docs: [], activeDoc: null, reveal: null, specDialog: null,
 
   openDoc: async (path) => {
     if (get().docs.some((d) => d.path === path)) { set({ activeDoc: path, focus: 'editor' }); return }
@@ -38,12 +38,7 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const doc: Doc = { kind: 'steeringform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'stf.tabTitle') }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
-  openSpecForm: (prefill) => {
-    const path = 'spec:new'
-    if (prefill) set({ specPrefill: prefill })
-    const doc: Doc = { kind: 'specform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'sf.tabTitle') }
-    set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
-  },
+  openSpecForm: (prefill) => set({ specDialog: prefill ?? { name: '', description: '' } }),
   openHookForm: (edit) => {
     const path = edit ? `hook:edit:${edit.index}:${edit.file}` : 'hook:new'
     const doc: Doc = { kind: 'hookform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: edit ? `${tr(get, 'hf.editTab')}${edit.name ? ` · ${edit.name}` : ''}` : tr(get, 'hf.tabTitle') }

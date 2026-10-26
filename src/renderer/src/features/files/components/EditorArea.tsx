@@ -16,7 +16,6 @@ import { DiffView } from './DiffView'
 import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '../../git/components/GitGraph'
 import { HookFormView } from '../../tutti/components/HookFormView'
-import { SpecFormView } from '../../tutti/components/SpecFormView'
 import { SkillFormView } from '../../tutti/components/SkillFormView'
 import { SteeringFormView } from '../../tutti/components/SteeringFormView'
 
@@ -165,7 +164,7 @@ export function EditorArea() {
                 active ? 'border-accent bg-surface text-text' : 'border-panel bg-panel text-muted hover:bg-raised'
               )}
             >
-              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : ['hookform', 'specform', 'steeringform', 'skillform'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
+              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
               <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
               {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
               {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
@@ -176,7 +175,7 @@ export function EditorArea() {
           )
         })}
       </div>
-      {doc && doc.kind !== 'graph' && !['hookform', 'specform', 'steeringform', 'skillform'].includes(doc.kind) && (
+      {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">
             {crumbs(project, doc.diffOf ?? doc.path).map((c, i, all) => (
@@ -251,11 +250,11 @@ export function EditorArea() {
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
           onSend={(sel) => sendSelection(doc.path, sel)}
+          onSelect={(sel) => useStore.setState({ editorSelection: { path: doc.path, ...sel } })}
         />
       )}
       {doc?.kind === 'graph' && <GitGraph />}
       {doc?.kind === 'hookform' && <HookFormView key={doc.path} path={doc.path} />}
-      {doc?.kind === 'specform' && <SpecFormView />}
       {doc?.kind === 'steeringform' && <SteeringFormView />}
       {doc?.kind === 'skillform' && <SkillFormView />}
       {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}

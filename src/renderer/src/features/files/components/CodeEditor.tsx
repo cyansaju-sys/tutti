@@ -210,6 +210,7 @@ interface Props {
   onChange: (text: string) => void
   onSave: () => void
   focusToken: number
+  onSelect?: (sel: { startLine: number; endLine: number; text: string }) => void      // al seleccionar algo: sus líneas (para citarlas en el chat)
   onSend?: (sel: { startLine: number; endLine: number; text: string }) => void      // «enviar al agente»: la selección, o la línea del cursor si no hay
   reveal?: { path: string; line: number; col: number; length: number; token: number } | null
 }
@@ -217,7 +218,7 @@ interface Props {
 const NO_CHANGES: ExternalChange[] = []
 
 /** Editor de código: guarda el estado de cada archivo (deshacer, cursor) al cambiar de pestaña. */
-export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, onChange, onSave, focusToken, reveal, onSend }: Props) {
+export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, onChange, onSave, focusToken, reveal, onSend, onSelect }: Props) {
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
   const host = useRef<HTMLDivElement>(null)
@@ -226,8 +227,8 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
   const states = useRef(new Map<string, EditorState>())
   const current = useRef(path)
   const ro = useRef(new Compartment())
-  const handlers = useRef({ onChange, onSave, onSend })
-  handlers.current = { onChange, onSave, onSend }
+  const handlers = useRef({ onChange, onSave, onSend, onSelect })
+  handlers.current = { onChange, onSave, onSend, onSelect }
 
   /** La selección con sus líneas (1..n); sin selección, la línea del cursor. */
   const selection = (v: EditorView): { startLine: number; endLine: number; text: string; empty: boolean } => {
@@ -279,7 +280,13 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
           return changeZoom(v, event.deltaY < 0 ? 0.1 : -0.1)
         }
       }),
-      EditorView.updateListener.of((u) => { if (u.docChanged) handlers.current.onChange(u.state.doc.toString()) })
+      EditorView.updateListener.of((u) => {
+        if (u.docChanged) handlers.current.onChange(u.state.doc.toString())
+        if (u.selectionSet && !u.state.selection.main.empty) {
+          const { from, to } = u.state.selection.main
+          handlers.current.onSelect?.({ startLine: u.state.doc.lineAt(from).number, endLine: u.state.doc.lineAt(to === u.state.doc.lineAt(to).from && to > from ? to - 1 : to).number, text: u.state.sliceDoc(from, Math.min(to, from + 20000)) })
+        }
+      })
     ]
   })
 

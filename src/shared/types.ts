@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'specform' | 'steeringform' | 'skillform'
+  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform'
   text: string
   crlf: boolean
   truncated: boolean
@@ -145,16 +145,6 @@ export interface AppMcpInfo {
   running: boolean; tools: string[]
   agents: Array<{ command: string; name: string; installed: boolean; applied: boolean; how: string; problem?: string }>
 }
-/** Un dato que el usuario debe rellenar al instalar un servidor del registro (variable de entorno o cabecera). */
-export interface RegistryField { name: string; description: string; required: boolean; secret: boolean; default: string }
-/** Una forma de instalar un servidor del registro: local (comando) o remota (URL). */
-export interface RegistryOption {
-  label: string; kind: 'remote' | 'local'
-  url?: string; transport?: McpTransport; command?: string; args?: string[]
-  env: RegistryField[]; headers: RegistryField[]
-}
-export interface RegistryServer { name: string; title: string; description: string; version: string; repository: string; options: RegistryOption[] }
-export interface RegistryPage { servers: RegistryServer[]; next: string; error: string }
 /** Cómo se habla con un servidor remoto: Streamable HTTP (el actual) o SSE (el antiguo). Sin indicar, HTTP. */
 export type McpTransport = 'http' | 'sse'
 /** Lo que se necesita para añadir un servidor. */
@@ -166,6 +156,22 @@ export interface McpSpec {
 export type GitOp = 'tag' | 'branch' | 'checkout' | 'cherry-pick' | 'revert' | 'merge' | 'rebase' | 'reset-soft' | 'reset-mixed' | 'reset-hard'
 export interface GitChangedFile { status: string; path: string; added: number; deleted: number }
 export interface GitCommit { hash: string; parents: string[]; author: string; time: number; refs: string[]; subject: string }
+/** Un archivo o carpeta del proyecto que se puede citar en el chat con «#». Las carpetas acaban en «/». */
+export interface ProjectRef { path: string; isDir: boolean }
+/** Una opción de una referencia «#» que se elige de una lista (un commit, un spec, una terminal…). */
+export interface ChatRefOption { id: string; label: string; hint: string }
+/** Lo que se puede citar con «#» además de archivos y carpetas. */
+export interface ChatRefs { commit: ChatRefOption[]; spec: ChatRefOption[]; steering: ChatRefOption[]; skill: ChatRefOption[]; doc: ChatRefOption[]; terminal: ChatRefOption[]; roadmap: boolean; hooks: boolean }
+/** Lo que adjuntaría una referencia «#» al enviar: su tamaño y si se recortó o no se pudo adjuntar. */
+export interface ChatRefPreview { token: string; chars: number; note: 'ok' | 'truncated' | 'blocked' | 'binary' | 'partial' | 'missing' }
+/** Lo que gastó una respuesta (solo algunos agentes lo informan). */
+export interface ChatUsage { inputTokens: number; outputTokens: number; costUsd?: number }
+/** Opciones de un mensaje: el texto de lo seleccionado en el editor (por referencia «sel:…») y el modelo (si el agente lo permite). */
+export interface ChatOptions { inline?: Record<string, string>; model?: string }
+/** Un «/comando» de un agente guardado como archivo: el de un proyecto o el del usuario. */
+export interface SlashCommand { name: string; description: string; source: 'project' | 'user' | 'builtin'; file: string }      // `builtin`: propio del agente, no es un archivo
+/** Un mensaje del chat. */
+export interface ChatTurn { role: 'user' | 'assistant'; text: string; attached?: string }      // `attached`: lo que citaba con «#», para que las preguntas siguientes lo conserven
 export interface McpResult { ok: boolean; message: string }
 /** Sincronización de MCP entre agentes: la fuente es Claude Code (`.mcp.json` en el proyecto, `~/.claude.json` en lo global). */
 export type SyncScope = 'project' | 'global'
@@ -210,7 +216,16 @@ export type Settings = Record<string, unknown>
 export interface Api {
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   dialog: { chooseFolder(start?: string): Promise<string | null> }
-  ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
+  ai: { cancel(kind: 'commit' | 'context' | 'chat'): Promise<void> }
+  chat: {
+    agents(): Promise<AgentInfo[]>                                                       // los agentes con los que se puede conversar sin abrirlos
+    extraRefs(project: string): Promise<ChatRefs>                                        // lo demás que se puede citar con «#»
+    refs(project: string): Promise<ProjectRef[]>                                         // archivos y carpetas del proyecto para «#»
+    slash(project: string | null, command: string): Promise<SlashCommand[]>             // los «/comandos» de ese agente
+    ask(project: string | null, command: string, history: ChatTurn[], options?: ChatOptions): Promise<McpResult & { text?: string; attached?: string; usage?: ChatUsage }>
+    preview(project: string, text: string, inline: Record<string, string>): Promise<ChatRefPreview[]>      // lo que adjuntarían las referencias # del texto
+    onChunk(cb: (text: string) => void): () => void                                      // la respuesta según se va escribiendo
+  }
   skills: { import(project: string, source: string): Promise<McpResult> }      // copia una skill (carpeta con SKILL.md) a .tutti/skills; el SKILL.md nuevo va en `message`
   openspec: {
     state(project: string): Promise<OpenSpecState>
@@ -301,8 +316,6 @@ export interface Api {
   mcp: {
     list(project: string | null): Promise<McpServer[]>
     app(): Promise<AppMcpInfo>
-    registry(query: string, cursor: string): Promise<RegistryPage>
-    featured(): Promise<RegistryServer[]>
     add(agent: McpAgent, spec: McpSpec, scope: McpScope, project: string | null): Promise<McpResult>
     probe(server: McpServer, project: string | null): Promise<McpProbe>          // arranca o llama al servidor y pide sus herramientas
     update(server: McpServer, spec: McpSpec, project: string | null): Promise<McpResult>   // cambia un servidor en su agente y alcance

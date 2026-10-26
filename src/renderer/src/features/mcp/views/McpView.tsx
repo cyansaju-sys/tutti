@@ -1,13 +1,25 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdErrorOutline, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdSync, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
-import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, McpTransport, RegistryServer, SyncScope, SyncState } from '@shared/types'
-import { FIELD, FIELD_SLIM, Modal } from '@/shared/components/ui'
-import { AGENT_NAMES, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFrom, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
+import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, McpTransport, SyncScope, SyncState } from '@shared/types'
+import { FIELD, Modal } from '@/shared/components/ui'
+import { AGENT_NAMES, shortName, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
 import { useT } from '@/shared/lib/i18n'
 import { useResizeHeight } from '@/shared/lib/useResizeHeight'
 import { useStore } from '@/shared/store'
-import { Avatar, McpStoreDetail, McpStoreList } from './McpStore'
+
+/** Iniciales sobre un color propio de cada servidor (el registro no trae iconos). */
+export function Avatar({ name }: { name: string }) {
+  let hash = 0
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
+  const hue = hash % 360
+  const letters = shortName(name).replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase() || '?'
+  return (
+    <span className="grid size-9 shrink-0 place-items-center rounded-lg text-[12px] font-semibold text-white" style={{ background: `linear-gradient(135deg, hsl(${hue} 55% 52%), hsl(${(hue + 30) % 360} 55% 38%))` }}>
+      {letters}
+    </span>
+  )
+}
 
 const SUPPORTED: McpAgent[] = ['claude', 'opencode', 'gemini', 'codex', 'agy', 'qwen', 'cursor']
 /** Comando con el que se detecta el agente, si no es su propio nombre. */
@@ -98,11 +110,9 @@ function InstalledWrap({ compact, count, children }: { compact: boolean; count: 
 
 /**
  * Servidores MCP de cada agente instalado, con + para añadir uno y papelera para quitarlo.
- * `compact`: sin título y con sangría, para incrustarla como sección de otra vista; `part` muestra solo los instalados o solo la tienda; `addSignal` abre el diálogo de añadir al cambiar.
+ * `compact`: sin título y con sangría, para incrustarla como sección de otra vista; `addSignal` abre el diálogo de añadir al cambiar.
  */
-export function McpView({ compact = false, part = 'all', addSignal = 0 }: { compact?: boolean; part?: 'all' | 'installed' | 'store'; addSignal?: number }) {
-  const showInstalled = part !== 'store'
-  const showStore = part !== 'installed'
+export function McpView({ compact = false, addSignal = 0 }: { compact?: boolean; addSignal?: number }) {
   const t = useT()
   const project = useStore((s) => s.project)
   const agents = useStore((s) => s.agents)
@@ -112,9 +122,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<McpServer[] | null>(null)      // grupo que se está editando
   const [removing, setRemoving] = useState<McpServer[] | null>(null)    // grupo que se va a quitar (pide confirmación)
-  const [prefill, setPrefill] = useState<Prefill | null>(null)          // instalar desde el registro: el diálogo de añadir con los datos rellenos
-  const [storeItem, setStoreItem] = useState<RegistryServer | null>(null)
-  const [query, setQuery] = useState('')
+  const [prefill, setPrefill] = useState<Prefill | null>(null)          // el diálogo de añadir con los datos rellenos
 
   const installed = useMemo(() => SUPPORTED.filter((a) => agents.some((x) => x.command === (COMMAND[a] ?? a))), [agents])
   const refresh = useCallback(async () => {
@@ -135,7 +143,6 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
   }, [visible])
   const open = details ? groups.find((g) => g[0].name.toLowerCase() === details) : undefined
 
-  const installedNames = useMemo(() => new Set((servers ?? []).map((x) => x.name.toLowerCase())), [servers])
 
   // sincronizar con la fuente: lo pendiente va en la tarjeta de cada servidor y las acciones, al final de la lista
   const toast = useStore((s) => s.toast)
@@ -186,13 +193,7 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
 
   return (
     <div className={clsx('flex flex-col', compact ? 'pl-3' : 'h-full px-2')}>
-      {showStore && <div className="px-1.5 pb-2">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('st.search')} spellCheck={false}
-          onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }} className={FIELD_SLIM} />
-      </div>}
       <div className={clsx(!compact && 'flex min-h-0 flex-1 flex-col overflow-y-auto pb-2')}>
-        {showInstalled && !query.trim() && (
-          <>
         {servers === null && <p className="px-2 text-[11px] text-muted">{t('mcp.reading')}</p>}
         {servers && installed.length === 0 && <p className="px-2 text-[11px] text-muted">{t('mcp.noneSupported')}</p>}
         {servers && installed.length > 0 && visible.length === 0 && (compact
@@ -231,17 +232,8 @@ export function McpView({ compact = false, part = 'all', addSignal = 0 }: { comp
         })}
         {syncActions}
         </InstalledWrap>}
-          </>
-        )}
-        {showStore && !query.trim() && (
-          <Fold id="featured" title={t('st.featured')} fill={!compact}>
-            <McpStoreList featured query="" installedNames={installedNames} onOpen={setStoreItem} />
-          </Fold>
-        )}
-        {showStore && query.trim() && <Fold id="available" title={t('st.available')} fill={!compact} forceOpen><McpStoreList query={query.trim()} installedNames={installedNames} onOpen={setStoreItem} /></Fold>}
       </div>
 
-      {storeItem && <McpStoreDetail server={storeItem} onClose={() => setStoreItem(null)} onInstall={(option) => { setPrefill(prefillFrom(storeItem, option)); setStoreItem(null) }} />}
       {prefill && <AddDialog installed={installed} project={project} prefill={prefill} onClose={() => setPrefill(null)} onDone={() => void refresh()} />}
       {open && <Details group={open} installed={installed} project={project} follow={followOf(open)} onClose={() => setDetails(null)} onChanged={() => { void sync.load(); void refresh() }} onEdit={(g) => { setDetails(null); setEditing(g) }} onRemove={(g) => { setDetails(null); setRemoving(g) }} />}
       {removing && (
@@ -473,7 +465,6 @@ function AddDialog({ installed, project, prefill, editing, onClose, onDone }: { 
             <textarea className={clsx(input, 'min-h-[64px] resize-y')} placeholder={t('mcp.envPlaceholder')} value={env} onChange={(e) => setEnv(e.target.value)} spellCheck={false} />
           </>
         )}
-        {prefill && prefill.fields.length > 0 && <p className="text-[11px] leading-snug text-muted">{t('st.fieldsHelp')}</p>}
         {!editing && <>
         {scope === 'global' && <div>
           <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">{t('mcp.agents')}</div>
