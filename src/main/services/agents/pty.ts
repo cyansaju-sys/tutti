@@ -27,21 +27,21 @@ const disposeScreen = (s: Session): void => { try { s.screen.dispose() } catch {
 const waiting = new Map<string, Array<() => void>>()
 
 /** Resuelve el ejecutable; lanza un Error con un mensaje legible si no se puede iniciar. */
-function resolve(opts: PtyOptions, args: string[]): { file: string; args: string[] } {
+function resolve(opts: PtyOptions, args: string[], useCommand: boolean = false): { file: string; args: string[] } {
   const exe = isAbsolute(opts.command) && existsSync(opts.command) ? opts.command : which(opts.command)
   if (!exe) throw new Error(tm('m.pty.notFound', { command: opts.command }))
   let dir = false
   try { dir = statSync(opts.cwd).isDirectory() } catch { /* no existe */ }
   if (!dir) throw new Error(tm('m.pty.noDir', { cwd: opts.cwd }))
-  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(exe)) return { file: 'cmd.exe', args: ['/c', exe, ...args] }
+  if (process.platform === 'win32' && /\.(cmd|bat)$/i.test(exe)) return { file: 'cmd.exe', args: ['/c', (useCommand ? opts.command : exe), ...args] }
   return { file: exe, args }
 }
 
-export function spawn(sender: WebContents, opts: PtyOptions): { ok: boolean; error?: string } {
+export function spawn(sender: WebContents, opts: PtyOptions, useCommand: boolean = false): { ok: boolean; error?: string } {
   try {
     const kind = opts.kind ?? 'shell'
     const launch: Launch = kind === 'agent' && launchHook ? launchHook(opts) : { args: opts.args ?? [], env: {} }
-    const { file, args } = resolve(opts, launch.args)
+    const { file, args } = resolve(opts, launch.args, useCommand)
     const term = pty.spawn(file, args, { name: 'xterm-256color', cols: opts.cols, rows: opts.rows, cwd: opts.cwd || homedir(), env: childEnv(launch.env) })
     // pantalla «sin cabeza»: permite leer lo que muestra el agente sin pasar por la interfaz
     const screen = new Headless({ cols: opts.cols, rows: opts.rows, scrollback: 3000, allowProposedApi: true })
@@ -57,6 +57,7 @@ export function spawn(sender: WebContents, opts: PtyOptions): { ok: boolean; err
       sessions.delete(opts.id)
       disposeScreen(session)
       if (session.killed || sender.isDestroyed()) return                // lo cerró la app: no hay nada que avisar
+      if (exitCode === 1 && !useCommand) { return spawn(sender, opts, true)}
       sender.send('pty:exit', { id: opts.id, code: signal ? -signal : exitCode })
     })
     waiting.get(opts.id)?.forEach((resolveWait) => resolveWait())
