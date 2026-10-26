@@ -158,7 +158,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     // el ejemplo va a la ubicación antigua (configuración aislada de la captura): así no se crea un AGENTS.md en el proyecto fotografiado
     mkdirSync(dirname(legacyContextFile(project)), { recursive: true })
     writeFileSync(legacyContextFile(project), sample, 'utf8')
-    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'context', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/tutti-docs'] })`)
+    await run(`${store}.set({ modal: null, docs: [], activeDoc: null, panes: [], activePane: null, tab: 'tutti', recentProjects: ['/home/usuario/proyectos/tienda-web', '/home/usuario/proyectos/api-pagos', '/home/usuario/proyectos/tutti-docs'] })`)
     await snap('21-contexto', 1500)
     await run(`${store}.set({ tab: 'files' })`)
     await snap('22-inicio', 800)
@@ -244,23 +244,8 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await snap('13-consumo-menu', 500)
   }
   if (process.env.TUTTI_CAPTURE_MCP) {              // requiere servidores de ejemplo en el HOME (ver docs)
-    await run(`${store}.set({ modal: null, tab: 'mcp', docs: [], activeDoc: null })`)
+    await run(`${store}.set({ modal: null, tab: 'tutti', docs: [], activeDoc: null })`)
     await snap('09-mcp', 5000)
-    // la tienda: buscar en el registro y abrir la ficha de un servidor
-    await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'filesystem'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-    await sleep(14000)
-    // sin conexión al registro no hay resultados que fotografiar: se omiten la tienda, la ficha y el instalar (y se conservan las imágenes que haya)
-    const offline = (await run(`/No se pudo consultar|Could not reach|Buscando en el registro|Searching the registry/.test(document.body.textContent)`)) as boolean
-    if (offline) console.log('registro MCP sin conexión: se omiten 09b, 09c y 09d')
-    else {
-      await snap('09b-mcp-tienda', 300)
-      await run(`document.querySelector('[title*="/"]')?.click()`)
-      await snap('09c-mcp-ficha', 700)
-      await run(`[...document.querySelectorAll('button')].find((b) => /Continuar|Continue/.test(b.textContent))?.click()`)
-      await snap('09d-mcp-instalar', 700)
-      await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`)
-    }
-    await run(`(() => { const i = document.querySelector('input[placeholder*="registr"], input[placeholder*="registry"]'); if (!i) return; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ''); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
     await sleep(800)
     await run(`document.querySelector('[title="Ver detalles"]')?.click()`)
     await snap('10-mcp-detalles', 600)

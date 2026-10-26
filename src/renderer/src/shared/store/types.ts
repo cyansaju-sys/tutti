@@ -1,8 +1,8 @@
-import type { AgentInfo, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
+import type { AgentInfo, ChatTurn, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 
-export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'mcp' | 'ai' | 'context' | 'tutti'
+export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti'
 export type ToastKind = 'ok' | 'error' | 'info'
 export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news' | 'quickOpen' | 'goLine'
 export type Focus = 'tree' | 'editor' | 'pane'
@@ -43,8 +43,8 @@ export interface DocsSlice {
   openGraph: () => void
   openSkillForm: () => void                           // el formulario de una skill nueva
   openSteeringForm: () => void                        // el formulario de un steering nuevo
-  openSpecForm: (prefill?: SpecPrefill) => void       // el formulario guiado de una spec nueva (desde el roadmap, ya rellenado)
-  specPrefill: SpecPrefill | null                     // lo que el formulario de spec debe rellenar al abrirse; lo consume el formulario
+  openSpecForm: (prefill?: SpecPrefill) => void       // el diálogo de una spec nueva (desde el roadmap, ya rellenado)
+  specDialog: SpecPrefill | null                      // el diálogo de cambio nuevo, abierto (con lo que ya trae relleno) o null si está cerrado
   openHookForm: (edit?: { file: string; index: number; name?: string }) => void      // el formulario para crear un hook (o editar uno), como una pestaña más del editor
   openCommitDiff: (hash: string, parent: string | null, path: string, label: string) => Promise<void>
   renameDocs: (from: string, to: string) => void      // un archivo o carpeta cambió de nombre: sus pestañas lo siguen
@@ -81,6 +81,13 @@ export interface UiSlice {
   newsSince: string | null
   tab: SidebarTab
   sidebarOpen: boolean
+  chatOpen: boolean                                     // el panel de chat, al lado contrario de la barra lateral
+  chatWidth: number
+  chatMessages: ChatTurn[]                               // la conversación del chat (se conserva aunque se cierre el panel)
+  editorSelection: { path: string; startLine: number; endLine: number; text: string } | null          // lo último que se seleccionó en el editor (para citarlo en el chat con #)
+  chatModel: Record<string, string>                     // el modelo elegido para cada agente en el chat (sin entrada: el suyo por defecto)
+  chatAgent: string | null                              // el comando del agente con el que se conversa (null: el primero disponible)
+  sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
   sidebarWidth: number
   editorWidth: number
   shellHeight: number
@@ -102,5 +109,8 @@ export interface UiSlice {
   dismissToast: (id: number) => void
   setTheme: (pref: ThemePref) => void
   setLang: (pref: LangPref) => void
+  setChat: (turns: ChatTurn[]) => void                  // cambia la conversación del chat y la guarda para este proyecto
+  restoreChat: () => void                               // carga la conversación guardada del proyecto abierto
+  setSidebarSide: (side: 'left' | 'right') => void
   setEdit: (enabled: boolean) => void
 }

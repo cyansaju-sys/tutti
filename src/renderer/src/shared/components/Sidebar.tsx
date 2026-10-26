@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
-import { useState } from 'react'
-import { MdAdd, MdLanguage, MdOutlineSettings, MdPalette } from 'react-icons/md'
+import { useEffect, useMemo, useState } from 'react'
+import { MdLanguage, MdSwapHoriz, MdOutlineSettings, MdPalette } from 'react-icons/md'
 import { Menu } from '@/shared/components/Menu'
 import { useT } from '@/shared/lib/i18n'
 import { sidebarIcon } from '@/shared/lib/icons'
@@ -10,21 +10,22 @@ import { AgentsView } from '@/features/agents/views/AgentsView'
 import { FilesView } from '@/features/files/views/FilesView'
 import { GitView } from '@/features/git/views/GitView'
 import { SearchView } from '@/features/search/views/SearchView'
-import { ContextView } from '@/features/context/views/ContextView'
 import { TuttiView } from '@/features/tutti/views/TuttiView'
-import { McpView } from '@/features/mcp/views/McpView'
 import { UsageView } from '@/features/usage/views/UsageView'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
   { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
   { id: 'tutti', icon: 'tutti', titleKey: 'tab.tutti', key: 'J' },
   { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
-  { id: 'context', icon: 'context', titleKey: 'tab.context', key: 'K' },
   { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
   { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
-  { id: 'mcp', icon: 'mcp', titleKey: 'tab.mcp', key: 'X' },
   { id: 'ai', icon: 'ai', titleKey: 'tab.ai', key: 'U' }
 ]
+
+const ORDER_KEY = 'sidebar_order'
+
+/** Las pestañas en el orden guardado; las que no aparezcan en él (p. ej. una nueva) van al final en su orden de siempre. */
+const ordered = (ids: string[]): typeof TABS => [...ids.flatMap((id) => TABS.filter((x) => x.id === id)), ...TABS.filter((x) => !ids.includes(x.id))]
 
 export function Sidebar() {
   const tab = useStore((s) => s.tab)
@@ -36,20 +37,42 @@ export function Sidebar() {
   const setTheme = useStore((s) => s.setTheme)
   const langPref = useStore((s) => s.langPref)
   const setLang = useStore((s) => s.setLang)
+  const side = useStore((s) => s.sidebarSide)
+  const setSide = useStore((s) => s.setSidebarSide)
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
-  const [addMcp, setAddMcp] = useState(0)          // sube al pulsar el + del título de MCP: la vista abre el diálogo de añadir
+  const [order, setOrder] = useState<string[]>([])           // el orden de los iconos, a gusto del usuario
+  const [dragged, setDragged] = useState<SidebarTab | null>(null)
+  const [over, setOver] = useState<SidebarTab | null>(null)
+  const tabs = useMemo(() => ordered(order), [order])
+  useEffect(() => { void window.api.settings.get(ORDER_KEY).then((v) => { if (Array.isArray(v)) setOrder(v.filter((x): x is string => typeof x === 'string')) }) }, [])
+
+  // suelta `dragged` en el lugar de `target`
+  const drop = (target: SidebarTab): void => {
+    if (dragged && dragged !== target) {
+      const ids = tabs.map((x) => x.id).filter((id) => id !== dragged)
+      ids.splice(ids.indexOf(target) + (tabs.findIndex((x) => x.id === dragged) < tabs.findIndex((x) => x.id === target) ? 1 : 0), 0, dragged)
+      setOrder(ids)
+      void window.api.settings.set(ORDER_KEY, ids)
+    }
+    setDragged(null); setOver(null)
+  }
 
   return (
-    <div style={{ width: open ? width + 56 : 56 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', !open && 'mr-1.5')}>
-      <div className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-line p-0.5">
-        {TABS.map((tab_) => (
+    <div style={{ width: open ? width + 56 : 56 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', side === 'right' && 'flex-row-reverse', !open && (side === 'right' ? 'ml-1.5' : 'mr-1.5'))}>
+      <div className={clsx('flex w-14 shrink-0 flex-col items-center gap-1 border-line p-0.5', side === 'right' ? 'border-l' : 'border-r')}>
+        {tabs.map((tab_) => (
           <button
             key={tab_.id}
+            draggable
+            onDragStart={(e) => { setDragged(tab_.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tab_.id) }}
+            onDragOver={(e) => { if (dragged) { e.preventDefault(); setOver(tab_.id) } }}
+            onDrop={(e) => { e.preventDefault(); drop(tab_.id) }}
+            onDragEnd={() => { setDragged(null); setOver(null) }}
             title={`${t(tab_.titleKey)} (Ctrl+Shift+${tab_.key})`}
             onClick={() => set(tab === tab_.id && open ? { sidebarOpen: false } : { tab: tab_.id, sidebarOpen: true })}
             onDoubleClick={() => set({ tab: tab_.id, sidebarOpen: !open })}
-            className={clsx('relative grid size-9 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg')}
+            className={clsx('relative grid size-9 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg', dragged === tab_.id && 'opacity-40', over === tab_.id && dragged !== tab_.id && 'ring-1 ring-accent')}
           >
             <img src={sidebarIcon(tab_.icon)} alt="" className="size-6" draggable={false} />
             {tab_.id === 'git' && changes > 0 && (
@@ -78,18 +101,13 @@ export function Sidebar() {
             { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },
             { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
             { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
-          ] }
+          ] },
+          { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), icon: <MdSwapHoriz size={15} />, onClick: () => setSide(side === 'left' ? 'right' : 'left') }
         ]} />
       )}
       {open && <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-1.5">
         <div className="flex items-center justify-between pb-1 pr-2">
           <h3 className="truncate px-3.5 pb-1 pt-0.5 text-[12px] font-medium text-muted/75">{t(`tt.${tab}` as MsgKey)}</h3>
-          {tab === 'mcp' && (
-            <button title={t('mcp.addTip')} onClick={() => setAddMcp((n) => n + 1)}
-              className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
-              <MdAdd size={17} />
-            </button>
-          )}
         </div>
         <div className="min-h-0 flex-1">
         {tab === 'files' && <FilesView />}
@@ -97,8 +115,6 @@ export function Sidebar() {
         {tab === 'agents' && <AgentsView />}
         {tab === 'git' && <GitView />}
         {tab === 'tutti' && <TuttiView />}
-        {tab === 'context' && <ContextView />}
-        {tab === 'mcp' && <McpView addSignal={addMcp} />}
         {tab === 'ai' && <UsageView />}
         </div>
       </div>}

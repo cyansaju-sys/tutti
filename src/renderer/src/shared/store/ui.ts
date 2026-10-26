@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import { cacheLangPref, cachedLangPref, resolveLangPref } from '@/shared/lib/langPref'
 import { cacheTheme, cachedTheme, paintTheme, resolveTheme } from '@/shared/lib/theme'
+import { loadChat, saveChat } from './chatHistory'
 import type { ToastKind } from './types'
 import type { State, UiSlice } from './types'
 let toastId = 1
@@ -13,8 +14,9 @@ const guessKind = (m: string): ToastKind => {
   return 'info'
 }
 
+
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
-  newsSince: null, tab: 'files', sidebarOpen: true, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
+  newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', chatOpen: false, chatWidth: 340, chatMessages: [], chatAgent: null, chatModel: {}, editorSelection: null, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {
@@ -36,5 +38,12 @@ export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) =>
     set({ langPref: pref, lang: resolveLangPref(pref) })
     void window.api.settings.set('language', pref)
   },
+  setChat: (turns) => { set({ chatMessages: turns }); const project = get().project; if (project) saveChat(project, turns) },
+  restoreChat: () => {
+    const project = get().project
+    set({ chatMessages: [] })
+    if (project) void loadChat(project).then((turns) => { if (get().project === project && get().chatMessages.length === 0) set({ chatMessages: turns }) })
+  },
+  setSidebarSide: (side) => { set({ sidebarSide: side }); void window.api.settings.set('sidebar_side', side) },
   setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }
 })

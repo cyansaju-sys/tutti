@@ -1,22 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { applyPrompt, changeFiles, changeFormError, EMPTY_CHANGE_FORM, proposePrompt } from '../../../../src/renderer/src/features/tutti/lib/openspec'
-import { taskProgress } from '../../../../src/renderer/src/features/tutti/lib/spec'
+import { applyPrompt, changeName, proposePrompt } from '../../../../src/renderer/src/features/tutti/lib/openspec'
 
 describe('cambios de OpenSpec', () => {
-  it('el formulario pide un nombre y, para el agente, qué se quiere', () => {
-    expect(changeFormError(EMPTY_CHANGE_FORM)).toBe('name')
-    expect(changeFormError({ ...EMPTY_CHANGE_FORM, name: '!!' })).toBe('name')
-    expect(changeFormError({ ...EMPTY_CHANGE_FORM, name: 'Añadir carrito' })).toBeNull()
-    expect(changeFormError({ name: 'carrito', description: ' ', useAgent: true })).toBe('description')
-  })
-
-  it('las plantillas traen propuesta, delta de spec, diseño y tareas sin hacer', () => {
-    const files = changeFiles('es', { name: 'Añadir carrito', description: 'Pagar en un paso', useAgent: false })
-    expect(Object.keys(files)).toEqual(['proposal.md', 'specs/anadir-carrito/spec.md', 'design.md', 'tasks.md'])
-    expect(files['proposal.md']).toContain('Pagar en un paso')
-    expect(files['specs/anadir-carrito/spec.md']).toContain('#### Scenario:')
-    expect(taskProgress(files['tasks.md'])).toEqual({ done: 0, total: 3 })
-    expect(changeFiles('en', { name: 'x', description: '', useAgent: false })['proposal.md']).toContain('## Why')
+  it('el nombre de la carpeta sale de lo pedido, o del indicado', () => {
+    expect(changeName('Añadir carrito de compra con pago en un paso y más cosas')).toBe('anadir-carrito-de-compra-con-pago')
+    expect(changeName('lo que sea', 'Mi cambio')).toBe('mi-cambio')
+    expect(changeName('!!')).toBe('')
   })
 
   it('los mensajes al agente apuntan a la carpeta del cambio', () => {

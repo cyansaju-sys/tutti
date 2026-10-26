@@ -105,6 +105,8 @@ export const killAll = (): void => { for (const id of [...sessions.keys()]) kill
 
 // --- lo que necesita el reparto de tareas -------------------------------------------------------------------------
 /** Agentes abiertos, en el orden en que se abrieron (el primero es el líder). */
+/** Todas las sesiones abiertas (agentes y terminales). */
+export const sessionList = (): Meta[] => [...sessions.values()].map((s) => s.meta)
 export const agentSessions = (): Meta[] => [...sessions.values()].filter((s) => s.meta.kind === 'agent').map((s) => s.meta)
 export const hasSession = (id: string): boolean => sessions.has(id)
 

@@ -11,11 +11,13 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     const prev = get().project
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
-    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'specform', 'steeringform', 'skillform'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
+    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
     // se cierra todo: agentes, terminales y archivos
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
     set({ project: path, git: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, docs: [], activeDoc: null, tab: 'files', focus: 'tree' })
     void window.api.settings.set('project', path)
+    void window.api.ai.cancel('chat')           // la conversación es de cada proyecto: se deja la del anterior y se carga la de este
+    get().restoreChat()
     void (async () => {
       const configs = { ...(((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}) }
       if (prev) configs[prev] = leaving
@@ -23,7 +25,7 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
       const known = path ? configs[path] : undefined
       if (!path || get().project !== path) return
       if (known) {                                                  // ya conocido: se recupera su configuración (uno nuevo se queda limpio)
-        set({ tab: known.tab })
+        set({ tab: ['mcp', 'context'].includes(known.tab as string) ? 'tutti' : known.tab })       // las pestañas MCP y Contexto ya no existen: viven en Tutti
         for (const f of known.docs) await get().openDoc(f)
         if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
         set({ focus: 'tree' })

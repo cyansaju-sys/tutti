@@ -1,11 +1,16 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
 import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
+import { chatAgents, chatAsk } from './services/chat'
+import { listRefs, previewRefs } from './services/refs'
+import { listRefs as listExtraRefs } from './services/chatRefs'
+import { slashCommands } from './services/slash'
 import { suggestCommit } from './services/git/commitMessage'
 import { archiveOpenspec, initOpenspec, openspecState, validateOpenspec } from './services/openspec'
 import { markRoadmapDone, roadmapState } from './services/roadmap'
@@ -18,14 +23,13 @@ import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './servi
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { GitOp, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
+import type { ChatOptions, ChatTurn, GitOp, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
 import { asServer, listDisabled } from './services/mcp/disabled'
 import { disableServer, enableServer, probeServer, updateServer, deleteServer } from './services/mcp/manage'
 import { applySync, pullSync, resolveSync, standardizeProject, syncState } from './services/mcp/sync'
-import { featuredServers, searchRegistry } from './services/mcp/registry'
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
 import { ensureLauncher } from './services/cli'
@@ -95,8 +99,8 @@ function createWindow(): void {
 }
 
 /** Tareas de IA en curso (mensaje de commit, contexto): se pueden cancelar al salir de su apartado. */
-const tasks = new Map<'commit' | 'context', AbortController>()
-async function withTask<T>(kind: 'commit' | 'context', run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+const tasks = new Map<'commit' | 'context' | 'chat', AbortController>()
+async function withTask<T>(kind: 'commit' | 'context' | 'chat', run: (signal: AbortSignal) => Promise<T>): Promise<T> {
   tasks.get(kind)?.abort()
   const controller = new AbortController()
   tasks.set(kind, controller)
@@ -111,7 +115,13 @@ function registerIpc(): void {
     return res.canceled ? null : res.filePaths[0]
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
-  ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
+  ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context' | 'chat') => tasks.get(kind)?.abort())
+  ipcMain.handle('chat:agents', () => chatAgents())
+  ipcMain.handle('chat:refs', (_e, project: string) => listRefs(project))
+  ipcMain.handle('chat:extra-refs', (_e, project: string) => listExtraRefs(project))
+  ipcMain.handle('chat:slash', (_e, project: string | null, command: string) => slashCommands(project, command))
+  ipcMain.handle('chat:ask', (e, project: string | null, command: string, history: ChatTurn[], options?: ChatOptions) => withTask('chat', (signal) => chatAsk(project, command, history, signal, (text) => e.sender.send('chat:chunk', text), options)))
+  ipcMain.handle('chat:preview', (_e, project: string, text: string, inline: Record<string, string>) => previewRefs(project, text, inline ?? {}))
   // hooks de .tutti/hooks: se vigilan solo en proyectos autorizados; sus avisos llegan a la interfaz
   const hooksHost = {
     notify: (r: { name: string; ok: boolean; message: string }): void => { win?.webContents.send('hooks:ran', r) },
@@ -162,13 +172,17 @@ function registerIpc(): void {
   ipcMain.handle('git:ignored', (_e, root: string, paths: string[]) => git.ignored(root, paths))
   ipcMain.handle('git:stage', (_e, root: string, paths: string[]) => git.stage(root, paths))
   ipcMain.handle('git:unstage', (_e, root: string, paths: string[]) => git.unstage(root, paths))
-  // descartar: los archivos conocidos vuelven a su versión; los nuevos (sin seguimiento) van a la papelera para poder recuperarlos
+  // descartar: los archivos conocidos vuelven a su versión; los nuevos (sin seguimiento) van a la papelera para poder recuperarlos (si no hay papelera, p. ej. en un disco externo, se borran)
   ipcMain.handle('git:discard', async (_e, root: string, tracked: string[], untracked: string[]): Promise<string> => {
     const inside = (rel: string): string | null => { const abs = resolve(root, rel); return abs !== resolve(root) && abs.startsWith(resolve(root) + sep) ? abs : null }
     if ([...tracked, ...untracked].some((p) => !inside(p))) return tm('m.git.badPath')
     const error = await git.discardTracked(root, tracked)
     if (error) return error
-    for (const rel of untracked) { try { await shell.trashItem(inside(rel)!) } catch (e) { return e instanceof Error ? e.message : String(e) } }
+    for (const rel of untracked) {
+      try { await shell.trashItem(inside(rel)!) } catch {
+        try { await rm(inside(rel)!, { recursive: true, force: true }) } catch (e) { return e instanceof Error ? e.message : String(e) }
+      }
+    }
     return ''
   })
   ipcMain.handle('git:commit', (_e, root: string, message: string) => git.commit(root, message))
@@ -202,8 +216,6 @@ function registerIpc(): void {
   ipcMain.handle('mcp:sync-pull', (_e, project, scope) => pullSync(project, scope))
   ipcMain.handle('mcp:sync-resolve', (_e, project, scope, name, agent, use) => resolveSync(project, scope, name, agent, use))
   ipcMain.handle('mcp:app', () => appMcpInfo())
-  ipcMain.handle('mcp:featured', () => featuredServers())
-  ipcMain.handle('mcp:registry', (_e, query: string, cursor: string) => searchRegistry(query, cursor))
   ipcMain.handle('mcp:add', (_e, agent, spec, scope, project) => mcp.addServer(agent, spec, scope, project))
   ipcMain.handle('usage:collect', (_e, project: string | null, fetchLimits: boolean) => collectUsage(detectAgents(), project, fetchLimits && !process.env.TUTTI_NO_LIMITS_FETCH))   // TUTTI_NO_LIMITS_FETCH: pruebas sin red
   ipcMain.handle('usage:rename', (_e, session, name: string) => renameSession(session, name))

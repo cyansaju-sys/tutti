@@ -3,6 +3,8 @@ import { AgentsArea, TerminalSection } from '@/features/agents/components/Agents
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
 import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShortcutsDialog } from '@/shared/components/Dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
+import { ChatPanel } from '@/shared/components/ChatPanel'
+import { Footer } from '@/shared/components/Footer'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
 import { Toasts } from '@/shared/components/Toasts'
 import { TitleBar } from '@/shared/components/TitleBar'
@@ -40,11 +42,14 @@ export function App() {
       const edit = await window.api.settings.get('edit_enabled')
       const savedTheme = await window.api.settings.get('theme')
       if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
+      const savedSide = await window.api.settings.get('sidebar_side')
+      if (savedSide === 'left' || savedSide === 'right') useStore.setState({ sidebarSide: savedSide })
       const savedLang = await window.api.settings.get('language')
       if (isLangPref(savedLang) && savedLang !== useStore.getState().langPref) useStore.getState().setLang(savedLang)
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
+      useStore.getState().restoreChat()
       if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined)            // lo guarda como último proyecto y en los recientes
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
       const current = await window.api.update.version()
@@ -156,7 +161,8 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
-  const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520)
+  const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right')
+  const dragChat = useDrag(() => useStore.getState().chatWidth, (v) => s.set({ chatWidth: v }), 260, 640, s.sidebarSide === 'left')       // el chat va al lado contrario de la barra
   const dragEditor = useDrag(() => useStore.getState().editorWidth, (v) => s.set({ editorWidth: v }), 320, 1600)
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
@@ -164,7 +170,7 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
-      <div className="flex min-h-0 flex-1 p-1.5 pt-0.5">
+      <div className={`flex min-h-0 flex-1 p-1.5 pt-0.5 ${s.sidebarSide === 'right' ? 'flex-row-reverse' : ''}`}>
         <Sidebar />
         {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
         <div className="relative flex min-w-0 flex-1 flex-col">
@@ -191,7 +197,14 @@ export function App() {
             </>
           )}
         </div>
+        {s.chatOpen && (
+          <>
+            <Resizer onDrag={dragChat} />
+            <ChatPanel />
+          </>
+        )}
       </div>
+      <Footer />
       {s.modal === 'agents' && <AgentPicker />}
       {s.modal === 'addAgent' && <AddAgentDialog />}
       {s.modal === 'shortcuts' && <ShortcutsDialog />}

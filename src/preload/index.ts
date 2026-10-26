@@ -24,6 +24,7 @@ const api: Api = {
     createBranch: (r, n, b, s) => ipcRenderer.invoke('git:createBranch', r, n, b, s), marks: (f) => ipcRenderer.invoke('git:marks', f), op: (r, o, h, a, m) => ipcRenderer.invoke('git:op', r, o, h, a, m), commitFiles: (r, h, p) => ipcRenderer.invoke('git:commitFiles', r, h, p), log: (r, n) => ipcRenderer.invoke('git:log', r, n), pull: (r) => ipcRenderer.invoke('git:pull', r), fetch: (r) => ipcRenderer.invoke('git:fetch', r), suggestCommit: (r) => ipcRenderer.invoke('git:suggestCommit', r), onCommitAgent: (cb) => subscribe<[string]>('git:commitAgent', cb), show: (r, rev, p) => ipcRenderer.invoke('git:show', r, rev, p)
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
+  chat: { agents: () => ipcRenderer.invoke('chat:agents'), refs: (project) => ipcRenderer.invoke('chat:refs', project), extraRefs: (project) => ipcRenderer.invoke('chat:extra-refs', project), onChunk: (cb) => subscribe<[string]>('chat:chunk', cb), slash: (project, command) => ipcRenderer.invoke('chat:slash', project, command), ask: (project, command, history, options) => ipcRenderer.invoke('chat:ask', project, command, history, options), preview: (project, text, inline) => ipcRenderer.invoke('chat:preview', project, text, inline) },
   skills: { import: (project, source) => ipcRenderer.invoke('skills:import', project, source) },
   openspec: {
     state: (p) => ipcRenderer.invoke('openspec:state', p), init: (p) => ipcRenderer.invoke('openspec:init', p),
@@ -55,7 +56,7 @@ const api: Api = {
     remove: (s) => ipcRenderer.invoke('usage:remove', s), names: () => ipcRenderer.invoke('usage:names')
   },
   mcp: {
-    list: (p) => ipcRenderer.invoke('mcp:list', p), app: () => ipcRenderer.invoke('mcp:app'), registry: (q, c) => ipcRenderer.invoke('mcp:registry', q, c), featured: () => ipcRenderer.invoke('mcp:featured'), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
+    list: (p) => ipcRenderer.invoke('mcp:list', p), app: () => ipcRenderer.invoke('mcp:app'), add: (a, s, sc, p) => ipcRenderer.invoke('mcp:add', a, s, sc, p),
     probe: (s, p) => ipcRenderer.invoke('mcp:probe', s, p), update: (s, spec, p) => ipcRenderer.invoke('mcp:update', s, spec, p), disable: (s, p) => ipcRenderer.invoke('mcp:disable', s, p), enable: (s, p) => ipcRenderer.invoke('mcp:enable', s, p), remove: (s, p) => ipcRenderer.invoke('mcp:remove', s, p),
     sync: { state: (p, sc) => ipcRenderer.invoke('mcp:sync-state', p, sc), apply: (p, sc) => ipcRenderer.invoke('mcp:sync-apply', p, sc), pull: (p, sc) => ipcRenderer.invoke('mcp:sync-pull', p, sc), standardize: (p) => ipcRenderer.invoke('mcp:sync-standardize', p), resolve: (p, sc, n, a, u) => ipcRenderer.invoke('mcp:sync-resolve', p, sc, n, a, u) }
   },

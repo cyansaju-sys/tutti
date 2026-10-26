@@ -1,5 +1,5 @@
 import type { MsgKey } from '@shared/i18n'
-import type { McpScope, McpServer, McpSpec, McpTransport, RegistryField, RegistryOption, RegistryServer } from '@shared/types'
+import type { McpScope, McpServer, McpSpec, McpTransport } from '@shared/types'
 
 export const SCOPE_KEYS: Record<McpScope, MsgKey> = { global: 'mcp.scope.global', project: 'mcp.scope.project', shared: 'mcp.scope.shared' }
 export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity', qwen: 'Qwen Code', cursor: 'Cursor Agent' }
@@ -88,32 +88,19 @@ export function specFromServer(server: McpServer): McpSpec {
   return { name: server.name, kind: 'local', command: parts[0], args: parts.slice(1), headers, env }
 }
 
-/** Nombre corto con el que se instala un servidor del registro: «io.github.acme/filesystem-mcp» -> «filesystem-mcp». */
+/** Nombre corto de un servidor: «io.github.acme/filesystem-mcp» -> «filesystem-mcp». */
 export function shortName(registryName: string): string {
   const last = registryName.split('/').pop() ?? registryName
   const clean = last.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64)
   return /^[A-Za-z0-9]/.test(clean) ? clean : `mcp-${clean}`.slice(0, 64)
 }
 
-/** Quien lo publica: «io.github.acme/filesystem-mcp» -> «io.github.acme». */
-export const publisherOf = (registryName: string): string => (registryName.includes('/') ? registryName.slice(0, registryName.lastIndexOf('/')) : '')
-
 /** Un argumento listo para ponerlo en una línea de comando (con comillas si lleva espacios). */
 export const quoteArg = (a: string): string => (/[\s"']/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a)
 
-/** Lo que se le entrega al diálogo de «Añadir servidor» para instalar una entrada del registro. */
+/** Lo que se le entrega al diálogo de «Añadir servidor». */
 export interface Prefill {
   name: string; kind: 'remote' | 'local'; url: string; transport: McpTransport; headers: string; command: string; args: string; env: string
-  fields: RegistryField[]       // lo que el servidor pide (para explicarlo en el diálogo)
-}
-
-const lines = (fields: RegistryField[], sep: string): string => fields.filter((f) => f.required || f.default).map((f) => `${f.name}${sep}${f.default}`).join('\n')
-
-export function prefillFrom(server: RegistryServer, option: RegistryOption): Prefill {
-  return {
-    name: shortName(server.name), kind: option.kind, url: option.url ?? '', transport: option.transport ?? 'http', headers: lines(option.headers, ': '),
-    command: option.command ?? '', args: (option.args ?? []).map(quoteArg).join(' '), env: lines(option.env, '='), fields: [...option.env, ...option.headers]
-  }
 }
 
 /** Un servidor ya instalado, como los datos del diálogo (para editarlo). */
@@ -122,6 +109,6 @@ export function prefillFromServer(server: McpServer): Prefill {
   const pairs = (m: Record<string, string> | undefined, sep: string): string => Object.entries(m ?? {}).map(([k, v]) => `${k}${sep}${v}`).join('\n')
   return {
     name: server.name, kind: spec.kind, url: spec.url ?? '', transport: spec.transport ?? 'http', headers: pairs(spec.headers, ': '),
-    command: spec.command ?? '', args: (spec.args ?? []).map(quoteArg).join(' '), env: pairs(spec.env, '='), fields: []
+    command: spec.command ?? '', args: (spec.args ?? []).map(quoteArg).join(' '), env: pairs(spec.env, '=')
   }
 }
