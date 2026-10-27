@@ -2,7 +2,7 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
-## 1.5.0
+## 1.4.1
 
 ### Funcional
 
