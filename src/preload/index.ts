@@ -25,6 +25,7 @@ const api: Api = {
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
   chat: { agents: () => ipcRenderer.invoke('chat:agents'), refs: (project) => ipcRenderer.invoke('chat:refs', project), extraRefs: (project) => ipcRenderer.invoke('chat:extra-refs', project), onChunk: (cb) => subscribe<[string]>('chat:chunk', cb), slash: (project, command) => ipcRenderer.invoke('chat:slash', project, command), ask: (project, command, history, options) => ipcRenderer.invoke('chat:ask', project, command, history, options), preview: (project, text, inline) => ipcRenderer.invoke('chat:preview', project, text, inline) },
+  powers: { list: (project) => ipcRenderer.invoke('powers:list', project), install: (project, source, scope) => ipcRenderer.invoke('powers:install', project, source, scope), remove: (project, name, scope) => ipcRenderer.invoke('powers:remove', project, name, scope), sources: (project) => ipcRenderer.invoke('powers:sources', project), create: (project, draft) => ipcRenderer.invoke('powers:create', project, draft) },
   skills: { import: (project, source) => ipcRenderer.invoke('skills:import', project, source) },
   openspec: {
     state: (p) => ipcRenderer.invoke('openspec:state', p), init: (p) => ipcRenderer.invoke('openspec:init', p),

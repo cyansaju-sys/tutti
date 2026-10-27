@@ -23,7 +23,7 @@ export const PROJECT_FILE = 'contexto.md'
 const AGENTS_FILE = 'AGENTS.md'
 
 /** La carpeta de configuración de Tutti (TUTTI_CONFIG_DIR solo existe para las pruebas). */
-const configDir = (): string => process.env.TUTTI_CONFIG_DIR || join(app.getPath('appData'), 'tutti')
+export const configDir = (): string => process.env.TUTTI_CONFIG_DIR || join(app.getPath('appData'), 'tutti')
 
 /** La plantilla en el idioma actual; una escrita en el otro idioma también cuenta como «sin tocar». */
 const template = (lang?: Lang): string => (lang ? translate(lang, 'm.ctx.template') : tm('m.ctx.template'))

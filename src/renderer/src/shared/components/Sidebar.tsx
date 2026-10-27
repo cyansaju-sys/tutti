@@ -1,13 +1,14 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
-import { useEffect, useMemo, useState } from 'react'
-import { MdLanguage, MdSwapHoriz, MdOutlineSettings, MdPalette } from 'react-icons/md'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MdAdd, MdLanguage, MdSwapHoriz, MdOutlineSettings, MdPalette } from 'react-icons/md'
 import { Menu } from '@/shared/components/Menu'
 import { useT } from '@/shared/lib/i18n'
 import { sidebarIcon } from '@/shared/lib/icons'
 import { useStore, type SidebarTab } from '@/shared/store'
 import { AgentsView } from '@/features/agents/views/AgentsView'
 import { FilesView } from '@/features/files/views/FilesView'
+import { PowersView, type PowersHandle } from '@/features/powers/views/PowersView'
 import { GitView } from '@/features/git/views/GitView'
 import { SearchView } from '@/features/search/views/SearchView'
 import { TuttiView } from '@/features/tutti/views/TuttiView'
@@ -19,6 +20,7 @@ export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: 
   { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
   { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
   { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
+  { id: 'powers', icon: 'mcp', titleKey: 'tab.powers', key: 'X' },
   { id: 'ai', icon: 'ai', titleKey: 'tab.ai', key: 'U' }
 ]
 
@@ -41,6 +43,7 @@ export function Sidebar() {
   const setSide = useStore((s) => s.setSidebarSide)
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
+  const powers = useRef<PowersHandle>(null)
   const [order, setOrder] = useState<string[]>([])           // el orden de los iconos, a gusto del usuario
   const [dragged, setDragged] = useState<SidebarTab | null>(null)
   const [over, setOver] = useState<SidebarTab | null>(null)
@@ -108,6 +111,12 @@ export function Sidebar() {
       {open && <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-1.5">
         <div className="flex items-center justify-between pb-1 pr-2">
           <h3 className="truncate px-3.5 pb-1 pt-0.5 text-[12px] font-medium text-muted/75">{t(`tt.${tab}` as MsgKey)}</h3>
+          {tab === 'powers' && (
+            <button title={t('powers.add')} onClick={() => powers.current?.add()}
+              className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
+              <MdAdd size={16} />
+            </button>
+          )}
         </div>
         <div className="min-h-0 flex-1">
         {tab === 'files' && <FilesView />}
@@ -116,6 +125,7 @@ export function Sidebar() {
         {tab === 'git' && <GitView />}
         {tab === 'tutti' && <TuttiView />}
         {tab === 'ai' && <UsageView />}
+        {tab === 'powers' && <PowersView ref={powers} />}
         </div>
       </div>}
     </div>

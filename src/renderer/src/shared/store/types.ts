@@ -2,7 +2,7 @@ import type { AgentInfo, ChatTurn, FileData, GitStatus, PaneRole, UpdateState } 
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 
-export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti'
+export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
 export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news' | 'quickOpen' | 'goLine'
 export type Focus = 'tree' | 'editor' | 'pane'
