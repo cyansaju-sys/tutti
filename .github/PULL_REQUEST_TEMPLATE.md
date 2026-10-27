@@ -11,6 +11,6 @@
 - [ ] `yarn typecheck` y `yarn test` pasan
 - [ ] Los textos de la interfaz están en `es.json` **y** `en.json`
 - [ ] Añadí una línea en `CHANGELOG.md` y `CHANGELOG.en.md` si el usuario lo nota
-- [ ] Si toca la documentación, edité `scripts/docs-site/content.py` y regeneré la página
+- [ ] Si toca la documentación, actualicé `docs/documentacion.md` y `docs/documentacion.en.md`
 - [ ] Sin capturas ni datos personales (rutas, nombres de proyectos)
 - [ ] Entiendo y revisé todo el código enviado (si lo escribió una IA, lo indico aquí)

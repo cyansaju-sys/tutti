@@ -18,7 +18,7 @@
 ### Cómo trabajar
 
 1. Haz un *fork* y crea una rama desde `master` con un nombre que diga lo que hace: `fix/terminal-pegar`, `feat/abrir-archivo-rapido`, `docs/atajos`.
-2. Instala y arranca: `yarn install` y `yarn dev` (más en [Desarrollo](https://cyansaju-sys.github.io/tutti/documentacion.html#desarrollo)).
+2. Instala y arranca: `yarn install` y `yarn dev` (más en [Desarrollo](https://github.com/cyansaju-sys/tutti/blob/master/docs/documentacion.md#desarrollo)).
 3. Haz el cambio **pequeño y enfocado**: un pull request, un propósito. Sin reformatear archivos que no tocas.
 4. Antes de abrir el PR, que pasen las dos comprobaciones:
 
@@ -33,14 +33,14 @@
 - **Textos de la interfaz:** nunca escritos a mano en el código. Van en `src/shared/locales/es.json` **y** en `en.json`, con la misma clave y las mismas variables `{nombre}`. Si falta una en inglés, no compila. Se usan con `t('clave')` (`useT()` en componentes).
 - **Pruebas:** si arreglas un error o añades lógica, añade una prueba en `test/` (vitest). Las pruebas no deben depender del idioma ni de la máquina donde corren.
 - **Sin dependencias nuevas** salvo que haya una razón clara; cuéntala en el PR.
-- **Privacidad:** la app no envía datos a ningún sitio y no debe empezar a hacerlo. Los accesos a internet que existen están descritos en la [documentación](https://cyansaju-sys.github.io/tutti/documentacion.html#privacidad).
+- **Privacidad:** la app no envía datos a ningún sitio y no debe empezar a hacerlo. Los accesos a internet que existen están descritos en la [documentación](https://github.com/cyansaju-sys/tutti/blob/master/docs/documentacion.md#privacidad).
 - **Capturas y documentación:** no subas imágenes con rutas, nombres de proyectos o datos personales. Usa `TUTTI_CAPTURE` con el proyecto de ejemplo.
 
 ### Commits y pull requests
 
 - **Mensajes de commit** en [Conventional Commits](https://www.conventionalcommits.org): `feat(git): ...`, `fix(terminal): ...`, `docs: ...`, `test: ...`, `chore: ...`. Una línea, en imperativo.
 - **Cambios que ve el usuario:** añade una línea en la sección de la versión siguiente de `CHANGELOG.md` **y** de `CHANGELOG.en.md` (frases pensadas para quien usa la app, no para quien programa).
-- **Documentación:** el texto de la web está en `scripts/docs-site/content.py` (español e inglés). Edítalo y ejecuta `python3 scripts/docs-site/build.py`; no toques `docs/documentacion.html` a mano.
+- **Documentación:** el texto está en `docs/documentacion.md` (español) y `docs/documentacion.en.md` (inglés); edítalos a mano. Las imágenes van en `docs/img`.
 - En el PR explica **qué cambia y por qué**, y cómo lo probaste. Si cambia algo visible, adjunta una captura.
 
 ### Uso de IA
@@ -71,7 +71,7 @@ Thanks for wanting to help! Tutti is open source (MIT) and every contribution co
 ### How to work
 
 1. Fork and create a branch from `master` with a name that says what it does: `fix/terminal-paste`, `feat/quick-open`, `docs/shortcuts`.
-2. Install and run: `yarn install` and `yarn dev` (more in [Development](https://cyansaju-sys.github.io/tutti/documentacion.html#desarrollo)).
+2. Install and run: `yarn install` and `yarn dev` (more in [Development](https://github.com/cyansaju-sys/tutti/blob/master/docs/documentacion.en.md#desarrollo)).
 3. Keep the change **small and focused**: one pull request, one purpose. Do not reformat files you do not touch.
 4. Before opening the PR, both checks must pass:
 
@@ -86,14 +86,14 @@ Thanks for wanting to help! Tutti is open source (MIT) and every contribution co
 - **Interface texts:** never hard-coded. They go in `src/shared/locales/es.json` **and** `en.json`, with the same key and the same `{name}` variables. A key missing in English does not compile. Use them with `t('key')` (`useT()` in components).
 - **Tests:** if you fix a bug or add logic, add a test in `test/` (vitest). Tests must not depend on the language or the machine they run on.
 - **No new dependencies** unless there is a clear reason; explain it in the PR.
-- **Privacy:** the app sends no data anywhere and must not start to. The existing network accesses are described in the [documentation](https://cyansaju-sys.github.io/tutti/documentacion.html#privacidad).
+- **Privacy:** the app sends no data anywhere and must not start to. The existing network accesses are described in the [documentation](https://github.com/cyansaju-sys/tutti/blob/master/docs/documentacion.en.md#privacidad).
 - **Screenshots and docs:** do not upload images with paths, project names or personal data. Use `TUTTI_CAPTURE` with the sample project.
 
 ### Commits and pull requests
 
 - **Commit messages** in [Conventional Commits](https://www.conventionalcommits.org): `feat(git): ...`, `fix(terminal): ...`, `docs: ...`, `test: ...`, `chore: ...`. One line, imperative.
 - **User-visible changes:** add a line to the next version's section of `CHANGELOG.md` **and** `CHANGELOG.en.md` (sentences written for people who use the app, not for developers).
-- **Documentation:** the website text lives in `scripts/docs-site/content.py` (Spanish and English). Edit it and run `python3 scripts/docs-site/build.py`; do not edit `docs/documentacion.html` by hand.
+- **Documentation:** the text lives in `docs/documentacion.md` (Spanish) and `docs/documentacion.en.md` (English); edit them by hand. Images go in `docs/img`.
 - In the PR explain **what changes and why**, and how you tested it. If something visible changes, attach a screenshot.
 
 ### Using AI
