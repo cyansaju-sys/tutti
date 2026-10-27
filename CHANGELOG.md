@@ -2,6 +2,14 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.0
+
+### Funcional
+
+- **Powers, paquetes de herramientas y guías:** una pestaña nueva en la barra lateral (icono del enchufe, `Ctrl+Shift+X`) reúne tus Powers. Un Power es una carpeta con un `POWER.md` que puede traer servidores MCP (`mcp.json`), steering, skills y hooks, y sustituye a la antigua tienda de servidores MCP. Se instalan con el botón **+** desde una carpeta, en el proyecto (`.tutti/powers`, se comparte con git) o para todos tus proyectos, y se quitan con la papelera. Si un Power no es válido, aparece en rojo con el motivo.
+- **Crea un Power con lo que ya tienes:** la opción **Crear con lo que tengo** deja elegir, con casillas, tus servidores MCP, steering, skills y hooks, y los empaqueta con nombre, descripción y palabras clave. Steering, skills y hooks se copian; los MCP que estaban en `.mcp.json` se mueven al Power (se quitan de ese archivo y del espejo de Antigravity y Codex) y se guardan con sus valores reales. En los demás MCP, las variables y cabeceras se guardan vacías salvo que lo pidas, porque suelen llevar tokens.
+- **Los agentes cargan los Powers solo cuando hacen falta:** el servidor MCP de Tutti ofrece `list_powers` (una línea por Power) y `use_power`, que entrega la guía, los archivos de steering y skills y las herramientas de sus servidores MCP. Así un Power instalado casi no ocupa contexto hasta que la tarea lo necesita.
+
 ## 1.4.0
 
 ### Funcional

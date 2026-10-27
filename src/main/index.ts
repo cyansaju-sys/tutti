@@ -18,12 +18,13 @@ import { copyEntry, createEntry, listDir, moveEntry, mtime, renameEntry, readFil
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
 import { loadSteering } from './services/context/steering'
+import { createPower, installPower, listPowers, powerSources, removePower } from './services/powers'
 import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { ChatOptions, ChatTurn, GitOp, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
+import type { ChatOptions, ChatTurn, GitOp, PowerDraft, PowerScope, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -145,6 +146,11 @@ function registerIpc(): void {
   ipcMain.handle('hooks:watch', (_e, project: string | null) => { if (process.env.TUTTI_CAPTURE) return; if (project) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('context:init', (_e, project: string, sub?: string) => (process.env.TUTTI_CAPTURE ? join(project, '.tutti', sub ?? '') : ensureProjectDir(project, sub)))      // en las capturas no se escribe en el proyecto fotografiado
   ipcMain.handle('context:steering', (_e, project: string) => loadSteering(project, { globalDir: globalSteeringDir() }).map(({ body: _body, ...info }) => info))
+  ipcMain.handle('powers:list', (_e, project: string | null) => listPowers(project))
+  ipcMain.handle('powers:install', (_e, project: string | null, source: string, scope: PowerScope) => installPower(project, source, scope))
+  ipcMain.handle('powers:sources', (_e, project: string | null) => powerSources(project))
+  ipcMain.handle('powers:create', (_e, project: string | null, draft: PowerDraft) => createPower(project, draft))
+  ipcMain.handle('powers:remove', (_e, project: string | null, name: string, scope: PowerScope) => removePower(project, name, scope))
   ipcMain.handle('skills:import', (_e, project: string, source: string) => importSkill(project, source))
   ipcMain.handle('context:global-steering', () => ensureGlobalSteeringDir())
   ipcMain.handle('context:working', (_e, project: string, files: string[]) => setWorkingFiles(project, files))

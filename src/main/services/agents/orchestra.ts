@@ -26,7 +26,7 @@ los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «
 Tarea grande o con varias partes: antes de repartir, escribe el plan (en .tutti/roadmap.md y, si es grande, en un cambio de OpenSpec) y revísalo: \
 ¿está completo?, ¿cada parte tiene criterio de terminado?, ¿hay partes que tocan los mismos archivos? Deriva de él los roles y envíalos con propose_roles: \
 cada rol con id, name, responsibility, deliverables, done (criterio de terminado), files (los que solo ese rol edita), difficulty (easy, medium o hard) y dependsOn. \
-Mira antes list_role_templates: si el usuario guardó un rol que encaja (tests, revisión, docs…), úsalo con "template" y pon solo lo que cambie. \
+Si hay Powers instalados (list_powers) y uno encaja con la tarea, cárgalo con use_power: así sus herramientas y su guía solo ocupan contexto cuando hacen falta. Mira antes list_role_templates: si el usuario guardó un rol que encaja (tests, revisión, docs…), úsalo con "template" y pon solo lo que cambie. \
 El agente y el modelo de cada rol los elige el usuario en el panel de la app (no los asignes tú; con el ajuste roles_assignment en auto, los asigna la app según \
 capacidad, límite de uso y modelos disponibles): un agente tiene un solo rol a la vez y, si el elegido no está libre, el rol espera. Si propose_roles devuelve errores, corrígelos y repítelo. Cuando el reparto te parezca bien llama a confirm_roles: la app \
 lanza los roles (tras la aprobación del usuario, si hace falta) cuando terminan sus dependencias y te avisa con «[Tutti]». Cada rol puede llevar un \
@@ -129,6 +129,16 @@ export const TOOLS = [
     inputSchema: { type: 'object', properties: {} }
   },
   {
+    name: 'list_powers',
+    description: 'Powers instalados (nombre, descripción y palabras clave). Si uno encaja con la tarea, cárgalo con use_power.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'use_power',
+    description: 'Carga un Power cuando la tarea lo necesita: su guía, los archivos de steering y skills que trae y las herramientas de sus servidores MCP.',
+    inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Nombre del Power (de list_powers).' } }, required: ['name'] }
+  },
+  {
     name: 'accept_role',
     description: 'Solo el líder: da por bueno un rol en revisión (cumple su criterio de terminado). Los roles que dependen de él pueden empezar.',
     inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
@@ -222,6 +232,8 @@ export interface Host {
   retryRole(caller: string, roleId: string): { ok: boolean; info: unknown }
   roleResult(caller: string, roleId: string): { ok: boolean; info: unknown }
   roleTemplates(caller: string): { ok: boolean; info: unknown }
+  listPowers(caller: string): { ok: boolean; info: unknown }
+  usePower(caller: string, name: string): Promise<{ ok: boolean; info: unknown }>
   acceptRole(caller: string, roleId: string): { ok: boolean; info: unknown }
   askLeader(caller: string, question: string): { ok: boolean; info: unknown }
   answerAgent(caller: string, agentId: string, answer: string): { ok: boolean; info: unknown }
@@ -381,6 +393,16 @@ export class Orchestra {
     }
     if (name === 'list_role_templates') {
       const { ok, info } = this.host.roleTemplates(caller)
+      return text(info, !ok)
+    }
+    if (name === 'list_powers') {
+      const { ok, info } = this.host.listPowers(caller)
+      return text(info, !ok)
+    }
+    if (name === 'use_power') {
+      const power = String(args.name ?? '').trim()
+      if (!power) return text('Falta `name`: el nombre de un Power de list_powers.', true)
+      const { ok, info } = await this.host.usePower(caller, power)
       return text(info, !ok)
     }
     if (name === 'accept_role') {

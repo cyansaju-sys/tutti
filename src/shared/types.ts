@@ -173,6 +173,21 @@ export interface SlashCommand { name: string; description: string; source: 'proj
 /** Un mensaje del chat. */
 export interface ChatTurn { role: 'user' | 'assistant'; text: string; attached?: string }      // `attached`: lo que citaba con «#», para que las preguntas siguientes lo conserven
 export interface McpResult { ok: boolean; message: string }
+/** Lo que se puede meter en un Power nuevo, de lo que ya tienes. */
+export interface PowerSources {
+  mcp: Array<{ name: string; agents: McpAgent[] }>
+  steering: Array<{ id: string; name: string; scope: 'project' | 'global' }>
+  skills: string[]; hooks: string[]
+}
+/** Lo elegido para crear un Power: nombres de MCP, ids de steering (`PowerSources`), skills y hooks. `withValues`: copiar también los valores de env y cabeceras de los MCP. */
+export interface PowerDraft { name: string; description: string; keywords: string[]; scope: PowerScope; mcp: string[]; steering: string[]; skills: string[]; hooks: string[]; withValues: boolean }
+/** Un Power (al estilo de Kiro): una carpeta con POWER.md que agrupa servidores MCP, steering, skills y hooks. */
+export type PowerScope = 'global' | 'project'
+export interface PowerInfo {
+  name: string; description: string; keywords: string[]; scope: PowerScope; dir: string
+  mcp: McpSpec[]; steering: string[]; skills: string[]; hooks: string[]      // lo que trae; steering, skills y hooks, por nombre de archivo o carpeta
+  error?: string                                                              // por qué no es válido
+}
 /** Sincronización de MCP entre agentes: la fuente es Claude Code (`.mcp.json` en el proyecto, `~/.claude.json` en lo global). */
 export type SyncScope = 'project' | 'global'
 export interface SyncState {
@@ -225,6 +240,13 @@ export interface Api {
     ask(project: string | null, command: string, history: ChatTurn[], options?: ChatOptions): Promise<McpResult & { text?: string; attached?: string; usage?: ChatUsage }>
     preview(project: string, text: string, inline: Record<string, string>): Promise<ChatRefPreview[]>      // lo que adjuntarían las referencias # del texto
     onChunk(cb: (text: string) => void): () => void                                      // la respuesta según se va escribiendo
+  }
+  powers: {
+    list(project: string | null): Promise<PowerInfo[]>
+    install(project: string | null, source: string, scope: PowerScope): Promise<McpResult>      // copia la carpeta de un Power; la nueva va en `message`
+    remove(project: string | null, name: string, scope: PowerScope): Promise<McpResult>
+    sources(project: string | null): Promise<PowerSources>      // lo que tienes y se puede empaquetar
+    create(project: string | null, draft: PowerDraft): Promise<McpResult>      // crea un Power con lo elegido; la carpeta nueva va en `message`
   }
   skills: { import(project: string, source: string): Promise<McpResult> }      // copia una skill (carpeta con SKILL.md) a .tutti/skills; el SKILL.md nuevo va en `message`
   openspec: {

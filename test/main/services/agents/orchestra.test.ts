@@ -18,6 +18,8 @@ const host: Host = {
   readNotes: (caller, limit) => { calls.push([caller, 'notes', limit]); return { ok: true, info: { notes: ['una'] } } },
   updates: (caller) => ({ ok: true, info: { updates: [`para ${caller}`] } }),
   roleTemplates: () => ({ ok: true, info: { templates: [{ id: 'tests' }] } }),
+  listPowers: () => ({ ok: true, info: { powers: [{ name: 'db' }] } }),
+  usePower: async (caller, name) => { calls.push([caller, 'power', name]); return name === 'db' ? { ok: true, info: { guide: 'usa pg' } } : { ok: false, info: 'no existe' } },
   seen: (caller) => { seen.add(caller) },
   output: (id) => (id === 'a2' ? { agent_id: 'a2', busy: false, idle_seconds: 9, text: 'listo' }
     : id === 'a3' ? { agent_id: 'a3', busy: false, idle_seconds: 0, text: '…', report: { status: 'done', summary: 'hecho', files: [] } }
@@ -53,7 +55,7 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(await (await post(rpc('ping'))).json()).toMatchObject({ result: {} })
     const tools = await (await post(rpc('tools/list'))).json()
     expect(tools.result.tools.map((t: { name: string }) => t.name)).toEqual(TOOLS.map((t) => t.name))
-    expect(tools.result.tools).toHaveLength(17)
+    expect(tools.result.tools).toHaveLength(19)
   })
 
   it('las notificaciones no tienen respuesta y un método desconocido da error', async () => {
@@ -170,6 +172,16 @@ describe('servidor MCP de reparto de tareas', () => {
     const { post } = await start()
     const res = await (await post(rpc('tools/call', { name: 'list_role_templates', arguments: {} }))).json()
     expect(JSON.parse(res.result.content[0].text).templates[0].id).toBe('tests')
+  })
+
+  it('list_powers y use_power cargan un Power solo cuando se pide', async () => {
+    const { post } = await start()
+    const call = async (name: string, args: object): Promise<{ isError: boolean; content: Array<{ text: string }> }> => (await (await post(rpc('tools/call', { name, arguments: args }))).json()).result
+    expect(JSON.parse((await call('list_powers', {})).content[0].text).powers[0].name).toBe('db')
+    expect(JSON.parse((await call('use_power', { name: 'db' })).content[0].text).guide).toBe('usa pg')
+    expect((await call('use_power', { name: 'nada' })).isError).toBe(true)
+    expect((await call('use_power', {})).isError).toBe(true)          // sin nombre ni siquiera llega al host
+    expect(calls).toEqual([['a1', 'power', 'db'], ['a1', 'power', 'nada']])
   })
 
   it('marca como conectado al agente que habla con el servidor', async () => {

@@ -4,12 +4,12 @@ import { basename, join, resolve } from 'node:path'
 import type { McpResult } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
 
-const MAX_FILES = 200
-const MAX_BYTES = 5 * 1024 * 1024
-const SKIP = new Set(['.git', 'node_modules'])
+export const MAX_FILES = 200
+export const MAX_BYTES = 5 * 1024 * 1024
+export const SKIP = new Set(['.git', 'node_modules'])
 
 /** Cuántos archivos y bytes tiene la carpeta (sin .git ni node_modules): una skill es pequeña, y así no se copia por error medio disco. */
-function measure(dir: string): { files: number; bytes: number } {
+export function measure(dir: string): { files: number; bytes: number } {
   let files = 0, bytes = 0
   const walk = (d: string): void => {
     for (const name of readdirSync(d)) {

@@ -21,6 +21,7 @@ import { awaitingInput, buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from '
 import { chooseLeader, currentLeader } from './leader'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
 import { appendNote, readNotes } from './notes'
+import { powerGuide, powerSummaries } from '../powers'
 import { listPlanTemplates, planTemplateInfo } from './planTemplates'
 import { Orchestra, TOOLS, type AgentOutput, type Host } from './orchestra'
 import * as plans from './plans'
@@ -157,6 +158,17 @@ const host: Host = {
   roleTemplates() {
     const list = listTemplates()
     return { ok: true, info: list.length ? { templates: list } : 'El usuario aún no guardó roles reutilizables.' }
+  },
+
+  listPowers(caller) {
+    const who = me(caller)
+    const list = powerSummaries(who ? projectRoot(who.cwd, knownProjects()) : null)
+    return { ok: true, info: list.length ? { powers: list } : 'No hay Powers instalados.' }
+  },
+
+  async usePower(caller, name) {
+    const who = me(caller)
+    return powerGuide(who ? projectRoot(who.cwd, knownProjects()) : null, name)
   },
 
   askLeader(caller, question) {
