@@ -2,7 +2,7 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
-## 1.5.0
+## 1.4.1
 
 ### Functional
 
