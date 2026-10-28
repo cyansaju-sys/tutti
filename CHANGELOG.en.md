@@ -2,6 +2,16 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.3
+
+### Functional
+
+- **Choose which terminal opens:** the settings menu (the gear in the sidebar) now has **Terminal…**, where you enter the path of an executable (for example, Git's `bash.exe` on Windows). If the path does not exist you get a warning and nothing is saved; leaving it empty goes back to the system terminal, and if the file disappears later the system one is used too.
+
+### Thanks
+
+- **davidenriquehm98** proposed choosing the terminal from the settings (PR #1).
+
 ## 1.4.2
 
 ### Functional

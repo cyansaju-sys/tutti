@@ -42,7 +42,7 @@ const api: Api = {
     onAgent: (cb) => subscribe<[string]>('context:agent', cb)
   },
   agents: {
-    detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell'),
+    detect: () => ipcRenderer.invoke('agents:detect'), shell: () => ipcRenderer.invoke('agents:shell'), setShell: (path) => ipcRenderer.invoke('agents:setShell', path),
     candidates: () => ipcRenderer.invoke('agents:candidates'),
     addCustom: (name, commandLine) => ipcRenderer.invoke('agents:addCustom', name, commandLine),
     removeCustom: (command) => ipcRenderer.invoke('agents:removeCustom', command)

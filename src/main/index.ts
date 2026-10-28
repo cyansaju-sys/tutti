@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
-import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent } from './services/agents/agents'
+import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent, setShell } from './services/agents/agents'
 import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
@@ -258,6 +258,7 @@ function registerIpc(): void {
   ipcMain.handle('orchestra:roles-options', (_e, project: string) => roleOptions(project))
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())
+  ipcMain.handle('agents:setShell', (_e, path: string) => setShell(path))
   ipcMain.handle('agents:candidates', () => candidateExecutables())
   ipcMain.handle('agents:addCustom', (_e, name: string, commandLine: string) => addCustomAgent(name, commandLine))
   ipcMain.handle('agents:removeCustom', (_e, command: string) => removeCustomAgent(command))

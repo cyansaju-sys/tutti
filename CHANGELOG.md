@@ -2,6 +2,16 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.3
+
+### Funcional
+
+- **Elige la terminal que se abre:** el menú de ajustes (la rueda de la barra lateral) tiene ahora **Terminal…**, donde pones la ruta de un ejecutable (por ejemplo, el `bash.exe` de Git en Windows). Si la ruta no existe se avisa y no se guarda; vacío vuelve a la terminal del sistema, y si el archivo desaparece más tarde se usa también la del sistema.
+
+### Agradecimientos
+
+- **davidenriquehm98** propuso elegir la terminal desde los ajustes (PR #1).
+
 ## 1.4.2
 
 ### Funcional

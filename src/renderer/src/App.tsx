@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShortcutsDialog } from '@/shared/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShellDialog, ShortcutsDialog } from '@/shared/components/Dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
 import { ChatPanel } from '@/shared/components/ChatPanel'
 import { Footer } from '@/shared/components/Footer'
@@ -207,6 +207,7 @@ export function App() {
       <Footer />
       {s.modal === 'agents' && <AgentPicker />}
       {s.modal === 'addAgent' && <AddAgentDialog />}
+      {s.modal === 'shell' && <ShellDialog />}
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
       {s.modal === 'news' && <NewsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
