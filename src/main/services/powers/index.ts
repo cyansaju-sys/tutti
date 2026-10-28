@@ -12,7 +12,7 @@ import { hooksDir } from '../hooks'
 import { isObject } from '../mcp/files'
 import { specFromConfig } from '../mcp/manage'
 import { probeSpec } from '../mcp/probe'
-import { listServers, NAME_RE, removeServer, validate } from '../mcp/mcp'
+import { listServers, NAME_RE, validate } from '../mcp/mcp'
 import { MAX_BYTES, MAX_FILES, measure, SKIP } from '../skills'
 
 export const globalPowersDir = (): string => join(configDir(), 'powers')
@@ -137,9 +137,8 @@ export function powerSources(project: string | null): PowerSources {
 const oneLine = (v: string): string => v.replace(/\s+/g, ' ').replace(/"/g, "'").trim()
 
 /**
- * Crea la carpeta de un Power con lo elegido. Steering, skills y hooks se copian (lo original se queda); los MCP que estaban en `.mcp.json` se
- * mueven: se quitan de allí (y del espejo de Antigravity y Codex) para que los agentes no los carguen siempre. Como salen de ese archivo, se
- * guardan con sus valores reales (no hay otra copia); los demás MCP respetan `withValues`. El destino va en `message`.
+ * Crea la carpeta de un Power con lo elegido. Steering, skills, hooks y MCP se copian: lo original (también `.mcp.json`) no se toca.
+ * Los valores de env y cabeceras de los MCP respetan `withValues`. El destino va en `message`.
  */
 export async function createPower(project: string | null, draft: PowerDraft): Promise<McpResult> {
   const name = draft.name.trim()
@@ -149,7 +148,6 @@ export async function createPower(project: string | null, draft: PowerDraft): Pr
   if (!draft.mcp.length && !draft.steering.length && !draft.skills.length && !draft.hooks.length) return { ok: false, message: tm('m.power.empty') }
   const target = join(root, name)
   if (existsSync(target)) return { ok: false, message: tm('m.fs.exists', { name }) }
-  const moved: McpServer[] = []          // los de .mcp.json, que se quitan al final
   try {
     const sources = powerSources(project)
     const pick = <T>(wanted: string[], all: T[], key: (x: T) => string): T[] => all.filter((x) => wanted.includes(key(x)))      // solo lo que existe: nunca una ruta que venga de fuera
@@ -158,8 +156,7 @@ export async function createPower(project: string | null, draft: PowerDraft): Pr
     const servers = new Map<string, McpServer>()
     for (const s of listServers(project).filter((x) => !isAppServer(x) && !x.disabled)) if (!servers.has(s.name) || (isShared(s) && !isShared(servers.get(s.name)!))) servers.set(s.name, s)          // si está en .mcp.json, esa es la entrada
     const chosen = pick(draft.mcp, sources.mcp, (x) => x.name).map((x) => servers.get(x.name)!)
-    moved.push(...chosen.filter(isShared))
-    if (chosen.length) writeFileSync(join(target, 'mcp.json'), JSON.stringify({ mcpServers: Object.fromEntries(chosen.map((s) => [s.name, mcpEntry(specFromConfig(s.name, s.config, s.agent), draft.withValues || isShared(s))])) }, null, 2) + '\n', 'utf8')
+    if (chosen.length) writeFileSync(join(target, 'mcp.json'), JSON.stringify({ mcpServers: Object.fromEntries(chosen.map((s) => [s.name, mcpEntry(specFromConfig(s.name, s.config, s.agent), draft.withValues)])) }, null, 2) + '\n', 'utf8')
     const steering = project ? loadSteering(project, { globalDir: globalSteeringDir() }) : []
     for (const x of pick(draft.steering, sources.steering, (x) => x.id)) {
       const doc = steering.find((d) => `${d.scope}:${d.base}` === x.id)
@@ -177,10 +174,6 @@ export async function createPower(project: string | null, draft: PowerDraft): Pr
   } catch (e) {
     rmSync(target, { recursive: true, force: true })
     return { ok: false, message: e instanceof Error ? e.message : String(e) }
-  }
-  for (const s of moved) {          // el Power ya está escrito: ahora sí se quitan de .mcp.json
-    const removed = await removeServer(s, project)
-    if (!removed.ok) return { ok: false, message: tm('m.power.notRemoved', { name: s.name, message: removed.message }) }
   }
   return { ok: true, message: target }
 }

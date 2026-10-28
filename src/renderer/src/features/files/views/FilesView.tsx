@@ -33,6 +33,7 @@ export function FilesView() {
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
   const [ignored, setIgnored] = useState<Set<string>>(new Set())
   const [cursor, setCursor] = useState<string | null>(null)
+  const byKey = useRef(false)          // el cursor lo movió el teclado: hay que traer su fila a la vista
   const [selected, setSelected] = useState<Set<string>>(new Set())      // selección múltiple (Shift/Ctrl + clic, Shift + ↑↓)
   const [dropOn, setDropOn] = useState<string | null>(null)            // carpeta (o la raíz) sobre la que se está arrastrando
   const [anchor, setAnchor] = useState<string | null>(null)              // de dónde parte el rango de Shift
@@ -227,6 +228,13 @@ export function FilesView() {
     }
   }
 
+  useEffect(() => {
+    if (!byKey.current || !cursor) return
+    byKey.current = false
+    const el = [...(box.current?.querySelectorAll('button[title]') ?? [])].find((b) => b.getAttribute('title') === cursor)
+    el?.scrollIntoView({ block: 'nearest' })
+  }, [cursor, rows])
+
   // navegación con el teclado: ↑↓ mueven la selección, → abre, ← cierra o sube, Enter abre, Esc devuelve el teclado a la terminal
   const onKeyDown = (e: React.KeyboardEvent): void => {
     const k = e.key.toLowerCase()
@@ -247,6 +255,7 @@ export function FilesView() {
     }
     const i = rows.findIndex((r) => r.entry.path === cursor)
     const current = rows[i]
+    byKey.current = true
     const go = (n: number): void => { const r = rows[Math.max(0, Math.min(rows.length - 1, n))]; if (r) setCursor(r.entry.path) }
     const extend = (n: number): void => { const r = rows[Math.max(0, Math.min(rows.length - 1, n))]; if (r) selectTo(r.entry.path) }
     if (e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {          // Shift + ↑↓: amplía la selección desde el ancla
@@ -308,7 +317,8 @@ export function FilesView() {
         </div>
       </div>
       {/* un solo scroll para todo el explorador: el árbol y, debajo, los roles */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto"
+        onContextMenu={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) } }}>      {/* el hueco bajo el árbol también abre el menú de la raíz */}
       {rootOpen && <div ref={box} tabIndex={0} onKeyDown={onKeyDown} onFocus={() => set({ focus: 'tree' })} className={clsx('px-1 pb-2 outline-none', dropOn === project && 'bg-accent/5 ring-1 ring-inset ring-accent/40')}
         onDragOver={(e) => { dropTarget(e, project) }} onDragLeave={(e) => { if (e.currentTarget === e.target) setDropOn(null) }} onDrop={(e) => dropped(e, project)}
         onClick={(e) => { if (e.target === e.currentTarget) setRootMenu(new DOMRect(e.clientX + 190, e.clientY, 0, 0)) }}
@@ -330,7 +340,7 @@ export function FilesView() {
               onDragEnd={() => setDropOn(null)}
               onDragOver={(e) => { e.stopPropagation(); dropTarget(e, entry.isDir ? entry.path : dirname(entry.path)) }}
               onDrop={(e) => dropped(e, entry.isDir ? entry.path : dirname(entry.path))}
-              onMouseMove={() => { if (cursor !== entry.path) setCursor(entry.path) }}      // el resaltado sigue al ratón (y desde ahí siguen las flechas)
+              onMouseMove={() => { if (cursor !== entry.path) { byKey.current = false; setCursor(entry.path) } }}      // el resaltado sigue al ratón (y desde ahí siguen las flechas)
               onContextMenu={(e) => {
                 e.preventDefault()
                 if (!(e.nativeEvent as PointerEvent).pointerType) return      // lo generó la tecla de menú: lo gestiona onKeyDown con la fila marcada

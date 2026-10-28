@@ -2,12 +2,20 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.2
+
+### Functional
+
+- **Creating a Power no longer touches your `.mcp.json`:** MCP servers are copied into the Power just like steering, skills and hooks, and the originals stay where they were (also in the Antigravity and Codex mirror). Variables and headers are saved empty unless you tick the option to save values. The note saying MCP servers were being moved is gone.
+- **The file explorer follows the keyboard:** when you move with ↑↓ the marked row scrolls into view instead of leaving the panel.
+- **Root menu in the gap below the tree:** right-clicking the empty space under the files opens the project folder menu.
+
 ## 1.4.1
 
 ### Functional
 
 - **Powers, bundles of tools and guides:** a new tab in the sidebar (plug icon, `Ctrl+Shift+X`) gathers your Powers. A Power is a folder with a `POWER.md` that can bring MCP servers (`mcp.json`), steering, skills and hooks, and it replaces the old MCP server store. You install them with the **+** button from a folder, in the project (`.tutti/powers`, shared with git) or for all your projects, and remove them with the trash can. If a Power is not valid, it shows in red with the reason.
-- **Create a Power from what you already have:** the **Create from what I have** option lets you pick, with checkboxes, your MCP servers, steering, skills and hooks, and bundles them with a name, description and keywords. Steering, skills and hooks are copied; the MCP servers that were in `.mcp.json` are moved into the Power (removed from that file and from the Antigravity and Codex mirror) and saved with their real values. For the other MCP servers, variables and headers are saved empty unless you ask otherwise, because they often hold tokens.
+- **Create a Power from what you already have:** the **Create from what I have** option lets you pick, with checkboxes, your MCP servers, steering, skills and hooks, and bundles them with a name, description and keywords. Steering, skills, hooks and MCP servers are copied. Variables and headers are saved empty unless you ask otherwise, because they often hold tokens.
 - **Agents load Powers only when needed:** Tutti's MCP server offers `list_powers` (one line per Power) and `use_power`, which hands over the guide, the steering and skill files and the tools of its MCP servers. That way an installed Power takes almost no context until the task needs it.
 
 ## 1.4.0

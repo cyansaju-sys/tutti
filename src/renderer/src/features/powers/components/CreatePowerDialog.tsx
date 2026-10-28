@@ -33,7 +33,7 @@ export function CreatePowerDialog({ scope, onClose, onDone }: { scope: PowerScop
     })
     setBusy(false)
     toast(res.ok ? t('powers.created', { name: name.trim() }) : res.message, res.ok ? 'ok' : 'error')
-    onDone()          // aunque falle al quitar de .mcp.json, el Power ya existe
+    onDone()
     if (res.ok) onClose()
   }
 
@@ -66,7 +66,6 @@ export function CreatePowerDialog({ scope, onClose, onDone }: { scope: PowerScop
           {sources && group('skills', t('powers.secSkills'), sources.skills.map((s) => ({ id: s, label: s })))}
           {sources && group('hooks', t('powers.secHooks'), sources.hooks.map((h) => ({ id: h, label: h })))}
         </div>
-        {picked.mcp.size > 0 && <p className="text-[11px] leading-relaxed text-muted">{t('powers.movesNote')}</p>}
         {picked.mcp.size > 0 && (
           <label className="flex cursor-pointer items-start gap-2 text-[12px]">
             <input type="checkbox" checked={withValues} onChange={(e) => setWithValues(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />

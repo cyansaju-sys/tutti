@@ -1072,7 +1072,5 @@
   "powers.withValuesHint": "Otherwise only the names are saved, empty, for whoever installs it to fill in.",
   "powers.create": "Create",
   "powers.created": "Power “{name}” created",
-  "powers.createHint": "Choose where the Power is created.",
-  "m.power.notRemoved": "The Power was created, but “{name}” could not be removed from .mcp.json: {message}",
-  "powers.movesNote": "MCP servers in .mcp.json are moved into the Power: they are removed from there (with their values) so agents do not load them all the time."
+  "powers.createHint": "Choose where the Power is created."
 }
