@@ -9,7 +9,7 @@ vi.mock('../../../../src/main/services/settings', () => ({ getSetting: (k: strin
 const installed = new Map<string, string>()
 vi.mock('../../../../src/main/utils/shellpath', () => ({ which: (c: string) => installed.get(c) ?? null, extendedPath: () => '' }))
 
-import { addCustomAgent, candidateExecutables, customAgents, detectAgents, removeCustomAgent, resolveExecutable, splitCommand } from '../../../../src/main/services/agents/agents'
+import { addCustomAgent, candidateExecutables, customAgents, defaultShell, detectAgents, removeCustomAgent, resolveExecutable, setShell, splitCommand } from '../../../../src/main/services/agents/agents'
 
 const exe = (dir: string, name: string): string => {
   const path = join(dir, name)
@@ -106,5 +106,23 @@ describe('resolver un ejecutable', () => {
     writeFileSync(join(dir, 'b'), 'x')
     expect(resolveExecutable(join(dir, 'b'))).toBeNull()               // sin permiso de ejecución
     expect(resolveExecutable(dir)).toBeNull()                          // una carpeta no es un ejecutable
+  })
+})
+
+describe('shell de la terminal', () => {
+  it('usa el elegido si existe; si desaparece o no se eligió, el del sistema', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tutti-shell-'))
+    const mine = exe(dir, 'mi-shell')
+    expect(setShell(mine)).toMatchObject({ ok: true })
+    expect(defaultShell()).toBe(mine)
+    store['default_shell'] = join(dir, 'borrado')                      // la ruta ya no existe: vuelve al del sistema
+    expect(defaultShell()).not.toBe(join(dir, 'borrado'))
+    expect(setShell('')).toMatchObject({ ok: true })                   // vacío: quita la elección
+    expect(store['default_shell']).toBe('')
+  })
+
+  it('rechaza una ruta que no existe y no guarda nada', () => {
+    expect(setShell('/no/existe/bash')).toMatchObject({ ok: false })
+    expect(store['default_shell']).toBeUndefined()
   })
 })

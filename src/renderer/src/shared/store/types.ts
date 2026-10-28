@@ -4,7 +4,7 @@ import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shortcuts' | 'branches' | 'news' | 'quickOpen' | 'goLine'
+export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'news' | 'quickOpen' | 'goLine'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
