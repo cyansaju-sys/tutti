@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MdAdd, MdLanguage, MdSwapHoriz, MdOutlineSettings, MdPalette } from 'react-icons/md'
+import { MdAdd, MdLanguage, MdSwapHoriz, MdOutlineSettings, MdPalette, MdTerminal } from 'react-icons/md'
 import { Menu } from '@/shared/components/Menu'
 import { useT } from '@/shared/lib/i18n'
 import { sidebarIcon } from '@/shared/lib/icons'
@@ -105,6 +105,7 @@ export function Sidebar() {
             { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
             { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
           ] },
+          { label: t('shell.title'), icon: <MdTerminal size={15} />, onClick: () => set({ modal: 'shell' }) },
           { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), icon: <MdSwapHoriz size={15} />, onClick: () => setSide(side === 'left' ? 'right' : 'left') }
         ]} />
       )}

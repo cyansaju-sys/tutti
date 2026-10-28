@@ -116,10 +116,20 @@ export function candidateExecutables(home: string = homedir(), path: string = ex
   return [...out.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/** Shell del usuario: $SHELL en Linux/macOS, PowerShell o cmd en Windows. */
+const SHELL_KEY = 'default_shell'
+
+/** Guarda el ejecutable de la terminal que eligió el usuario; vacío vuelve al del sistema. */
+export function setShell(path: string): McpResult {
+  const file = path.trim()
+  if (file && !resolveExecutable(file)) return { ok: false, message: tm('m.ag.notFound', { command: file }) }
+  setSetting(SHELL_KEY, file)
+  return { ok: true, message: file }
+}
+
+/** Shell del usuario: el que eligió en los ajustes (si sigue existiendo), $SHELL en Linux/macOS, PowerShell o cmd en Windows. */
 export function defaultShell(): string {
-  const defaultShell = getSetting('default_shell')
-  if (defaultShell != null && defaultShell) return String(defaultShell)
+  const own = getSetting(SHELL_KEY)
+  if (typeof own === 'string' && own && resolveExecutable(own)) return own
   if (process.platform === 'win32') return which('pwsh') ?? which('powershell') ?? process.env.COMSPEC ?? 'cmd'
   return process.env.SHELL || which('bash') || 'sh'
 }

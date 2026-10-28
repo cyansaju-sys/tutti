@@ -318,6 +318,7 @@ export interface Api {
   agents: {
     detect(): Promise<AgentInfo[]>
     shell(): Promise<string>
+    setShell(path: string): Promise<McpResult>
     candidates(): Promise<AgentCandidate[]>
     addCustom(name: string, commandLine: string): Promise<McpResult>
     removeCustom(command: string): Promise<void>
