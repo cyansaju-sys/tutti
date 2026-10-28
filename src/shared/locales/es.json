@@ -1072,7 +1072,5 @@
   "powers.withValuesHint": "Si no, se guardan solo los nombres, vacíos, para que quien lo instale los rellene.",
   "powers.create": "Crear",
   "powers.created": "Power «{name}» creado",
-  "powers.createHint": "Elige dónde se crea el Power.",
-  "m.power.notRemoved": "El Power se creó, pero no se pudo quitar «{name}» de .mcp.json: {message}",
-  "powers.movesNote": "Los MCP que estén en .mcp.json se mueven al Power: se quitan de allí (con sus valores) para que los agentes no los carguen siempre."
+  "powers.createHint": "Elige dónde se crea el Power."
 }
