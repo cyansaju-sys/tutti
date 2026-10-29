@@ -52,7 +52,7 @@ Terminales, **editor**, **git** con grafo de commits, **servidores MCP** y **con
 <td width="33%" valign="top">
 
 ### 🔌 Sin atarte a nadie
-Detecta más de 20 agentes y **añade el tuyo**. Tienda de **MCP** integrada, tema claro y oscuro, **español e inglés**.
+Detecta más de 20 agentes y **añade el tuyo**. Tema claro y oscuro, **español e inglés**.
 
 </td>
 </tr>
@@ -320,26 +320,6 @@ Codex, por el `.codex/config.toml` del proyecto (lo lee si el proyecto es de con
 </tr>
 </table>
 
-#### Tienda de servidores
-
-Busca en el **registro oficial de MCP** sin salir de la app, con el aspecto de las extensiones de VS Code: una lista con icono, nombre,
-descripción, quién lo publica y el botón **Instalar**. Los más conocidos (Context7, Playwright, GitHub, Notion, Figma…) salen primero,
-en **Recomendados**.
-
-1. Al pulsar un servidor se abre su **ficha**: qué es, quién lo publica, el comando exacto que se va a ejecutar y lo que pide rellenar.
-2. *Continuar* abre el diálogo de **Añadir servidor** ya relleno; completas lo que falte y eliges a qué agentes va.
-
-Solo se ofrece lo que Tutti sabe instalar: paquetes npm (con `npx`), pypi (con `uvx`) y servidores remotos por URL. Instalar un MCP
-ejecuta código de terceros que el registro no revisa, y la ficha lo recuerda.
-
-<table>
-<tr>
-<td width="33%"><img src="docs/img/mcp-tienda.png" alt="Buscar en el registro" /></td>
-<td width="33%"><img src="docs/img/mcp-ficha.png" alt="Ficha de un servidor" /></td>
-<td width="33%"><img src="docs/img/mcp-instalar.png" alt="Instalar con los datos rellenos" /></td>
-</tr>
-</table>
-
 ### Consumo e historial
 
 Tokens de la ventana de 5 h de Claude, de hoy, de 7 días y totales; los porcentajes reales de límite que da Anthropic (se consultan
@@ -449,7 +429,7 @@ Todas por variable de entorno:
 | `TUTTI_CAPTURE_GRAPH=1` · `TUTTI_CAPTURE_DIFF=<archivo>` | Con la captura, añade el grafo de commits y la comparación de un archivo modificado |
 | `TUTTI_CAPTURE_INTERNAL=1` | Con la captura, coloca la ventana en la pantalla integrada (si hay varias) y ocupando su área útil |
 | `TUTTI_CAPTURE_LANG=en` · `TUTTI_CAPTURE_LIGHT=1` | Con la captura, saca las imágenes en inglés (`es` / `en`) o con el tema claro |
-| `TUTTI_CAPTURE_MCP=1` · `TUTTI_CAPTURE_UPDATE=1` | Con la captura, añade los servidores MCP (incluida la tienda, que consulta el registro) y el botón de actualización |
+| `TUTTI_CAPTURE_MCP=1` · `TUTTI_CAPTURE_UPDATE=1` | Con la captura, añade los servidores MCP y el botón de actualización |
 | `TUTTI_CAPTURE_REAL=1` | Con la captura, lanza **agentes reales** (Claude Code) en una carpeta de ejemplo temporal para la imagen principal; gasta tokens de tu cuenta |
 | `TUTTI_SELFTEST=1` | Prueba el reparto de tareas de punta a punta con agentes falsos |
 
