@@ -13,7 +13,7 @@ Installation, editor, agents, task distribution, MCP, git, shortcuts, settings a
 - [Project context](#contexto)
 - [The Tutti tab](#tutti)
 - [The .tutti folder](#dottutti)
-- [MCP servers and store](#mcp)
+- [MCP servers](#mcp)
 - [Usage and history](#consumo)
 - [Git](#git)
 - [Appearance and language](#apariencia)
@@ -445,7 +445,7 @@ A skill is a folder with a `SKILL.md` that starts with a header (`name` and `des
 
 <a id="mcp"></a>
 
-## MCP servers and store
+## MCP servers
 
 It reads, adds and removes the servers of **Claude Code, OpenCode, Gemini CLI, Qwen Code, Cursor Agent, Codex and Antigravity** (global, project and `.mcp.json`) using each agent's CLI to respect its format. Cursor Agent has no `mcp add`: Tutti writes its `.cursor/mcp.json` directly, keeping the rest of the file.
 
@@ -488,24 +488,6 @@ Where each agent keeps its project MCPs (as far as we know, only Claude Code rea
 
 > [!NOTE]
 > When you **standardize**, the servers that are already the *same* in `.mcp.json` are removed from `opencode.json`; if the file only had MCPs it is deleted, and if it has more settings (theme, permissions…) it is kept. Those that differ there are left alone and the notice lists them. **Trade-off:** OpenCode only gets those MCPs when you open it from Tutti; in a regular terminal it will not have them.
-
-### Store
-
-The search box at the top queries the **official MCP registry** (`registry.modelcontextprotocol.io`) styled like VS Code extensions: icon, name, description, who publishes it, whether it is local or remote and the **Install** button. The best-known ones (Context7, Playwright, GitHub, Chrome DevTools, Notion, Figma, Linear, Atlassian, Sentry, Supabase, Stripe, Cloudflare, Vercel, Serena) come first under **Recommended**; when searching, the best match goes on top.
-
-![Server store](img/mcp-tienda.png)
-
-1. Clicking a server opens its **page**: what it is, who publishes it, version, repository, the exact command that will run and the variables it asks for.
-2. *Continue* opens *Add MCP server* already filled in; you complete what is missing and pick the agents.
-
-![Server page](img/mcp-ficha.png)
-
-![Install with the data filled in](img/mcp-instalar.png)
-
-Only what Tutti knows how to install is offered: **npm** packages (with `npx`), **pypi** (with `uvx`) and **remote** servers by URL (`streamable-http` or `sse`). You need `node` or `uv` installed for the local ones.
-
-> [!WARNING]
-> Installing an MCP server runs third-party code on your computer and the registry does not review it. Check the command and where it comes from before continuing. Offline, the store shows a notice with *Retry*; what is already installed keeps working.
 
 <a id="consumo"></a>
 
@@ -634,7 +616,7 @@ Read only: Claude Code's logs (`~/.claude/projects`), its MCP configuration (`~/
 
 ## Privacy and security
 
-- The app only goes online to **query your limits at Anthropic** (with the Claude Code session; the token is never stored or shown), **check for updates** on GitHub and, if you open the store, **query the MCP registry**.
+- The app only goes online to **query your limits at Anthropic** (with the Claude Code session; the token is never stored or shown) and **check for updates** on GitHub.
 - The task delegation server listens only on `127.0.0.1` and requires a different token on every run.
 - There are no accounts, analytics or telemetry.
 - Deleting a file sends it to the trash. Git operations that change history ask for confirmation.
@@ -650,8 +632,6 @@ Read only: Claude Code's logs (`~/.claude/projects`), its MCP configuration (`~/
 - **The terminal cannot find `tutti`**: On Linux, `~/.local/bin` has to be in your `PATH` (add it in `~/.bashrc` or `~/.zshrc`); if you downloaded the AppImage by hand, open it once so it creates the command. On Windows, open a new terminal: the ones already open when you installed do not see the `PATH` change.
 - **An agent does not see Tutti's tools**: Open it **from Tutti** (outside the app it does not get its session's configuration). Make sure `"orchestration"` is not `false`.
 - **In Antigravity the card says “… does not exist”**: The registration points to an old path (for example after moving the app's folder). It repairs itself when Tutti opens with Antigravity installed; open it again.
-- **The store does not load**: It needs a connection to the official MCP registry. Click *Retry*. What you already had installed keeps working offline.
-- **A server from the store does not start**: Local ones need `node` (`npx`) or `uv` (`uvx`) installed and the variables the page asks for filled in.
 - **The window does not open where I expected (Wayland)**: On Wayland the compositor decides the position; Tutti cannot force it. On KDE it opens on the cursor's monitor.
 - **Removing Tutti completely**: `install.sh --uninstall`; your settings stay in `~/.config/tutti` (delete them to start from scratch).
 
@@ -678,7 +658,7 @@ src/
       git/         git and the AI commit message
       context/     project context, .tutti and its generation
       usage/       usage and history of each agent
-      mcp/         agents' MCP and the store
+      mcp/         agents' MCP
                    (and here: files, search, settings, updater)
     utils/       message language, version, shell path, self-test
   preload/     the secure bridge to the interface (window.api)
