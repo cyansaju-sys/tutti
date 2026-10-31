@@ -2,6 +2,22 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.4
+
+### Functional
+
+- **Worktrees from the branch picker:** the branch picker now has **Worktrees…**. It lists the repository's worktrees (marking the one you have open, the main one, locked ones and those whose folder is gone), opens one as a project, creates a new one for an existing or new branch, and removes the ones you no longer need (with a warning if they have unsaved changes). They are created next to the repository, in `<repo>.worktrees/<branch>`, so the project stays clean. **New worktree with an agent…** creates it and opens an agent of your choice inside it, without switching project.
+- **Heads-up when an agent waits for your permission:** if an agent stops asking for authorization or an answer, its tab is marked and you get a notice (in the app, or a system one if Tutti is in the background; clicking it takes you to its panel). It does not notify if you are already looking at it, nor repeat for the same question. It recognizes more ways of asking: trusting the folder, applying changes and Enter/Esc confirmations.
+- **Who changed each line:** the editor shows, at the end of the cursor's line, the author, when and the commit subject (`You, 2 days ago • fix…`), or “Uncommitted changes” if it is not in a commit yet.
+- **Nicer JSON:** keys are shown in blue and autocompletion offers the word you type in quotes, plus the keys the file already uses.
+- **Quick open starts with your recent files:** with an empty box it shows the last files you opened in the project (the ones that still exist); typing searches all of them.
+- **Local branches first:** in the branch picker, local branches come before remote ones.
+- **Project permissions in `.tutti`:** the `.tutti` folder now includes `settings.json` with the project's permissions.
+
+### Changes
+
+- **The chat with agents is removed:** the chat panel in the title bar (with `/` and `#`) is gone; you talk to agents in their panels, as usual.
+
 ## 1.4.3
 
 ### Functional

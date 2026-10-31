@@ -16,8 +16,6 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
     set({ project: path, git: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, docs: [], activeDoc: null, tab: 'files', focus: 'tree' })
     void window.api.settings.set('project', path)
-    void window.api.ai.cancel('chat')           // la conversación es de cada proyecto: se deja la del anterior y se carga la de este
-    get().restoreChat()
     void (async () => {
       const configs = { ...(((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}) }
       if (prev) configs[prev] = leaving

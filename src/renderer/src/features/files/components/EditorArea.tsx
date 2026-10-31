@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAccountTree, MdClose, MdCode, MdTune, MdVisibility } from 'react-icons/md'
-import type { GitMarks } from '@shared/types'
+import type { GitBlame, GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { confirmAsk } from '@/shared/lib/confirm'
 import { t, useT } from '@/shared/lib/i18n'
@@ -53,6 +53,7 @@ export function EditorArea() {
   const closeDoc = useStore((s) => s.closeDoc)
   const updateDocText = useStore((s) => s.updateDocText)
   const [marks, setMarks] = useState<GitMarks>({})
+  const [blame, setBlame] = useState<GitBlame | null>(null)
   const [previews, setPreviews] = useState<Record<string, boolean>>({})        // vista Markdown por archivo (lo que no está aquí usa su valor por defecto)
   // cambios externos por decidir, por archivo: sobreviven al cambiar de pestaña
   const [pendings, setPendings] = useState<Record<string, PendingExternal>>({})
@@ -77,8 +78,12 @@ export function EditorArea() {
     })
   }, [docs])
 
-  const loadMarks = useCallback(async () => { if (doc?.kind === 'text') setMarks(await window.api.git.marks(doc.path)) }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { setMarks({}); void loadMarks() }, [doc?.path, git?.files.length, doc?.savedText])  // eslint-disable-line react-hooks/exhaustive-deps
+  const loadMarks = useCallback(async () => {
+    if (doc?.kind !== 'text') return
+    setMarks(await window.api.git.marks(doc.path))
+    setBlame(await window.api.git.blame(doc.path))
+  }, [doc?.path])  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setMarks({}); setBlame(null); void loadMarks() }, [doc?.path, git?.files.length, doc?.savedText])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // si otra herramienta cambia el archivo y aquí no hay cambios sin guardar, se recarga solo
   useEffect(() => {
@@ -246,11 +251,10 @@ export function EditorArea() {
       })()}
       {doc?.kind === 'text' && !preview && (
         <CodeEditor
-          path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled || !!visiblePending} marks={marks} changes={externalChanges}
+          path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled || !!visiblePending} marks={marks} blame={blame} changes={externalChanges}
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
           onSend={(sel) => sendSelection(doc.path, sel)}
-          onSelect={(sel) => useStore.setState({ editorSelection: { path: doc.path, ...sel } })}
         />
       )}
       {doc?.kind === 'graph' && <GitGraph />}

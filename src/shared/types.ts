@@ -16,7 +16,11 @@ export interface GitFile { path: string; index: string; work: string; code: stri
 export interface GitStatus { isRepo: boolean; branch: string; ahead: number; behind: number; hasUpstream: boolean; hasRemote: boolean; files: GitFile[] }
 /** Rama con su último commit (fecha en ms, autor, hash corto y asunto) para mostrarla en el selector. */
 export interface GitBranch { name: string; current: boolean; remote: boolean; date?: number; author?: string; hash?: string; subject?: string }
+/** Un árbol de trabajo (git worktree): `main` es el del repositorio original; `branch` es null con HEAD suelto. */
+export interface GitWorktree { path: string; branch: string | null; hash: string; main: boolean; current: boolean; locked: boolean; prunable: boolean }
 export type GitMarks = Record<number, 'added' | 'modified' | 'deleted'>
+/** Quién escribió cada línea (git blame): `lines[n-1]` es el commit de la línea n; `mine` = el autor es el usuario de git; sin `hash` = aún sin commit. */
+export interface GitBlame { lines: string[]; commits: Record<string, { author: string; time: number; summary: string; mine: boolean; uncommitted: boolean }> }
 
 /** `custom`: lo añadió el usuario (no está en la lista conocida). `args`: argumentos fijos con los que se arranca. */
 export interface AgentInfo { name: string; command: string; path: string; args?: string[]; custom?: boolean }
@@ -52,6 +56,8 @@ export interface PaneState {
   /** El agente líder (null si solo hay uno abierto: no hace falta marcarlo). */
   leader: string | null
   roles: Record<string, PaneRole>; inbox: Record<string, number>
+  /** Los agentes parados esperando un permiso o una respuesta en su panel. */
+  asking: string[]
 }
 /** Una plantilla de plan para elegirla: sus roles y en qué orden van. */
 export interface PlanTemplateInfo { id: string; name: string; builtin: boolean; roles: Array<{ id: string; name: string; dependsOn: string[] }> }
@@ -156,22 +162,6 @@ export interface McpSpec {
 export type GitOp = 'tag' | 'branch' | 'checkout' | 'cherry-pick' | 'revert' | 'merge' | 'rebase' | 'reset-soft' | 'reset-mixed' | 'reset-hard'
 export interface GitChangedFile { status: string; path: string; added: number; deleted: number }
 export interface GitCommit { hash: string; parents: string[]; author: string; time: number; refs: string[]; subject: string }
-/** Un archivo o carpeta del proyecto que se puede citar en el chat con «#». Las carpetas acaban en «/». */
-export interface ProjectRef { path: string; isDir: boolean }
-/** Una opción de una referencia «#» que se elige de una lista (un commit, un spec, una terminal…). */
-export interface ChatRefOption { id: string; label: string; hint: string }
-/** Lo que se puede citar con «#» además de archivos y carpetas. */
-export interface ChatRefs { commit: ChatRefOption[]; spec: ChatRefOption[]; steering: ChatRefOption[]; skill: ChatRefOption[]; doc: ChatRefOption[]; terminal: ChatRefOption[]; roadmap: boolean; hooks: boolean }
-/** Lo que adjuntaría una referencia «#» al enviar: su tamaño y si se recortó o no se pudo adjuntar. */
-export interface ChatRefPreview { token: string; chars: number; note: 'ok' | 'truncated' | 'blocked' | 'binary' | 'partial' | 'missing' }
-/** Lo que gastó una respuesta (solo algunos agentes lo informan). */
-export interface ChatUsage { inputTokens: number; outputTokens: number; costUsd?: number }
-/** Opciones de un mensaje: el texto de lo seleccionado en el editor (por referencia «sel:…») y el modelo (si el agente lo permite). */
-export interface ChatOptions { inline?: Record<string, string>; model?: string }
-/** Un «/comando» de un agente guardado como archivo: el de un proyecto o el del usuario. */
-export interface SlashCommand { name: string; description: string; source: 'project' | 'user' | 'builtin'; file: string }      // `builtin`: propio del agente, no es un archivo
-/** Un mensaje del chat. */
-export interface ChatTurn { role: 'user' | 'assistant'; text: string; attached?: string }      // `attached`: lo que citaba con «#», para que las preguntas siguientes lo conserven
 export interface McpResult { ok: boolean; message: string }
 /** Lo que se puede meter en un Power nuevo, de lo que ya tienes. */
 export interface PowerSources {
@@ -231,16 +221,7 @@ export type Settings = Record<string, unknown>
 export interface Api {
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   dialog: { chooseFolder(start?: string): Promise<string | null> }
-  ai: { cancel(kind: 'commit' | 'context' | 'chat'): Promise<void> }
-  chat: {
-    agents(): Promise<AgentInfo[]>                                                       // los agentes con los que se puede conversar sin abrirlos
-    extraRefs(project: string): Promise<ChatRefs>                                        // lo demás que se puede citar con «#»
-    refs(project: string): Promise<ProjectRef[]>                                         // archivos y carpetas del proyecto para «#»
-    slash(project: string | null, command: string): Promise<SlashCommand[]>             // los «/comandos» de ese agente
-    ask(project: string | null, command: string, history: ChatTurn[], options?: ChatOptions): Promise<McpResult & { text?: string; attached?: string; usage?: ChatUsage }>
-    preview(project: string, text: string, inline: Record<string, string>): Promise<ChatRefPreview[]>      // lo que adjuntarían las referencias # del texto
-    onChunk(cb: (text: string) => void): () => void                                      // la respuesta según se va escribiendo
-  }
+  ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
   powers: {
     list(project: string | null): Promise<PowerInfo[]>
     install(project: string | null, source: string, scope: PowerScope): Promise<McpResult>      // copia la carpeta de un Power; la nueva va en `message`
@@ -306,6 +287,10 @@ export interface Api {
     checkout(root: string, name: string, remote: boolean): Promise<string>
     createBranch(root: string, name: string, base?: string, switchTo?: boolean): Promise<string>
     marks(file: string): Promise<GitMarks>
+    worktrees(root: string): Promise<GitWorktree[]>
+    addWorktree(root: string, branch: string, create: boolean, base?: string): Promise<McpResult>      // la carpeta nueva va en `message` (junto al repo: <repo>.worktrees/<rama>)
+    removeWorktree(root: string, path: string, force: boolean): Promise<string>                          // devuelve el error, o '' si salió bien
+    blame(file: string): Promise<GitBlame | null>
     op(root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean): Promise<string>
     log(root: string, limit: number): Promise<GitCommit[]>
     pull(root: string): Promise<string>
@@ -356,6 +341,8 @@ export interface Api {
   orchestra: {
     newId(): Promise<string>
     onOpenPane(cb: (pane: OpenPane) => void): () => void
+    /** Un agente se quedó parado esperando un permiso o una respuesta en su panel. */
+    onAttention(cb: (agent: { id: string; name: string }) => void): () => void
     tasks(): Promise<TaskInfo[]>
     clearTasks(): Promise<void>
     /** El usuario aprueba el plan de roles que el líder dejó listo en el proyecto; false si no había ninguno por aprobar. */

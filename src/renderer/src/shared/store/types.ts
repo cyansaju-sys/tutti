@@ -1,10 +1,10 @@
-import type { AgentInfo, ChatTurn, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
+import type { AgentInfo, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'news' | 'quickOpen' | 'goLine'
+export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'worktrees' | 'news' | 'quickOpen' | 'goLine'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
@@ -65,6 +65,7 @@ export interface PanesSlice {
   paneRoles: Record<string, PaneRole>
   /** Avisos de Tutti que esperan a que cada agente esté libre (o a que dejes de escribir en su panel). */
   paneInbox: Record<string, number>
+  paneAsking: string[]
   /** El agente líder; null si solo hay uno abierto. */
   paneLeader: string | null
   openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string; prompt?: string }) => Promise<void>
@@ -81,12 +82,6 @@ export interface UiSlice {
   newsSince: string | null
   tab: SidebarTab
   sidebarOpen: boolean
-  chatOpen: boolean                                     // el panel de chat, al lado contrario de la barra lateral
-  chatWidth: number
-  chatMessages: ChatTurn[]                               // la conversación del chat (se conserva aunque se cierre el panel)
-  editorSelection: { path: string; startLine: number; endLine: number; text: string } | null          // lo último que se seleccionó en el editor (para citarlo en el chat con #)
-  chatModel: Record<string, string>                     // el modelo elegido para cada agente en el chat (sin entrada: el suyo por defecto)
-  chatAgent: string | null                              // el comando del agente con el que se conversa (null: el primero disponible)
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
   sidebarWidth: number
   editorWidth: number
@@ -109,8 +104,6 @@ export interface UiSlice {
   dismissToast: (id: number) => void
   setTheme: (pref: ThemePref) => void
   setLang: (pref: LangPref) => void
-  setChat: (turns: ChatTurn[]) => void                  // cambia la conversación del chat y la guarda para este proyecto
-  restoreChat: () => void                               // carga la conversación guardada del proyecto abierto
   setSidebarSide: (side: 'left' | 'right') => void
   setEdit: (enabled: boolean) => void
 }

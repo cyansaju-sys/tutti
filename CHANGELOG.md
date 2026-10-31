@@ -2,6 +2,22 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.4
+
+### Funcional
+
+- **Worktrees desde el selector de ramas:** el selector de ramas tiene ahora **Worktrees…**. Lista los árboles de trabajo del repositorio (marca cuál tienes abierto, el principal, los bloqueados y los que perdieron su carpeta), abre uno como proyecto, crea uno nuevo para una rama existente o nueva y quita los que ya no necesitas (con aviso si tienen cambios sin guardar). Se crean junto al repositorio, en `<repo>.worktrees/<rama>`, para no ensuciar el proyecto. **Nuevo worktree con un agente…** lo crea y abre un agente de tu elección dentro, sin cambiar de proyecto.
+- **Aviso cuando un agente espera tu permiso:** si un agente se queda parado pidiendo autorización o una respuesta, su pestaña se marca y recibes un aviso (dentro de la app, o del sistema si Tutti está en segundo plano; al pulsarlo vas a su panel). No avisa si ya lo estás viendo ni repite el aviso por la misma pregunta. Reconoce más formas de pedir permiso: confiar en la carpeta, aplicar cambios y confirmaciones con Enter/Esc.
+- **Quién cambió cada línea:** el editor muestra, al final de la línea del cursor, el autor, cuándo y el asunto del commit (`Tú, hace 2 días • arreglar…`), o «Cambios sin confirmar» si aún no están en un commit.
+- **JSON más cómodo:** las claves se ven en azul y el autocompletado ofrece la palabra que escribes entre comillas, además de las claves que el archivo ya usa.
+- **Abrir archivo rápido empieza por tus recientes:** con el cuadro vacío muestra los últimos archivos que abriste en el proyecto (los que aún existen), y al escribir busca entre todos.
+- **Ramas locales primero:** en el selector de ramas, las locales van antes que las remotas.
+- **Permisos del proyecto en `.tutti`:** la carpeta `.tutti` incluye ahora `settings.json` con los permisos del proyecto.
+
+### Cambios
+
+- **Se quita el chat con los agentes:** el panel de chat de la barra de título (con `/` y `#`) desaparece; se conversa con los agentes en sus paneles, como siempre.
+
 ## 1.4.3
 
 ### Funcional

@@ -83,7 +83,7 @@ export function taskShown(screen: string, task: string): boolean {
 }
 
 // avisos con los que los agentes piden permiso o una respuesta antes de seguir (Claude, Codex, OpenCode, Gemini, Aider…)
-const ASKING = /(do you want to (proceed|make this edit|create|run|allow)|allow (once|always|execution|this|command)|permission (required|needed)|approve (this|command|edit)|waiting for (your )?(approval|confirmation|input)|press enter to continue|\(y\/n\)|\[y\/n\]|\(yes\/no\)|¿(quieres|deseas|permitir)|permitir (una vez|siempre))/i
+const ASKING = /(do you want to (proceed|make this edit|create|run|allow)|allow (once|always|execution|this|command)|permission (required|needed)|approve (this|command|edit)|waiting for (your )?(approval|confirmation|input)|press enter to continue|\(y\/n\)|\[y\/n\]|\(yes\/no\)|do you (trust|want to (apply|continue|save|delete|overwrite|execute))|(apply|accept|approve) (these |this |the )?(changes?|edits?|plan)\?|(requires?|needs?) (your )?(approval|permission|confirmation)|(enter|press enter) to (confirm|select|approve)|esc to (cancel|reject)|\byes,? (and )?(allow|don't ask)|\b(trust|confiar en) (this|esta) (folder|carpeta)|¿(quieres|deseas|permitir|confías)|permitir (una vez|siempre)|(aprobar|aceptar) (el |este |estos |los |las |la )?(cambios?|plan)\?|requiere (tu )?(aprobación|permiso|confirmación))/i
 const ASKING_ROWS = 15
 
 /** ¿El agente está parado esperando a que alguien le responda (un permiso, una confirmación)? Solo mira el final de la pantalla. */

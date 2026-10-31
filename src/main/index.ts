@@ -7,10 +7,6 @@ import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, remov
 import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
-import { chatAgents, chatAsk } from './services/chat'
-import { listRefs, previewRefs } from './services/refs'
-import { listRefs as listExtraRefs } from './services/chatRefs'
-import { slashCommands } from './services/slash'
 import { suggestCommit } from './services/git/commitMessage'
 import { archiveOpenspec, initOpenspec, openspecState, validateOpenspec } from './services/openspec'
 import { markRoadmapDone, roadmapState } from './services/roadmap'
@@ -24,7 +20,7 @@ import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './servi
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { ChatOptions, ChatTurn, GitOp, PowerDraft, PowerScope, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
+import type { GitOp, PowerDraft, PowerScope, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -100,8 +96,8 @@ function createWindow(): void {
 }
 
 /** Tareas de IA en curso (mensaje de commit, contexto): se pueden cancelar al salir de su apartado. */
-const tasks = new Map<'commit' | 'context' | 'chat', AbortController>()
-async function withTask<T>(kind: 'commit' | 'context' | 'chat', run: (signal: AbortSignal) => Promise<T>): Promise<T> {
+const tasks = new Map<'commit' | 'context', AbortController>()
+async function withTask<T>(kind: 'commit' | 'context', run: (signal: AbortSignal) => Promise<T>): Promise<T> {
   tasks.get(kind)?.abort()
   const controller = new AbortController()
   tasks.set(kind, controller)
@@ -116,13 +112,7 @@ function registerIpc(): void {
     return res.canceled ? null : res.filePaths[0]
   })
   ipcMain.handle('context:generate', (e, project: string) => withTask('context', (signal) => generateContext(project, (name) => e.sender.send('context:agent', name), signal)))
-  ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context' | 'chat') => tasks.get(kind)?.abort())
-  ipcMain.handle('chat:agents', () => chatAgents())
-  ipcMain.handle('chat:refs', (_e, project: string) => listRefs(project))
-  ipcMain.handle('chat:extra-refs', (_e, project: string) => listExtraRefs(project))
-  ipcMain.handle('chat:slash', (_e, project: string | null, command: string) => slashCommands(project, command))
-  ipcMain.handle('chat:ask', (e, project: string | null, command: string, history: ChatTurn[], options?: ChatOptions) => withTask('chat', (signal) => chatAsk(project, command, history, signal, (text) => e.sender.send('chat:chunk', text), options)))
-  ipcMain.handle('chat:preview', (_e, project: string, text: string, inline: Record<string, string>) => previewRefs(project, text, inline ?? {}))
+  ipcMain.handle('ai:cancel', (_e, kind: 'commit' | 'context') => tasks.get(kind)?.abort())
   // hooks de .tutti/hooks: se vigilan solo en proyectos autorizados; sus avisos llegan a la interfaz
   const hooksHost = {
     notify: (r: { name: string; ok: boolean; message: string }): void => { win?.webContents.send('hooks:ran', r) },
@@ -205,6 +195,10 @@ function registerIpc(): void {
   ipcMain.handle('git:fetch', (_e, root: string) => git.fetch(root))
   ipcMain.handle('git:suggestCommit', (e, root: string) => withTask('commit', (signal) => suggestCommit(root, (name) => e.sender.send('git:commitAgent', name), signal)))
   ipcMain.handle('git:marks', (_e, file: string) => git.marks(file))
+  ipcMain.handle('git:worktrees', (_e, root: string) => git.worktrees(root))
+  ipcMain.handle('git:addWorktree', (_e, root: string, branch: string, create: boolean, base?: string) => git.addWorktree(root, branch, create, base))
+  ipcMain.handle('git:removeWorktree', (_e, root: string, path: string, force: boolean) => git.removeWorktree(root, path, force))
+  ipcMain.handle('git:blame', (_e, file: string) => git.blame(file))
 
   ipcMain.handle('mcp:list', (_e, project: string | null) => {
     const live = mcp.listServers(project)

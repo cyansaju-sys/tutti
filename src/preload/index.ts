@@ -21,10 +21,9 @@ const api: Api = {
     stage: (r, p) => ipcRenderer.invoke('git:stage', r, p), unstage: (r, p) => ipcRenderer.invoke('git:unstage', r, p), discard: (r, t, u) => ipcRenderer.invoke('git:discard', r, t, u),
     commit: (r, m) => ipcRenderer.invoke('git:commit', r, m), push: (r) => ipcRenderer.invoke('git:push', r),
     branches: (r) => ipcRenderer.invoke('git:branches', r), checkoutDetached: (r, ref) => ipcRenderer.invoke('git:checkout-detached', r, ref), checkout: (r, n, rem) => ipcRenderer.invoke('git:checkout', r, n, rem),
-    createBranch: (r, n, b, s) => ipcRenderer.invoke('git:createBranch', r, n, b, s), marks: (f) => ipcRenderer.invoke('git:marks', f), op: (r, o, h, a, m) => ipcRenderer.invoke('git:op', r, o, h, a, m), commitFiles: (r, h, p) => ipcRenderer.invoke('git:commitFiles', r, h, p), log: (r, n) => ipcRenderer.invoke('git:log', r, n), pull: (r) => ipcRenderer.invoke('git:pull', r), fetch: (r) => ipcRenderer.invoke('git:fetch', r), suggestCommit: (r) => ipcRenderer.invoke('git:suggestCommit', r), onCommitAgent: (cb) => subscribe<[string]>('git:commitAgent', cb), show: (r, rev, p) => ipcRenderer.invoke('git:show', r, rev, p)
+    createBranch: (r, n, b, s) => ipcRenderer.invoke('git:createBranch', r, n, b, s), marks: (f) => ipcRenderer.invoke('git:marks', f), worktrees: (r) => ipcRenderer.invoke('git:worktrees', r), addWorktree: (r, b, c, base) => ipcRenderer.invoke('git:addWorktree', r, b, c, base), removeWorktree: (r, p, f) => ipcRenderer.invoke('git:removeWorktree', r, p, f), blame: (f) => ipcRenderer.invoke('git:blame', f), op: (r, o, h, a, m) => ipcRenderer.invoke('git:op', r, o, h, a, m), commitFiles: (r, h, p) => ipcRenderer.invoke('git:commitFiles', r, h, p), log: (r, n) => ipcRenderer.invoke('git:log', r, n), pull: (r) => ipcRenderer.invoke('git:pull', r), fetch: (r) => ipcRenderer.invoke('git:fetch', r), suggestCommit: (r) => ipcRenderer.invoke('git:suggestCommit', r), onCommitAgent: (cb) => subscribe<[string]>('git:commitAgent', cb), show: (r, rev, p) => ipcRenderer.invoke('git:show', r, rev, p)
   },
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
-  chat: { agents: () => ipcRenderer.invoke('chat:agents'), refs: (project) => ipcRenderer.invoke('chat:refs', project), extraRefs: (project) => ipcRenderer.invoke('chat:extra-refs', project), onChunk: (cb) => subscribe<[string]>('chat:chunk', cb), slash: (project, command) => ipcRenderer.invoke('chat:slash', project, command), ask: (project, command, history, options) => ipcRenderer.invoke('chat:ask', project, command, history, options), preview: (project, text, inline) => ipcRenderer.invoke('chat:preview', project, text, inline) },
   powers: { list: (project) => ipcRenderer.invoke('powers:list', project), install: (project, source, scope) => ipcRenderer.invoke('powers:install', project, source, scope), remove: (project, name, scope) => ipcRenderer.invoke('powers:remove', project, name, scope), sources: (project) => ipcRenderer.invoke('powers:sources', project), create: (project, draft) => ipcRenderer.invoke('powers:create', project, draft) },
   skills: { import: (project, source) => ipcRenderer.invoke('skills:import', project, source) },
   openspec: {
@@ -86,6 +85,7 @@ const api: Api = {
     updateRole: (project, id, edit) => ipcRenderer.invoke('orchestra:roles-update', project, id, edit),
     roleOptions: (project) => ipcRenderer.invoke('orchestra:roles-options', project),
     onOpenPane: (cb) => subscribe<[OpenPane]>('orchestra:open-pane', cb),
+    onAttention: (cb) => subscribe<[{ id: string; name: string }]>('orchestra:attention', cb),
     onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb),
     paneState: () => ipcRenderer.invoke('orchestra:pane-state'),
     setLeader: (id) => ipcRenderer.invoke('orchestra:set-leader', id),

@@ -1,15 +1,16 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MdAdd, MdCallSplit, MdCloudQueue, MdSearch, MdTerminal } from 'react-icons/md'
-import type { AgentCandidate, GitBranch } from '@shared/types'
+import { MdAccountTree, MdAdd, MdCallSplit, MdCloudQueue, MdDeleteOutline, MdSearch, MdSmartToy, MdTerminal } from 'react-icons/md'
+import type { AgentCandidate, GitBranch, GitWorktree } from '@shared/types'
 import { newSince, parseChangelog } from '@/shared/lib/changelog'
 import { ago } from '@/shared/lib/format'
-import { useConfirm } from '@/shared/lib/confirm'
+import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
 import { useT } from '@/shared/lib/i18n'
 import { refreshGit } from '@/features/git/lib/gitSync'
 import { SECTIONS } from '@/shared/lib/shortcuts'
 import { useStore } from '@/shared/store'
+import { loadRecentFiles } from '@/shared/store/recentFiles'
 import { iconFor } from '@/shared/lib/icons'
 import { basename, relative, toPosix } from '@/shared/lib/paths'
 import { AgentIcon } from '../../features/agents/components/AgentIcon'
@@ -35,8 +36,8 @@ const matches = (text: string, query: string): boolean => {
  * Selector rápido (estilo de los de VS Code): barra de búsqueda sin borde de foco arriba y filas planas debajo. ↑↓ eligen, Enter acepta.
  * `extra` son filas que no se filtran (acciones) y van primero; `group` separa con una línea y rotula a la derecha; `footer` va bajo la lista.
  */
-function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, group, extra }: {
-  placeholder: string; items: T[]; label: (i: T) => string; render: (i: T, active: boolean) => React.ReactNode
+function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, group, extra, initial, emptyInitial }: {
+  placeholder: string; items: T[]; initial?: T[]; emptyInitial?: string; label: (i: T) => string; render: (i: T, active: boolean) => React.ReactNode
   onPick: (i: T, query: string) => void; empty: string; footer?: (query: string) => React.ReactNode; group?: (i: T) => string
   extra?: (query: string) => T[]
 }) {
@@ -45,7 +46,7 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
   const [index, setIndex] = useState(0)
   const input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLUListElement>(null)
-  const shown = useMemo(() => [...(extra?.(query.trim()) ?? []), ...items.filter((i) => matches(label(i), query))], [items, query, extra])  // eslint-disable-line react-hooks/exhaustive-deps
+  const shown = useMemo(() => [...(extra?.(query.trim()) ?? []), ...(initial && !query ? initial : items.filter((i) => matches(label(i), query)))], [items, initial, query, extra])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => input.current?.focus(), [])
   useEffect(() => setIndex(0), [query])
   useEffect(() => { list.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' }) }, [index, shown])
@@ -73,15 +74,15 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
           return (
             <li key={label(item)}>
               {heading && i > 0 && <div className="mx-0 my-1 border-t border-ov/[0.08]" />}
+              {heading && <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted/80">{heading}</div>}
               <button data-active={active} onMouseMove={() => setIndex(i)} onClick={() => onPick(item, query)}
                 className={clsx('relative flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[13px] transition-colors', active ? 'bg-accent/[0.18]' : 'hover:bg-ov/[0.04]')}>
                 {render(item, active)}
-                {heading && <span className="absolute right-3 top-1.5 text-[11px] text-muted/80">{heading}</span>}
               </button>
             </li>
           )
         })}
-        {shown.length === 0 && !footer && <li className="px-3 py-4 text-center text-[12px] text-muted">{empty}</li>}
+        {shown.length === 0 && !footer && <li className="px-3 py-4 text-center text-[12px] text-muted">{initial && !query && emptyInitial ? emptyInitial : empty}</li>}
       </ul>
       {footer?.(query)}
       <div className="flex items-center gap-4 border-t border-ov/[0.06] bg-black/20 px-3 py-1.5 text-[10px] text-muted">
@@ -97,6 +98,9 @@ export function QuickOpenDialog() {
   const openDoc = useStore((s) => s.openDoc)
   const set = useStore((s) => s.set)
   const [files, setFiles] = useState<string[]>([])
+  const [recent, setRecent] = useState<string[]>([])
+  useEffect(() => { if (project) void loadRecentFiles(project).then(setRecent) }, [project])
+  const opened = useMemo(() => { const all = new Set(files); return recent.filter((p) => all.has(p)) }, [recent, files])          // lo que se abrió y sigue existiendo
   useEffect(() => {
     if (!project) return
     let cancelled = false
@@ -116,7 +120,7 @@ export function QuickOpenDialog() {
   if (!project) return <Modal onClose={() => set({ modal: null })} width={560}><p className="px-4 py-5 text-[12px] text-muted">{t('dlg.openProjectFirst')}</p></Modal>
   return <Modal onClose={() => set({ modal: null })} width={560}>
     <Palette
-      placeholder={t('dlg.quickOpen')} items={files} label={(path) => toPosix(relative(project, path))} empty={t('dlg.noFileMatch')}
+      placeholder={t('dlg.quickOpen')} items={files} initial={opened} emptyInitial={t('dlg.quickOpenHint')} label={(path) => toPosix(relative(project, path))} empty={t('dlg.noFileMatch')}
       render={(path, active) => <><img src={iconFor(basename(path))} alt="" className="size-4 shrink-0" draggable={false} /><span className="truncate">{toPosix(relative(project, path))}</span></>}
       onPick={(path) => { if (path) { set({ modal: null }); void openDoc(path) } }}
     />
@@ -267,7 +271,7 @@ export function ShellDialog() {
 }
 
 type BranchItem =
-  | { kind: 'new' } | { kind: 'newFrom' } | { kind: 'detach' } | { kind: 'create'; name: string }
+  | { kind: 'new' } | { kind: 'newFrom' } | { kind: 'detach' } | { kind: 'worktrees' } | { kind: 'create'; name: string }
   | { kind: 'branch'; b: GitBranch }
 type Step = { step: 'list' } | { step: 'base'; detach: boolean } | { step: 'name'; base?: string; initial: string }
 
@@ -312,19 +316,20 @@ export function BranchPicker() {
     <Modal onClose={close} width={560}>
       <Palette<BranchItem>
         placeholder={picking ? (view.detach ? t('br.pickDetach') : t('br.pickBase')) : t('br.placeholder')}
-        items={branches.map((b) => ({ kind: 'branch' as const, b }))} empty={t('br.noMatch')}
+        items={[...branches.filter((b) => !b.remote), ...branches.filter((b) => b.remote)].map((b) => ({ kind: 'branch' as const, b }))} empty={t('br.noMatch')}
         label={(i) => (i.kind === 'branch' ? i.b.name : i.kind === 'create' ? `create:${i.name}` : i.kind)}
         group={(i) => (i.kind === 'branch' ? (i.b.remote ? t('br.remoteGroup') : t('br.group')) : '')}
         extra={(q) => {
           if (picking) return []
           if (q && !branches.some((b) => b.name === q)) return [{ kind: 'create', name: q.replace(/\s+/g, '-') }]
-          return [{ kind: 'new' }, { kind: 'newFrom' }, { kind: 'detach' }]
+          return [{ kind: 'new' }, { kind: 'newFrom' }, { kind: 'detach' }, { kind: 'worktrees' }]
         }}
         render={(i, active) => {
           if (i.kind === 'branch') return row(i.b, active)
           if (i.kind === 'create') return action(<MdAdd size={16} />, t('br.createNamed', { name: i.name }))
           if (i.kind === 'new') return action(<MdAdd size={16} />, t('br.createNew'))
           if (i.kind === 'newFrom') return action(<MdAdd size={16} />, t('br.createFrom'))
+          if (i.kind === 'worktrees') return action(<MdAccountTree size={16} />, t('br.worktrees'))
           return action(<MdCallSplit size={16} />, t('br.detach'))
         }}
         onPick={(i, query) => {
@@ -333,6 +338,7 @@ export function BranchPicker() {
           else if (i.kind === 'create') setView({ step: 'name', initial: i.name })
           else if (i.kind === 'newFrom') setView({ step: 'base', detach: false })
           else if (i.kind === 'detach') setView({ step: 'base', detach: true })
+          else if (i.kind === 'worktrees') set({ modal: 'worktrees' })
           else if (picking && view.detach) void window.api.git.checkoutDetached(project, i.b.name).then(done)
           else if (picking) setView({ step: 'name', initial: '', base: i.b.name })
           else if (!i.b.current) void window.api.git.checkout(project, i.b.name, i.b.remote).then(done)
@@ -375,6 +381,105 @@ function NameStep({ initial, base, branches, project, onBack, onDone }: {
         {problem || (busy ? t('br.creating') : <Rich text={t('br.willCreate', { from: '\u0001' })} node={<span className="text-text">{from}</span>} />)}
       </p>
     </div>
+  )
+}
+
+type WtItem = { kind: 'wt'; w: GitWorktree } | { kind: 'new' } | { kind: 'newAgent' } | { kind: 'branch'; b: GitBranch } | { kind: 'create'; name: string }
+
+/** Árboles de trabajo (git worktree): abrir uno como proyecto, crear uno para una rama (existente o nueva) o quitarlo. */
+export function WorktreeDialog() {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  const setProject = useStore((s) => s.setProject)
+  const project = useStore((s) => s.project)!
+  const toast = useStore((s) => s.toast)
+  const [list, setList] = useState<GitWorktree[]>([])
+  const [branches, setBranches] = useState<GitBranch[]>([])
+  const [picking, setPicking] = useState(false)
+  const [withAgent, setWithAgent] = useState(false)          // tras crear el worktree se abre un agente en él (sin cambiar de proyecto)
+  const [agentIn, setAgentIn] = useState<{ dir: string; label: string } | null>(null)
+  const agents = useStore((s) => s.agents)
+  const openAgent = useStore((s) => s.openAgent)
+  const load = (): void => { void window.api.git.worktrees(project).then(setList) }
+  useEffect(() => { load(); void window.api.git.branches(project).then(setBranches); void window.api.agents.detect().then((a) => set({ agents: a })) }, [project])  // eslint-disable-line react-hooks/exhaustive-deps
+  const close = (): void => set({ modal: null })
+  const free = branches.filter((b) => !b.remote && !list.some((w) => w.branch === b.name))
+  const name = (w: GitWorktree): string => w.branch ?? basename(w.path)
+
+  const create = async (branch: string, isNew: boolean): Promise<void> => {
+    const res = await window.api.git.addWorktree(project, branch, isNew)
+    if (!res.ok) { toast(res.message, 'error'); return }
+    toast(t('wt.created', { dir: res.message }), 'ok')
+    if (withAgent) { setAgentIn({ dir: res.message, label: branch }); return }
+    close()
+    setProject(res.message)
+  }
+  const remove = async (w: GitWorktree): Promise<void> => {
+    if (!(await confirmAsk(t('wt.confirmRemove', { name: name(w) })))) return
+    let error = await window.api.git.removeWorktree(project, w.path, false)
+    if (error && /modified|untracked|contains/i.test(error) && (await confirmAsk(t('wt.confirmForce', { name: name(w) })))) error = await window.api.git.removeWorktree(project, w.path, true)
+    if (error) toast(error, 'error'); else toast(t('wt.removed'), 'ok')
+    load()
+  }
+
+  if (agentIn) {
+    return (
+      <Modal onClose={close} width={560}>
+        <Palette
+          placeholder={t('wt.pickAgent', { name: agentIn.label })} items={agents} label={(a) => a.name} empty={agents.length ? t('dlg.noAgentMatch') : t('dlg.noAgents')}
+          render={(a, active) => (<><Chip active={active}><AgentIcon name={a.name} command={a.command} size={20} /></Chip><span className="flex-1 truncate">{a.name}</span><Tag>{a.command}</Tag></>)}
+          onPick={(a) => { if (a) void openAgent(a, [], { cwd: agentIn.dir, title: `${a.name} · ${agentIn.label}` }) }}
+        />
+      </Modal>
+    )
+  }
+  const items: WtItem[] = picking ? free.map((b) => ({ kind: 'branch' as const, b })) : list.map((w) => ({ kind: 'wt' as const, w }))
+  return (
+    <Modal onClose={close} width={560}>
+      <Palette<WtItem>
+        placeholder={picking ? t('wt.pickBranch') : t('wt.placeholder')} items={items} empty={picking ? t('wt.noBranch') : t('wt.empty')}
+        label={(i) => (i.kind === 'wt' ? `wt:${i.w.path}` : i.kind === 'branch' ? i.b.name : i.kind === 'create' ? `create:${i.name}` : i.kind)}
+        group={(i) => (i.kind === 'wt' ? t('wt.group') : i.kind === 'branch' ? t('br.group') : '')}
+        extra={(q) => (picking ? (q && !branches.some((b) => b.name === q) ? [{ kind: 'create', name: q.replace(/\s+/g, '-') }] : []) : [{ kind: 'new' }, { kind: 'newAgent' }])}
+        render={(i, active) => {
+          if (i.kind === 'new') return <><span className="mt-0.5 shrink-0 text-muted"><MdAdd size={16} /></span><span>{t('wt.new')}</span></>
+          if (i.kind === 'newAgent') return <><span className="mt-0.5 shrink-0 text-muted"><MdSmartToy size={16} /></span><span>{t('wt.newAgent')}</span></>
+          if (i.kind === 'create') return <><span className="mt-0.5 shrink-0 text-muted"><MdAdd size={16} /></span><span>{t('wt.createNamed', { name: i.name })}</span></>
+          if (i.kind === 'branch') return <><MdCallSplit size={16} className={clsx('mt-0.5 shrink-0', active ? 'text-accent' : 'text-muted')} /><span className="truncate">{i.b.name}</span></>
+          const w = i.w
+          return (
+            <>
+              <MdAccountTree size={16} className={clsx('mt-0.5 shrink-0', active ? 'text-accent' : 'text-muted')} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline gap-2">
+                  <span className={clsx('truncate', w.current && 'font-semibold')}>{w.branch ?? t('wt.detached')}</span>
+                  {w.current && <Tag tone="accent">{t('wt.current')}</Tag>}
+                  {w.main && <Tag>{t('wt.main')}</Tag>}
+                  {w.locked && <Tag>{t('wt.locked')}</Tag>}
+                  {w.prunable && <Tag>{t('wt.prunable')}</Tag>}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-muted">{[w.hash, w.path].filter(Boolean).join(' • ')}</span>
+              </span>
+              <span role="button" title={t('wt.openAgent')} onClick={(e) => { e.stopPropagation(); setAgentIn({ dir: w.path, label: name(w) }) }}
+                className="mt-0.5 grid size-5 shrink-0 place-items-center rounded text-muted hover:bg-line hover:text-accent"><MdSmartToy size={14} /></span>
+              {!w.main && !w.current && (
+                <span role="button" title={t('wt.remove')} onClick={(e) => { e.stopPropagation(); void remove(w) }}
+                  className="mt-0.5 grid size-5 shrink-0 place-items-center rounded text-muted hover:bg-line hover:text-danger"><MdDeleteOutline size={14} /></span>
+              )}
+            </>
+          )
+        }}
+        onPick={(i, query) => {
+          if (!i) { if (picking && query.trim()) void create(query.trim().replace(/\s+/g, '-'), true); return }
+          if (i.kind === 'new') { setWithAgent(false); setPicking(true) }
+          else if (i.kind === 'newAgent') { setWithAgent(true); setPicking(true) }
+          else if (i.kind === 'create') void create(i.name, true)
+          else if (i.kind === 'branch') void create(i.b.name, false)
+          else if (i.w.current) close()
+          else { close(); setProject(i.w.path) }
+        }}
+      />
+    </Modal>
   )
 }
 

@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process'
-import { dirname, basename } from 'node:path'
-import type { GitBranch, GitCommit, GitMarks, GitOp, GitStatus } from '../../../shared/types'
+import { existsSync } from 'node:fs'
+import { dirname, basename, join, resolve } from 'node:path'
+import type { GitBlame, GitBranch, GitCommit, GitMarks, GitOp, GitStatus, GitWorktree, McpResult } from '../../../shared/types'
 import { extendedPath } from '../../utils/shellpath'
 import { tm } from '../../utils/i18n'
 
@@ -218,6 +219,50 @@ export async function createBranch(root: string, name: string, base?: string, sw
   return flat(await run(root, switchTo ? ['checkout', '-b', name, ...from] : ['branch', name, ...from]))
 }
 
+/** Interpreta la salida de `git worktree list --porcelain` (un bloque por árbol; el primero es el principal). */
+export function parseWorktrees(out: string, root: string): GitWorktree[] {
+  const here = resolve(root)
+  return out.split(/\n\n+/).map((b) => b.trim()).filter(Boolean).map((block, i) => {
+    const w: GitWorktree = { path: '', branch: null, hash: '', main: i === 0, current: false, locked: false, prunable: false }
+    for (const line of block.split('\n')) {
+      if (line.startsWith('worktree ')) w.path = line.slice(9)
+      else if (line.startsWith('HEAD ')) w.hash = line.slice(5, 12)
+      else if (line.startsWith('branch ')) w.branch = line.slice(7).replace(/^refs\/heads\//, '')
+      else if (line === 'locked' || line.startsWith('locked ')) w.locked = true
+      else if (line === 'prunable' || line.startsWith('prunable ')) w.prunable = true
+    }
+    w.current = resolve(w.path) === here || here.startsWith(resolve(w.path) + '/') || here.startsWith(resolve(w.path) + '\\')
+    return w
+  }).filter((w) => w.path)
+}
+
+export async function worktrees(root: string): Promise<GitWorktree[]> {
+  const res = await run(root, ['worktree', 'list', '--porcelain'])
+  return res.ok ? parseWorktrees(res.out, root) : []
+}
+
+/** Dónde se crea el árbol de una rama: junto al repositorio, en `<repo>.worktrees/<rama con «/» como «-»>` (así no ensucia el proyecto). */
+export const worktreePath = (main: string, branch: string): string => join(dirname(main), `${basename(main)}.worktrees`, branch.replace(/\//g, '-'))
+
+/** Crea un árbol de trabajo para una rama (nueva desde `base`, o ya existente) sin tocar lo que tienes abierto; la carpeta va en `message`. */
+export async function addWorktree(root: string, branch: string, create: boolean, base?: string): Promise<McpResult> {
+  if (!validBranchName(branch)) return { ok: false, message: tm('m.git.badBranch') }
+  if (base && !REF_NAME.test(base)) return { ok: false, message: tm('m.git.badBase') }
+  const main = (await worktrees(root)).find((w) => w.main)?.path ?? root
+  const dir = worktreePath(main, branch)
+  if (existsSync(dir)) return { ok: false, message: tm('m.git.wtExists', { dir }) }
+  const res = await run(root, create ? ['worktree', 'add', '-b', branch, dir, ...(base ? [base] : [])] : ['worktree', 'add', dir, branch], undefined, 60000)
+  return res.ok ? { ok: true, message: dir } : { ok: false, message: flat(res) }
+}
+
+/** Quita un árbol de trabajo (su carpeta); con cambios sin guardar solo si `force`. El principal no se puede quitar. */
+export async function removeWorktree(root: string, path: string, force: boolean): Promise<string> {
+  const target = (await worktrees(root)).find((w) => resolve(w.path) === resolve(path))
+  if (!target) return tm('m.git.wtMissing')
+  if (target.main) return tm('m.git.wtMain')
+  return flat(await run(root, ['worktree', 'remove', ...(force ? ['--force'] : []), target.path], undefined, 60000))
+}
+
 /** Contenido de un archivo en HEAD (`rev` = 'HEAD') o en lo preparado (`rev` = 'index'); null si no existe ahí (archivo nuevo). */
 export async function show(root: string, rev: string, path: string): Promise<string | null> {
   if (rev !== 'HEAD' && rev !== 'index' && !HASH.test(rev)) return null
@@ -238,6 +283,33 @@ export async function marks(file: string): Promise<GitMarks> {
     const added = m[3] === undefined ? 1 : Number(m[3])
     if (added === 0) out[Math.max(start, 1)] = 'deleted'
     else for (let i = 0; i < added; i++) out[start + i] = removed > 0 ? 'modified' : 'added'
+  }
+  return out
+}
+
+/** Autor, fecha y asunto del commit de cada línea del archivo (`git blame` sobre lo que hay en disco; lo no guardado en un commit figura como tal). */
+export async function blame(file: string): Promise<GitBlame | null> {
+  const dir = dirname(file)
+  const tracked = await run(dir, ['ls-files', '--error-unmatch', '--', basename(file)])
+  if (!tracked.ok) return null
+  const [res, email] = await Promise.all([run(dir, ['blame', '--porcelain', '--', basename(file)], undefined, 30000), run(dir, ['config', 'user.email'])])
+  if (!res.ok) return null
+  const me = email.ok ? email.out.trim().toLowerCase() : ''
+  const out: GitBlame = { lines: [], commits: {} }
+  let current = ''
+  for (const line of res.out.split('\n')) {
+    const head = /^([0-9a-f]{40}) \d+ (\d+)/.exec(line)
+    if (head) {
+      current = head[1]
+      out.lines[Number(head[2]) - 1] = current
+      out.commits[current] ??= { author: '', time: 0, summary: '', mine: false, uncommitted: /^0+$/.test(current) }
+    } else if (current) {
+      const c = out.commits[current]
+      if (line.startsWith('author ')) c.author = line.slice(7)
+      else if (line.startsWith('author-mail ')) c.mine = !!me && line.slice(12).replace(/[<>]/g, '').toLowerCase() === me
+      else if (line.startsWith('author-time ')) c.time = Number(line.slice(12)) * 1000
+      else if (line.startsWith('summary ')) c.summary = line.slice(8)
+    }
   }
   return out
 }
