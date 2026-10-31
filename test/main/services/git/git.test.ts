@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { joinSummary, numstatPath, opArgs, branches, checkoutDetached, discardTracked, status, validBranchName } from '../../../../src/main/services/git/git'
+import { addWorktree, joinSummary, numstatPath, opArgs, parseWorktrees, removeWorktree, worktrees, worktreePath, branches, checkoutDetached, discardTracked, status, validBranchName } from '../../../../src/main/services/git/git'
 
 const H = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 
@@ -115,5 +115,43 @@ describe('descartar cambios', () => {
       expect(await discardTracked(dir, [])).toBe('')
       expect(await discardTracked(dir, ['no-existe.txt'])).not.toBe('')
     } finally { rmSync(dir, { recursive: true, force: true }) }
+  })
+})
+
+describe('worktrees', () => {
+  it('interpreta la salida porcelain', () => {
+    const out = 'worktree /p/repo\nHEAD aaaaaaaabbbb\nbranch refs/heads/main\n\nworktree /p/repo.worktrees/feat-x\nHEAD ccccccccdddd\nbranch refs/heads/feat/x\nlocked razón\n\nworktree /p/otro\nHEAD eeeeeeeeffff\ndetached\nprunable gitdir roto\n'
+    const list = parseWorktrees(out, '/p/repo/src')
+    expect(list.map((w) => [w.path, w.branch, w.main, w.current, w.locked, w.prunable])).toEqual([
+      ['/p/repo', 'main', true, true, false, false],
+      ['/p/repo.worktrees/feat-x', 'feat/x', false, false, true, false],
+      ['/p/otro', null, false, false, false, true]
+    ])
+    expect(list[0].hash).toBe('aaaaaaa')
+  })
+  it('la carpeta nueva va junto al repositorio', () => {
+    expect(worktreePath('/p/repo', 'feat/x')).toBe('/p/repo.worktrees/feat-x')
+  })
+  it('crea, lista y quita un worktree', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'tutti-wt-'))
+    const dir = join(base, 'repo')
+    const git = (...a: string[]): string => execFileSync('git', ['-C', dir, '-c', 'user.name=Ana', '-c', 'user.email=a@b.c', ...a], { encoding: 'utf8' })
+    try {
+      execFileSync('git', ['init', '-q', '-b', 'main', dir])
+      writeFileSync(join(dir, 'a.txt'), 'x')
+      git('add', '.'); git('commit', '-q', '-m', 'primero')
+      const made = await addWorktree(dir, 'feat/x', true)
+      expect(made.ok).toBe(true)
+      expect(made.message).toBe(join(base, 'repo.worktrees', 'feat-x'))
+      expect(existsSync(join(made.message, 'a.txt'))).toBe(true)
+      expect((await addWorktree(dir, 'feat/x', true)).ok).toBe(false)             // la carpeta ya existe
+      expect((await addWorktree(dir, '--mala', true)).ok).toBe(false)
+      const list = await worktrees(dir)
+      expect(list.map((w) => [w.branch, w.main])).toEqual([['main', true], ['feat/x', false]])
+      expect(await removeWorktree(dir, dir, false)).not.toBe('')                  // el principal no se quita
+      expect(await removeWorktree(dir, made.message, false)).toBe('')
+      expect(existsSync(made.message)).toBe(false)
+      expect((await worktrees(dir)).length).toBe(1)
+    } finally { rmSync(base, { recursive: true, force: true }) }
   })
 })

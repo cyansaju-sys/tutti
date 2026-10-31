@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShellDialog, ShortcutsDialog } from '@/shared/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
-import { ChatPanel } from '@/shared/components/ChatPanel'
 import { Footer } from '@/shared/components/Footer'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
 import { Toasts } from '@/shared/components/Toasts'
@@ -49,7 +48,6 @@ export function App() {
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
-      useStore.getState().restoreChat()
       if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined)            // lo guarda como último proyecto y en los recientes
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
       const current = await window.api.update.version()
@@ -95,11 +93,20 @@ export function App() {
       const st = useStore.getState()
       st.addPane({ id: p.id, kind: 'agent', name: p.name, title: `${p.name} · ${p.cwd.split(/[\\/]/).filter(Boolean).pop() ?? ''}`, command: p.command, args: p.args ?? [], cwd: p.cwd, prompt: p.prompt, parentId: p.parentId })
     })
+    const offAttention = window.api.orchestra.onAttention(({ id, name }) => {
+      const st = useStore.getState()
+      if (document.hasFocus() && st.activePane === id) return          // ya lo está viendo
+      const message = t('app.needsInput', { agent: name.split(' · ')[0] })
+      st.toast(message, 'info')
+      if (document.hasFocus()) return
+      const n = new Notification('Tutti', { body: message })
+      n.onclick = () => { window.focus(); useStore.getState().focusPane(id) }
+    })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
-    const applyPanes = ({ leader, roles, inbox }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneRoles: roles, paneInbox: inbox })
+    const applyPanes = ({ leader, roles, inbox, asking }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneRoles: roles, paneInbox: inbox, paneAsking: asking })
     void window.api.orchestra.paneState().then(applyPanes)
     const offRoles = window.api.orchestra.onPaneState(applyPanes)
-    return () => { offPane(); offToast(); offRoles() }
+    return () => { offPane(); offAttention(); offToast(); offRoles() }
   }, [])
 
   // actualizaciones: el estado llega del proceso principal; al haber una release nueva se avisa una vez por versión
@@ -162,7 +169,6 @@ export function App() {
   }, [])
 
   const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right')
-  const dragChat = useDrag(() => useStore.getState().chatWidth, (v) => s.set({ chatWidth: v }), 260, 640, s.sidebarSide === 'left')       // el chat va al lado contrario de la barra
   const dragEditor = useDrag(() => useStore.getState().editorWidth, (v) => s.set({ editorWidth: v }), 320, 1600)
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
@@ -197,12 +203,6 @@ export function App() {
             </>
           )}
         </div>
-        {s.chatOpen && (
-          <>
-            <Resizer onDrag={dragChat} />
-            <ChatPanel />
-          </>
-        )}
       </div>
       <Footer />
       {s.modal === 'agents' && <AgentPicker />}
@@ -211,6 +211,7 @@ export function App() {
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
       {s.modal === 'news' && <NewsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
+      {s.modal === 'worktrees' && s.project && <WorktreeDialog />}
       {s.modal === 'quickOpen' && <QuickOpenDialog />}
       {s.modal === 'goLine' && <GoLineDialog />}
       <ConfirmDialog />

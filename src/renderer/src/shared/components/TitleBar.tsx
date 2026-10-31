@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MdAdd, MdChatBubbleOutline, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 import { Chip, IconButton } from './ui'
@@ -45,7 +45,6 @@ export function TitleBar() {
   const editEnabled = useStore((s) => s.editEnabled)
   const set = useStore((s) => s.set)
   const setEdit = useStore((s) => s.setEdit)
-  const chatOpen = useStore((s) => s.chatOpen)
   const toggleShell = useStore((s) => s.toggleShell)
   const addShell = useStore((s) => s.addShell)
 
@@ -66,7 +65,6 @@ export function TitleBar() {
       </div>
       <div className="flex items-center gap-0.5">
         <UpdateButton />
-        <IconButton title={t('title.chat')} onClick={() => set({ chatOpen: !chatOpen })} className={chatOpen ? 'bg-accent-bg text-accent' : undefined}><MdChatBubbleOutline size={15} /></IconButton>
         <IconButton title={t('title.newWindow')} onClick={() => window.api.window.openNew()}><MdOpenInNew size={15} /></IconButton>
         <IconButton title={t('title.shortcuts')} onClick={() => set({ modal: 'shortcuts' })}><MdKeyboard size={16} /></IconButton>
         <IconButton title={t('title.minimize')} onClick={() => window.api.window.minimize()}><MdRemove size={16} /></IconButton>

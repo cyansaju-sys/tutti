@@ -17,6 +17,7 @@ import { launchServers } from '../mcp/sync'
 import { agyBridgeStatus, ensureAgyBridge } from './agyBridge'
 import { trackRecord } from './history'
 import { deliverNotices, noticeCounts, notify, takeNotices } from './inbox'
+import { askingIds, checkAttention } from './attention'
 import { awaitingInput, buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from './launch'
 import { chooseLeader, currentLeader } from './leader'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
@@ -70,7 +71,7 @@ function paneRoles(): Record<string, PaneRole> {
 }
 /** El líder (si hay más de un agente), el rol de cada panel y cuántos avisos de Tutti le esperan. */
 export function paneState(): PaneState {
-  return { leader: pty.agentSessions().length > 1 ? currentLeader()?.id ?? null : null, roles: paneRoles(), inbox: noticeCounts() }
+  return { leader: pty.agentSessions().length > 1 ? currentLeader()?.id ?? null : null, roles: paneRoles(), inbox: noticeCounts(), asking: askingIds() }
 }
 let sentState = ''
 /** Avisa a la interfaz cuando cambia algo de lo que muestran las pestañas. */
@@ -310,6 +311,7 @@ let ticker: ReturnType<typeof setInterval> | null = null
 function tick(): void {
   checkTasks(plans.byReview)
   deliverNotices()
+  checkAttention()
   pushPaneState()
   void plans.tickRoles(host.delegate).catch(() => undefined)
 }

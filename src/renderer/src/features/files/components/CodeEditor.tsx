@@ -1,14 +1,15 @@
-import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap } from '@codemirror/autocomplete'
+import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, completionKeymap, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { bracketMatching, foldGutter, foldKeymap, HighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import { bracketMatching, foldGutter, foldKeymap, HighlightStyle, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
 import { Decoration, drawSelection, EditorView, gutter, GutterMarker, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, ViewPlugin, WidgetType, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef, useState } from 'react'
 import { useT } from '@/shared/lib/i18n'
+import { ago } from '@/shared/lib/format'
 import { Menu } from '../../../shared/components/Menu'
-import type { GitMarks } from '@shared/types'
+import type { GitBlame, GitMarks } from '@shared/types'
 import { languageFor } from '@/features/files/lib/languages'
 import { findPanel, openFind } from '../../search/components/searchPanel'
 
@@ -26,6 +27,9 @@ const highlight = HighlightStyle.define([
   { tag: [t.heading], color: 'var(--syn-keyword)', fontWeight: '700' },
   { tag: [t.link, t.url], color: 'var(--syn-func)', textDecoration: 'underline' }
 ])
+
+/** En JSON las claves van en azul (los valores ya llevan el color de cadenas, números y true/false/null); solo ahí, para no teñir `a.b` en otros lenguajes. */
+const jsonKeys = HighlightStyle.define([{ tag: t.propertyName, color: 'var(--syn-func)' }])
 
 /** Íconos de Material (rutas de react-icons/md) para el tipo de cada sugerencia, como máscara CSS. */
 const maskOf = (path: string): { maskImage: string; WebkitMaskImage: string } => {
@@ -45,6 +49,17 @@ const ICON_KINDS: Record<string, [string, string]> = {
   namespace: [MODULE, 'var(--color-muted)'], keyword: [TAG, 'var(--color-muted)'], text: [TEXT, 'var(--color-muted)'], snippet: [SNIPPET, 'var(--color-muted)']
 }
 const completionIcons = Object.fromEntries(Object.entries(ICON_KINDS).map(([kind, [path, color]]) => [`.cm-completionIcon-${kind}`, { ...maskOf(path), backgroundColor: color }]))
+
+/** En JSON, una palabra suelta se ofrece entre comillas (`fgj` → `"fgj"`), junto a las claves que el archivo ya usa. Dentro de una cadena no ofrece nada. */
+function completeJson(ctx: CompletionContext): CompletionResult | null {
+  if (syntaxTree(ctx.state).resolveInner(ctx.pos, -1).name === 'String') return null
+  const word = ctx.matchBefore(/[\w$-]*/)
+  if (!word || (word.from === word.to && !ctx.explicit)) return null
+  const typed = word.text
+  const keys = new Set<string>()
+  for (const m of ctx.state.doc.toString().matchAll(/"([^"\\\n]+)"\s*:/g)) if (m[1] !== typed && m[1].startsWith(typed)) keys.add(m[1])
+  return { from: word.from, filter: false, options: [...(typed ? [{ label: `"${typed}"`, type: 'property', boost: 1 }] : []), ...[...keys].slice(0, 30).map((k) => ({ label: `"${k}"`, type: 'property' }))] }
+}
 
 /** Marcador de plegado con los chevrones de Material (expand_more / chevron_right) en vez de los caracteres por defecto. */
 const foldMarker = (open: boolean): HTMLElement => {
@@ -102,7 +117,8 @@ const theme = EditorView.theme({
   '.tutti-find-btn:hover:not(:disabled)': { backgroundColor: 'var(--color-accent-bg)' },
   '.tutti-find-btn:disabled': { opacity: 0.35, cursor: 'default' },
   '.tutti-find-text': { fontSize: '10px', padding: '0 6px' },
-  '.cm-git-gutter': { width: '4px' }
+  '.cm-git-gutter': { width: '4px' },
+  '.cm-blame': { marginLeft: '3em', color: 'var(--color-muted)', opacity: 0.7, fontStyle: 'italic', fontSize: '0.92em', pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap' }
 }, { dark: true })
 
 // --- marcas de git en el margen -------------------------------------------------------------------------------------
@@ -130,6 +146,35 @@ const gitGutter = [marksField, gutter({
   },
   lineMarkerChange: (update) => update.transactions.some((tr) => tr.effects.some((e) => e.is(setMarks)))
 })]
+
+// --- quién cambió la línea del cursor (git blame), al final de la línea ------------------------------------------------
+class BlameNote extends WidgetType {
+  constructor(readonly text: string) { super() }
+  eq(other: BlameNote): boolean { return other.text === this.text }
+  toDOM(): HTMLElement {
+    const el = document.createElement('span')
+    el.className = 'cm-blame'
+    el.textContent = this.text
+    return el
+  }
+  ignoreEvent(): boolean { return true }
+}
+/** Texto de la nota de cada línea (1..n), o null; se vacía si el documento cambia hasta que llegue un blame nuevo. */
+type BlameText = (line: number) => string | null
+const setBlame = StateEffect.define<BlameText | null>()
+const blameField = StateField.define<{ text: BlameText | null; deco: ReturnType<typeof Decoration.set> }>({
+  create: () => ({ text: null, deco: Decoration.none }),
+  update(value, tr) {
+    const sent = tr.effects.find((e) => e.is(setBlame))
+    const text = sent ? (sent.value as BlameText | null) : tr.docChanged ? null : value.text
+    if (!text) return { text, deco: Decoration.none }
+    if (text === value.text && !tr.selection && !tr.docChanged) return value
+    const line = tr.state.doc.lineAt(tr.state.selection.main.head)
+    const note = text(line.number)
+    return { text, deco: note ? Decoration.set([Decoration.widget({ widget: new BlameNote(note), side: 1 }).range(line.to)]) : Decoration.none }
+  },
+  provide: (field) => EditorView.decorations.from(field, (v) => v.deco)
+})
 
 /** Marcas verticales en cada nivel de indentación visible del documento. */
 class IndentGuide extends WidgetType {
@@ -206,11 +251,11 @@ interface Props {
   text: string
   readOnly: boolean
   marks: GitMarks
+  blame?: GitBlame | null
   changes?: ExternalChange[]
   onChange: (text: string) => void
   onSave: () => void
   focusToken: number
-  onSelect?: (sel: { startLine: number; endLine: number; text: string }) => void      // al seleccionar algo: sus líneas (para citarlas en el chat)
   onSend?: (sel: { startLine: number; endLine: number; text: string }) => void      // «enviar al agente»: la selección, o la línea del cursor si no hay
   reveal?: { path: string; line: number; col: number; length: number; token: number } | null
 }
@@ -218,7 +263,7 @@ interface Props {
 const NO_CHANGES: ExternalChange[] = []
 
 /** Editor de código: guarda el estado de cada archivo (deshacer, cursor) al cambiar de pestaña. */
-export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, onChange, onSave, focusToken, reveal, onSend, onSelect }: Props) {
+export function CodeEditor({ path, text, readOnly, marks, blame = null, changes = NO_CHANGES, onChange, onSave, focusToken, reveal, onSend }: Props) {
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
   const host = useRef<HTMLDivElement>(null)
@@ -227,8 +272,8 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
   const states = useRef(new Map<string, EditorState>())
   const current = useRef(path)
   const ro = useRef(new Compartment())
-  const handlers = useRef({ onChange, onSave, onSend, onSelect })
-  handlers.current = { onChange, onSave, onSend, onSelect }
+  const handlers = useRef({ onChange, onSave, onSend })
+  handlers.current = { onChange, onSave, onSend }
 
   /** La selección con sus líneas (1..n); sin selección, la línea del cursor. */
   const selection = (v: EditorView): { startLine: number; endLine: number; text: string; empty: boolean } => {
@@ -255,11 +300,12 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
   const makeState = (p: string, doc: string, locked: boolean): EditorState => EditorState.create({
     doc,
     extensions: [
-      lineNumbers(), foldGutter({ markerDOM: foldMarker }), gitGutter, changesField, indentGuides, highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(), indentOnInput(), EditorView.lineWrapping,
+      lineNumbers(), foldGutter({ markerDOM: foldMarker }), gitGutter, blameField, changesField, indentGuides, highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(), indentOnInput(), EditorView.lineWrapping,
       bracketMatching(), closeBrackets(), highlightSelectionMatches(), syntaxHighlighting(highlight), theme,
       autocompletion({ override: undefined, activateOnTyping: true, icons: true }),
-      EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
+      EditorState.languageData.of(() => [{ autocomplete: /\.jsonc?$/i.test(p) ? completeJson : completeAnyWord }]),
       languageFor(p.split(/[\\/]/).pop() ?? p),
+      ...(/\.jsonc?$/i.test(p) ? [syntaxHighlighting(jsonKeys)] : []),
       findPanel,
       ro.current.of([EditorState.readOnly.of(locked), EditorView.editable.of(!locked)]),
       keymap.of([
@@ -282,10 +328,6 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
       }),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) handlers.current.onChange(u.state.doc.toString())
-        if (u.selectionSet && !u.state.selection.main.empty) {
-          const { from, to } = u.state.selection.main
-          handlers.current.onSelect?.({ startLine: u.state.doc.lineAt(from).number, endLine: u.state.doc.lineAt(to === u.state.doc.lineAt(to).from && to > from ? to - 1 : to).number, text: u.state.sliceDoc(from, Math.min(to, from + 20000)) })
-        }
       })
     ]
   })
@@ -317,6 +359,14 @@ export function CodeEditor({ path, text, readOnly, marks, changes = NO_CHANGES, 
   }, [readOnly])
 
   useEffect(() => { view.current?.dispatch({ effects: setMarks.of(marks) }) }, [marks])
+  useEffect(() => {
+    view.current?.dispatch({ effects: setBlame.of(blame ? (n) => {
+      const c = blame.commits[blame.lines[n - 1]]
+      if (!c) return null
+      if (c.uncommitted) return t('ed.blameUncommitted')
+      return `${c.mine ? t('ed.blameYou') : c.author}, ${ago(c.time)} • ${c.summary}`
+    } : null) })
+  }, [blame, t])
   useEffect(() => { view.current?.dispatch({ effects: setChanges.of(changes) }) }, [changes, text])
   // un resultado de búsqueda: el cursor va a la coincidencia y queda seleccionada
   useEffect(() => {

@@ -23,6 +23,7 @@ export function PaneBox({ pane }: { pane: Pane }) {
   const canLead = useStore((s) => pane.kind === 'agent' && !!s.paneLeader && s.paneLeader !== pane.id)
   const parent = useStore((s) => (pane.parentId ? s.panes.find((p) => p.id === pane.parentId) : undefined))
   const role = useStore((s) => s.paneRoles[pane.id])
+  const asking = useStore((s) => s.paneAsking.includes(pane.id))
   const pending = useStore((s) => s.paneInbox[pane.id] ?? 0)
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" onMouseDown={() => useStore.getState().focusPane(pane.id)}>
@@ -31,6 +32,7 @@ export function PaneBox({ pane }: { pane: Pane }) {
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
         {role && <span title={t('pane.roleTip', { name: role.name, id: role.id, status: t(ROLE_STATUS[role.status]) })} className={clsx('min-w-0 max-w-[45%] shrink truncate rounded-full px-2 py-0.5 text-[10px] font-medium', ROLE_CHIP[role.status])}>{t('pane.role', { name: role.name })}</span>}
+        {asking && <span title={t('pane.asking')} className="shrink-0 animate-pulse rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-medium text-danger">{t('pane.askingShort')}</span>}
         {pending > 0 && <span title={t('pane.inbox', { n: pending })} className="flex shrink-0 items-center gap-0.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"><MdMailOutline size={11} />{pending}</span>}
         {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}
         {canLead && (

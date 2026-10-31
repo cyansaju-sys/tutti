@@ -3,6 +3,7 @@ import { basename } from '@/shared/lib/paths'
 import { tr } from './helpers'
 import type { Doc } from './types'
 import type { State, DocsSlice } from './types'
+import { rememberFile } from './recentFiles'
 
 export const isDirty = (d: Doc): boolean => d.text !== d.savedText
 
@@ -10,6 +11,8 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
   docs: [], activeDoc: null, reveal: null, specDialog: null,
 
   openDoc: async (path) => {
+    const project = get().project
+    if (project && path.startsWith(project)) rememberFile(project, path)          // para «abrir archivo»: lo último que se abrió
     if (get().docs.some((d) => d.path === path)) { set({ activeDoc: path, focus: 'editor' }); return }
     try {
       const data = await window.api.fs.read(path)

@@ -275,7 +275,8 @@ La pestaña **Tutti** (`Ctrl+Shift+J`) reúne en un sitio lo que los agentes nec
 ├─ docs/       documentación por categorías (Diátaxis: tutorials, how-to, reference, explanation)
 ├─ steering/   contexto.md y tus guías para los agentes (product.md, tech.md…)
 ├─ hooks/      un .json por hook, en el formato de Kiro
-└─ skills/     una carpeta por skill, con su SKILL.md
+├─ skills/     una carpeta por skill, con su SKILL.md
+└─ settings.json  los permisos del proyecto
 ```
 
 Cada sección tiene su **+** y, si está vacía, un botón de ancho completo para crear el primer elemento. Crear una spec, un hook o un steering abre un **formulario como una pestaña del editor**.

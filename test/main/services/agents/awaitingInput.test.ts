@@ -36,3 +36,18 @@ describe('typedSomething', () => {
     expect(typedSomething('\x1b[<35;12;7Mhola')).toBe(true)
   })
 })
+
+describe('awaitingInput: otras formas de pedir permiso', () => {
+  it('reconoce confianza, aplicar cambios y confirmaciones por teclado', () => {
+    expect(awaitingInput('Do you trust the files in this folder?')).toBe(true)
+    expect(awaitingInput('Apply these changes?\n  Enter to confirm · Esc to cancel')).toBe(true)
+    expect(awaitingInput('  ❯ Yes, allow all edits during this session')).toBe(true)
+    expect(awaitingInput('¿Aceptar los cambios?')).toBe(true)
+    expect(awaitingInput('Este comando requiere tu aprobación')).toBe(true)
+    expect(awaitingInput('This command requires your approval')).toBe(true)
+  })
+  it('un texto normal sobre confianza o cambios no cuenta', () => {
+    expect(awaitingInput('I applied the changes and trust the result.')).toBe(false)
+    expect(awaitingInput('Tests pass. Ready to apply changes later.')).toBe(false)
+  })
+})
