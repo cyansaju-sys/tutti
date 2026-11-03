@@ -2,6 +2,12 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.5
+
+### Changes
+
+- **Projects with `.agents`:** if the project already uses `.agents` and has no `.tutti`, Tutti does not create `.tutti` when opening it: the Tutti section points to `.agents` and stores steering, hooks, skills and the rest there, without adding a README.
+
 ## 1.4.4
 
 ### Functional

@@ -2,6 +2,12 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.5
+
+### Cambios
+
+- **Proyectos con `.agents`:** si el proyecto ya usa `.agents` y no tiene `.tutti`, Tutti no crea `.tutti` al abrirlo: la sección Tutti apunta a `.agents` y guarda ahí steering, hooks, skills y demás, sin añadir un README.
+
 ## 1.4.4
 
 ### Funcional
