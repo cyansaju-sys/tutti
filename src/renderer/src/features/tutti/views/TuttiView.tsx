@@ -82,11 +82,12 @@ export function TuttiView() {
   const [name, setName] = useState('')
   const [docCat, setDocCat] = useState<(typeof DOC_CATEGORIES)[number]>('how-to')   // categoría del documento que se está creando
 
-  const root = project ? `${project}/.tutti` : ''                // no se crea hasta que se añade algo
+  const [root, setRoot] = useState('')                // .tutti (o .agents si el proyecto ya lo usa); no se crea hasta que se añade algo
 
   const refresh = useCallback(async () => {
     if (!project) return
-    const dir = `${project}/.tutti`
+    const dir = await window.api.context.dir(project)
+    setRoot(dir)
     const read = (k: Kind): Promise<DirEntry[]> => window.api.fs.list(`${dir}/${k}`).catch(() => [])
     const [hooks, steering, skills, docs] = await Promise.all([read('hooks'), read('steering'), read('skills'), read('docs')])
     const next = { hooks, steering, skills, docs }

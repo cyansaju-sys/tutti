@@ -8,6 +8,7 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync, watch, type FSWatcher } from 'node:fs'
 import { join, sep } from 'node:path'
+import { tuttiDir } from '../context/context'
 import type { HookInfo } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
 import { extendedPath } from '../../utils/shellpath'
@@ -20,7 +21,7 @@ const QUIET_MS = 2500             // tras correr un hook sobre un archivo, se ig
 const DEBOUNCE_MS = 250
 const IGNORED = ['.git', 'node_modules', '.tutti', 'out', 'dist', 'build', 'release', 'coverage', '.next', '__pycache__', '.venv']
 
-export const hooksDir = (project: string): string => join(project, '.tutti', 'hooks')
+export const hooksDir = (project: string): string => join(tuttiDir(project), 'hooks')
 
 /** Lee un archivo de hooks. Si no es válido devuelve una sola entrada con el error (así se ve en la lista qué falla). */
 export function parseHookFile(file: string, text: string): HookInfo[] {

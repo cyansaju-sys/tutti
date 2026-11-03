@@ -6,7 +6,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statS
 import { basename, join, resolve, sep } from 'node:path'
 import type { McpAgent, McpResult, McpServer, McpSpec, PowerDraft, PowerInfo, PowerScope, PowerSources } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
-import { configDir, globalSteeringDir } from '../context/context'
+import { configDir, globalSteeringDir, tuttiDir } from '../context/context'
 import { loadSteering, parseSteering } from '../context/steering'
 import { hooksDir } from '../hooks'
 import { isObject } from '../mcp/files'
@@ -16,7 +16,7 @@ import { listServers, NAME_RE, validate } from '../mcp/mcp'
 import { MAX_BYTES, MAX_FILES, measure, SKIP } from '../skills'
 
 export const globalPowersDir = (): string => join(configDir(), 'powers')
-const powersDir = (project: string | null, scope: PowerScope): string | null => (scope === 'global' ? globalPowersDir() : project ? join(project, '.tutti', 'powers') : null)
+const powersDir = (project: string | null, scope: PowerScope): string | null => (scope === 'global' ? globalPowersDir() : project ? join(tuttiDir(project), 'powers') : null)
 
 const findFile = (dir: string, name: string): string | undefined => { try { return readdirSync(dir).find((n) => n.toLowerCase() === name) } catch { return undefined } }
 const listDir = (dir: string, only?: (name: string) => boolean): string[] => { try { return readdirSync(dir).filter((n) => !n.startsWith('.') && (!only || only(n))).sort() } catch { return [] } }
@@ -103,7 +103,7 @@ export function removePower(project: string | null, name: string, scope: PowerSc
 
 // ---- crear un Power con lo que ya tienes ----
 
-const skillsDir = (project: string): string => join(project, '.tutti', 'skills')
+const skillsDir = (project: string): string => join(tuttiDir(project), 'skills')
 /** El servidor «tutti» que la app registra en los agentes no es tuyo: no se empaqueta. */
 const isAppServer = (s: { name: string; scope: string }): boolean => s.scope === 'global' && s.name.toLowerCase() === 'tutti'
 const blank = (o: Record<string, string> | undefined, keep: boolean): Record<string, string> => Object.fromEntries(Object.entries(o ?? {}).map(([k, v]) => [k, keep ? v : '']))

@@ -6,6 +6,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type { AgentsPointerState, McpResult } from '../../../shared/types'
+import { tuttiDir } from './context'
 import { tm } from '../../utils/i18n'
 import { roadmapFile } from '../roadmap'
 
@@ -25,7 +26,7 @@ const some = (names: string[]): string => (names.length > MAX_LISTED ? `${names.
 
 /** El bloque con lo que ahora hay en el proyecto: solo lista las carpetas que existen. */
 export function agentsBlock(project: string): string {
-  const tutti = join(project, '.tutti')
+  const tutti = tuttiDir(project)
   const steering = ls(join(tutti, 'steering')).filter((f) => f.toLowerCase().endsWith('.md'))
   const skills = ls(join(tutti, 'skills')).filter((d) => isDir(join(tutti, 'skills', d)))
   const lines = [

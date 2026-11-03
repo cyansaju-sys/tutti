@@ -8,12 +8,13 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type { RoadmapItem, RoadmapPhase, RoadmapState } from '../../shared/types'
+import { tuttiDirName } from './context/context'
 import { openspecDir, taskCounts } from './openspec'
 
 /** Dónde se busca, en orden: el de `.tutti` y, si no, el que ya tenga el proyecto en la raíz. */
-const CANDIDATES = ['.tutti/roadmap.md', 'ROADMAP.md', 'roadmap.md']
+const candidates = (project: string): string[] => [`${tuttiDirName(project)}/roadmap.md`, 'ROADMAP.md', 'roadmap.md']
 export const roadmapFile = (project: string): string =>
-  CANDIDATES.map((c) => join(project, c)).find((f) => existsSync(f)) ?? join(project, CANDIDATES[0])
+  candidates(project).map((c) => join(project, c)).find((f) => existsSync(f)) ?? join(project, candidates(project)[0])
 
 const SAFE = /^[\w.-]+$/
 const ITEM = /^ ?(?:[-*+]|\d+[.)])\s+(.*)$/          // solo los de primer nivel: las sublistas son detalle del ítem

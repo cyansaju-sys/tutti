@@ -37,13 +37,17 @@ export function legacyContextFile(project: string): string {
   return join(configDir(), `${name}-${hash}`, 'contexto.md')
 }
 
-export const tuttiDir = (project: string): string => join(project, TUTTI_DIR)
+/** Carpeta de agentes alternativa: si el proyecto ya usa `.agents` y no tiene `.tutti`, Tutti trabaja ahí en vez de crear la suya. */
+export const AGENTS_DIR = '.agents'
+/** El nombre de la carpeta de Tutti en este proyecto: `.tutti`, salvo que no exista y `.agents` sí. */
+export const tuttiDirName = (project: string): string => (!existsSync(join(project, TUTTI_DIR)) && existsSync(join(project, AGENTS_DIR)) ? AGENTS_DIR : TUTTI_DIR)
+export const tuttiDir = (project: string): string => join(project, tuttiDirName(project))
 export const globalContextFile = (): string => join(configDir(), 'contexto-global.md')
 const tuttiContextFile = (project: string): string => join(tuttiDir(project), 'steering', PROJECT_FILE)
 export const agentsFile = (project: string): string => join(project, AGENTS_FILE)
 
 /** Un AGENTS.md que solo apunta a .tutti (lo dejaba una versión anterior) no cuenta como contexto propio. */
-const POINTER_PATH = `${TUTTI_DIR}/steering/${PROJECT_FILE}`
+const POINTER_PATH = `/steering/${PROJECT_FILE}`
 /** Lo mismo con el bloque de Tutti (que apunta a .tutti, ver agentsPointer): ese bloque no es contexto, solo un puntero. */
 const realAgents = (project: string): boolean => {
   try {
@@ -69,7 +73,7 @@ export function ensureProjectDir(project: string, sub = ''): string {
   try {
     mkdirSync(target, { recursive: true })
     const readme = join(dir, 'README.md')
-    if (!existsSync(readme)) writeFileSync(readme, tm('m.ctx.tuttiReadme'), 'utf8')
+    if (tuttiDirName(project) === TUTTI_DIR && !existsSync(readme)) writeFileSync(readme, tm('m.ctx.tuttiReadme'), 'utf8')
   } catch { /* proyecto de solo lectura: se sigue sin la carpeta */ }
   return target
 }
@@ -153,7 +157,7 @@ export function readContext(project: string): { files: string[]; text: string } 
     { file: globalContextFile(), text: readOne(globalContextFile()), native: false },
     { file: projectText ? mine : legacyContextFile(project), text: projectText || configText, native: mine === agentsFile(project) && !!projectText },
     ...(steering?.text ? [{ file: steeringFile(project, steering.text), text: steering.text, native: false }] : []),
-    ...(existsSync(agentsFile(project)) && existsSync(tuttiDir(project)) ? [{ file: join(tuttiDir(project), 'README.md'), text: tm('m.ctx.tuttiRef'), native: true }] : [])
+    ...(existsSync(agentsFile(project)) && existsSync(join(tuttiDir(project), 'README.md')) ? [{ file: join(tuttiDir(project), 'README.md'), text: tm('m.ctx.tuttiRef'), native: true }] : [])
   ].filter((p) => p.text)
   return parts.length ? { files: parts.filter((p) => !p.native).map((p) => p.file), text: parts.map((p) => p.text).join('\n\n') } : null
 }
