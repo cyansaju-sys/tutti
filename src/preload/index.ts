@@ -36,7 +36,7 @@ const api: Api = {
     onRan: (cb) => subscribe<[{ name: string; ok: boolean; message: string }]>('hooks:ran', cb)
   },
   context: {
-    steering: (project) => ipcRenderer.invoke('context:steering', project), globalSteeringDir: () => ipcRenderer.invoke('context:global-steering'), working: (project, files) => ipcRenderer.invoke('context:working', project, files), sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
+    dir: (project) => ipcRenderer.invoke('context:dir', project), steering: (project) => ipcRenderer.invoke('context:steering', project), globalSteeringDir: () => ipcRenderer.invoke('context:global-steering'), working: (project, files) => ipcRenderer.invoke('context:working', project, files), sources: (project) => ipcRenderer.invoke('context:sources', project), init: (project, sub) => ipcRenderer.invoke('context:init', project, sub), open: (project) => ipcRenderer.invoke('context:open', project), ensureGlobal: () => ipcRenderer.invoke('context:ensure-global'), generate: (project) => ipcRenderer.invoke('context:generate', project),
     agents: { state: (project) => ipcRenderer.invoke('context:agents-state', project), write: (project) => ipcRenderer.invoke('context:agents-write', project), remove: (project) => ipcRenderer.invoke('context:agents-remove', project) },
     onAgent: (cb) => subscribe<[string]>('context:agent', cb)
   },

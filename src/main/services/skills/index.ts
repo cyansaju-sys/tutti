@@ -1,6 +1,7 @@
 /** Importar una skill que ya tienes en otra carpeta (una con su SKILL.md) a .tutti/skills del proyecto, sin pisar nada. */
 import { cpSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
+import { tuttiDir } from '../context/context'
 import type { McpResult } from '../../../shared/types'
 import { tm } from '../../utils/i18n'
 
@@ -33,8 +34,8 @@ export function importSkill(project: string, source: string): McpResult {
     if (!skillFile) return { ok: false, message: tm('m.skill.noSkillMd', { name: basename(src) }) }
     const { files, bytes } = measure(src)
     if (files > MAX_FILES || bytes > MAX_BYTES) return { ok: false, message: tm('m.skill.tooBig', { name: basename(src) }) }
-    const target = join(project, '.tutti', 'skills', basename(src))
-    if (resolve(target) === src || src.startsWith(resolve(project, '.tutti', 'skills') + '/')) return { ok: false, message: tm('m.skill.already') }
+    const target = join(tuttiDir(project), 'skills', basename(src))
+    if (resolve(target) === src || src.startsWith(resolve(tuttiDir(project), 'skills') + '/')) return { ok: false, message: tm('m.skill.already') }
     if (existsSync(target)) return { ok: false, message: tm('m.fs.exists', { name: basename(src) }) }
     cpSync(src, target, { recursive: true, filter: (from) => !SKIP.has(basename(from)) })
     return { ok: true, message: join(target, skillFile) }

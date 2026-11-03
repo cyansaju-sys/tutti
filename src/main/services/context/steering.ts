@@ -8,6 +8,7 @@
 import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, join, relative, resolve, sep } from 'node:path'
+import { tuttiDir } from './context'
 import { tm } from '../../utils/i18n'
 import { extendedPath } from '../../utils/shellpath'
 import { globsToRegex } from '../search'
@@ -49,7 +50,7 @@ function readSteeringDir(dir: string, scope: 'project' | 'global', skip = ''): S
  * globales (los de todos tus proyectos). Si un archivo del proyecto y uno global se llaman igual, manda el del proyecto, como en Kiro.
  */
 export function loadSteering(project: string, opts: { skip?: string; globalDir?: string } = {}): Steering[] {
-  const mine = readSteeringDir(join(project, '.tutti', 'steering'), 'project', opts.skip ?? 'contexto.md')
+  const mine = readSteeringDir(join(tuttiDir(project), 'steering'), 'project', opts.skip ?? 'contexto.md')
   const names = new Set(mine.map((d) => d.base))
   const global = opts.globalDir ? readSteeringDir(opts.globalDir, 'global').filter((d) => !names.has(d.base)) : []
   return [...mine, ...global]

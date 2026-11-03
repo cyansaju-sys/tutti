@@ -248,6 +248,7 @@ export interface Api {
     working(project: string, files: string[]): Promise<void>                            // los archivos abiertos en el editor, para el modo `fileMatch`
     steering(project: string): Promise<SteeringInfo[]>                                   // los steering del proyecto y su modo
     sources(project: string): Promise<ContextSource[]>                                   // qué recibirán los agentes y cuánto pesa
+    dir(project: string): Promise<string>                                                  // la carpeta de Tutti del proyecto (.tutti o, si no hay y existe, .agents) sin crearla
     init(project: string, sub?: string): Promise<string>                                 // crea .tutti (y su subcarpeta) al añadir algo; devuelve la ruta
     open(project: string): Promise<{ file: string; text: string; exists: boolean }>      // no crea el archivo: se crea al guardar
     ensureGlobal(): Promise<string>

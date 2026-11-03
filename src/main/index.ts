@@ -5,7 +5,7 @@ import { rm } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent, setShell } from './services/agents/agents'
 import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
-import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, openProjectContext, setWorkingFiles } from './services/context/context'
+import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, tuttiDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
 import { archiveOpenspec, initOpenspec, openspecState, validateOpenspec } from './services/openspec'
@@ -134,6 +134,7 @@ function registerIpc(): void {
   ipcMain.handle('hooks:list', (_e, project: string) => ({ hooks: loadHooks(project), trusted: isTrusted(project) }))
   ipcMain.handle('hooks:trust', (_e, project: string, on: boolean) => { setTrusted(project, on); if (on) startHooks(project, hooksHost); else stopHooks() })
   ipcMain.handle('hooks:watch', (_e, project: string | null) => { if (process.env.TUTTI_CAPTURE) return; if (project) startHooks(project, hooksHost); else stopHooks() })
+  ipcMain.handle('context:dir', (_e, project: string) => tuttiDir(project))
   ipcMain.handle('context:init', (_e, project: string, sub?: string) => (process.env.TUTTI_CAPTURE ? join(project, '.tutti', sub ?? '') : ensureProjectDir(project, sub)))      // en las capturas no se escribe en el proyecto fotografiado
   ipcMain.handle('context:steering', (_e, project: string) => loadSteering(project, { globalDir: globalSteeringDir() }).map(({ body: _body, ...info }) => info))
   ipcMain.handle('powers:list', (_e, project: string | null) => listPowers(project))

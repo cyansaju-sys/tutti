@@ -61,7 +61,7 @@ export function App() {
   // con «Automático», el tema sigue al del sistema
   // cada proyecto que se abre recibe .tutti con su README; las subcarpetas (specs, docs…) solo aparecen al añadir algo
   const project = useStore((s) => s.project)
-  useEffect(() => { if (project) void window.api.context.init(project); void window.api.hooks.watch(project) }, [project])
+  useEffect(() => { if (project) void window.api.context.dir(project).then((d) => { if (!/[\\/]\.agents$/.test(d)) void window.api.context.init(project) }); void window.api.hooks.watch(project) }, [project])
   useEffect(() => { const name = project?.split(/[\\/]/).filter(Boolean).pop(); document.title = name ? `Tutti - ${name}` : 'Tutti' }, [project])          // el título de la ventana
   // los archivos abiertos en el editor (relativos al proyecto): los steering por archivos (`fileMatch`) también los tienen en cuenta
   const openPaths = useStore((s) => s.docs.filter((d) => d.kind === 'text').map((d) => d.path).join('\n'))
