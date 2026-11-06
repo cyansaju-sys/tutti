@@ -32,7 +32,10 @@ const ordered = (ids: string[]): typeof TABS => [...ids.flatMap((id) => TABS.fil
 export function Sidebar() {
   const tab = useStore((s) => s.tab)
   const set = useStore((s) => s.set)
-  const width = useStore((s) => s.sidebarWidth)
+  const saved = useStore((s) => s.sidebarWidth)
+  const [viewport, setViewport] = useState(window.innerWidth)
+  useEffect(() => { const on = (): void => setViewport(window.innerWidth); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on) }, [])
+  const width = Math.max(180, Math.min(saved, Math.round(viewport * 0.4)))          // el ancho elegido se respeta mientras la ventana lo permita; en una estrecha, nunca pasa del 40 % (mínimo 180 px)
   const open = useStore((s) => s.sidebarOpen)
   const changes = useStore((s) => s.git?.files.length ?? 0)
   const theme = useStore((s) => s.theme)

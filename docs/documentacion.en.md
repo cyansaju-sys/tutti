@@ -320,7 +320,7 @@ The **Tutti** tab (`Ctrl`+`Shift`+`J`) gathers in one place what agents need to 
 | **Skills** | One folder per skill; clicking opens its `SKILL.md` | Opens the skill form (name, when to use it and instructions) |
 | **MCP servers** | The MCPs installed in your agents (the same as the MCP tab) | Opens the add-a-server dialog |
 
-Each section folds (and remembers it). When a section is empty, instead of a list you see a full-width button to create the first item. The `.tutti` folder and its subfolders are **not created until you add something**: opening a project or looking at the tab writes nothing, except the `README.md` in `.tutti`.
+Each section folds (and remembers it). When a section is empty, instead of a list you see a full-width button to create the first item. The `.tutti` folder and its subfolders are **not created until you add something**: opening a project or looking at the tab writes nothing.
 
 ### AGENTS.md pointing to .tutti
 
@@ -346,7 +346,7 @@ In the file Explorer, the `.tutti` folder carries the Tutti logo so you can spot
 
 ## The .tutti folder
 
-Tutti creates a `.tutti` folder in every project you open, with a `README.md` that explains its contents. It is plain text (Markdown and JSON): it is versioned with git, reviewed like any other change and shared by the whole team. Nothing leaves your computer.
+Tutti creates the project's `.tutti` folder the first time you add something (a hook, a steering file, a skill…), with a `README.md` that explains its contents; opening a project does not create it. It is plain text (Markdown and JSON): it is versioned with git, reviewed like any other change and shared by the whole team. Nothing leaves your computer.
 
 ```
 .tutti/

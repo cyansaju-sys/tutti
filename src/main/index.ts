@@ -71,16 +71,19 @@ function openNewWindow(): void {
   spawn(exe, args, { detached: true, stdio: 'ignore', env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined } }).unref()
 }
 
+const MIN_WIDTH = 560, MIN_HEIGHT = 400          // lo bastante pequeño para ponerla en media pantalla, al lado de otra ventana
+
 /** Posición de una ventana de ese tamaño, centrada en la pantalla donde está el cursor (con varios monitores, ahí es donde se mira al abrir la app). */
-function centeredOnCursor(width: number, height: number): { x: number; y: number; width: number; height: number } {
+function centeredOnCursor(width: number, height: number): { x: number; y: number; width: number; height: number; minWidth: number; minHeight: number } {
   const { workArea } = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-  const w = Math.min(width, workArea.width), h = Math.min(height, workArea.height)
-  return { x: Math.round(workArea.x + (workArea.width - w) / 2), y: Math.round(workArea.y + (workArea.height - h) / 2), width: w, height: h }
+  const w = Math.min(workArea.width, Math.max(MIN_WIDTH, Math.round(Math.min(width, workArea.width * 0.9))))          // hasta `width`, pero nunca más del 90 % de la pantalla: en una pequeña se adapta
+  const h = Math.min(workArea.height, Math.max(MIN_HEIGHT, Math.round(Math.min(height, workArea.height * 0.9))))
+  return { x: Math.round(workArea.x + (workArea.width - w) / 2), y: Math.round(workArea.y + (workArea.height - h) / 2), width: w, height: h, minWidth: Math.min(MIN_WIDTH, w), minHeight: Math.min(MIN_HEIGHT, h) }
 }
 
 function createWindow(): void {
   win = new BrowserWindow({
-    ...(process.env.TUTTI_CAPTURE ? { width: 1360, height: 860 } : centeredOnCursor(1360, 860)), minWidth: 900, minHeight: 560, show: false, frame: false, backgroundColor: '#07080C',
+    ...(process.env.TUTTI_CAPTURE ? { width: 1360, height: 860 } : centeredOnCursor(1360, 860)), ...(process.env.TUTTI_CAPTURE ? { minWidth: MIN_WIDTH, minHeight: MIN_HEIGHT } : {}), show: false, frame: false, backgroundColor: '#07080C',
     title: 'Tutti', icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true }
   })

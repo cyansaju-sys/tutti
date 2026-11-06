@@ -2,6 +2,15 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.7
+
+### Changes
+
+- **Opening a project no longer creates `.tutti`:** the folder appears when you add the first item (a skill, a steering file, a hook, the roadmap…). If the project uses `.agents` and has no `.tutti`, everything is saved in `.agents`, as before.
+- **Tidier start screen:** the project list shows one line per project (name and path) and, with more than five, a **Show more** button for the rest. The shortcuts move below the list and the logo is centered.
+- **MCP servers at full height:** in the Tutti tab, the MCP servers section uses the available height instead of being cut at a fixed one.
+- **The window and the sidebar adapt to the available space:** the window opens at up to 90% of your screen and can shrink down to 560 × 400 px, so it fits in half the screen next to another window. The sidebar width you chose is kept while it fits; in a narrow window it never goes over 40% of its width (minimum 180 px).
+
 ## 1.4.6
 
 ### Changes

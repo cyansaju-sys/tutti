@@ -320,7 +320,7 @@ La pestaña **Tutti** (`Ctrl`+`Shift`+`J`) reúne en un solo sitio lo que los ag
 | **Skills** | Una carpeta por skill; al pulsar se abre su `SKILL.md` | Abre el formulario de la skill (nombre, cuándo usarla e instrucciones) |
 | **Servidores MCP** | Los MCP instalados en tus agentes (los mismos de la pestaña MCP) | Abre el diálogo de añadir un servidor |
 
-Cada sección se pliega (y se recuerda). Si una sección está vacía, en lugar de una lista verás un botón de ancho completo para crear el primer elemento. La carpeta `.tutti` y sus subcarpetas **no se crean hasta que añades algo**: abrir un proyecto o mirar la pestaña no escribe nada, salvo el `README.md` de `.tutti`.
+Cada sección se pliega (y se recuerda). Si una sección está vacía, en lugar de una lista verás un botón de ancho completo para crear el primer elemento. La carpeta `.tutti` y sus subcarpetas **no se crean hasta que añades algo**: abrir un proyecto o mirar la pestaña no escribe nada.
 
 ### AGENTS.md apuntando a .tutti
 
@@ -346,7 +346,7 @@ En el Explorador de archivos, la carpeta `.tutti` lleva el logo de Tutti para re
 
 ## La carpeta .tutti
 
-Tutti crea una carpeta `.tutti` en cada proyecto que abres, con un `README.md` que explica su contenido. Es texto plano (Markdown y JSON): se versiona con git, se revisa como cualquier cambio y la comparte todo el equipo. Nada sale de tu equipo.
+Tutti crea la carpeta `.tutti` del proyecto la primera vez que añades algo (un hook, un steering, una skill…), con un `README.md` que explica su contenido; abrir un proyecto no la crea. Es texto plano (Markdown y JSON): se versiona con git, se revisa como cualquier cambio y la comparte todo el equipo. Nada sale de tu equipo.
 
 ```
 .tutti/
