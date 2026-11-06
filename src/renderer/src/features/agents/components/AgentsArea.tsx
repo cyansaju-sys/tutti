@@ -17,6 +17,8 @@ const ROLE_CHIP = {
 const ROLE_STATUS = { working: 'ag.working', needs_input: 'ag.needsInput', done: 'ag.done', blocked: 'ag.blocked', failed: 'ag.failed', closed: 'ag.closed' } as const
 
 /** Pestaña de un agente en la barra superior: solo se ve el cuerpo del activo (los demás siguen vivos, ocultos). */
+const SHOWN_PROJECTS = 5
+
 export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   const t = useT()
   const closePane = useStore((s) => s.closePane)
@@ -70,6 +72,7 @@ export function AgentsArea() {
   const focus = useStore((s) => s.focus)
   // los archivos se abren como una pestaña más de esta sección: al abrir uno se ve el editor y al elegir un agente, su terminal
   const [view, setView] = useState<'agent' | 'doc'>('agent')
+  const [allProjects, setAllProjects] = useState(false)          // la pantalla de inicio muestra los primeros proyectos; «Ver más» enseña el resto
   useEffect(() => { if (focus === 'editor') setView('doc'); else if (focus === 'pane') setView('agent') }, [focus, activeDoc])
   const docView = view === 'doc' && docs.some((d) => d.path === activeDoc)
   const second = !docView && split && split !== current && panes.some((p) => p.id === split) ? split : null
@@ -82,21 +85,13 @@ export function AgentsArea() {
     <div className="min-h-0 min-w-[260px] flex-1 overflow-hidden rounded-lg border border-line bg-surface">
       {panes.length === 0 ? (
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
-          <div className="my-auto flex w-full max-w-[780px] flex-wrap items-start justify-center gap-x-12 gap-y-8">
+          <div className="my-auto flex w-full max-w-[780px] flex-wrap items-center justify-center gap-x-12 gap-y-8">
             <div className="flex w-[300px] max-w-full flex-col items-center">
               <img src={`${import.meta.env.BASE_URL}icons/logo-contorno${mode === 'light' ? '-light' : ''}.svg`} alt="Tutti" width={180} height={180} draggable={false} />
               <p className="mt-3 text-[12px] text-muted">{t('pane.pickAgent')}</p>
               <button onClick={() => set({ modal: 'agents' })} className="mt-3 flex items-center gap-2 rounded-lg border border-line px-5 py-2.5 text-[13px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
                 <MdSearch size={16} /> {t('pane.chooseAgent')}
               </button>
-
-              <div className="mt-8 flex w-full flex-col gap-1.5 border-t border-line pt-4">
-                {([['Ctrl + Shift + N', 'pane.hintOpenAgent'], ['Ctrl + Shift + T', 'pane.hintOpenTerminal'], ['Ctrl + Shift + B', 'pane.hintHideSidebar']] as const).map(([keys, what]) => (
-                  <div key={keys} className="flex items-center justify-between gap-6 text-[11px] text-muted">
-                    <span>{t(what)}</span><Kbd>{keys}</Kbd>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="w-[380px] max-w-full">
@@ -110,13 +105,13 @@ export function AgentsArea() {
                 <p className="px-1 py-2 text-[11px] text-muted">{t('pane.projectsEmpty')}</p>
               ) : (
                 <div className="flex flex-col gap-0.5">
-                  {recent.map((path) => (
+                  {(allProjects ? recent : recent.slice(0, SHOWN_PROJECTS)).map((path) => (
                     <div key={path} title={path} onClick={() => setProject(path)}
-                      className="group flex cursor-pointer items-center gap-3 rounded-md px-2.5 py-1.5 transition-colors hover:bg-accent-bg">
-                      <MdFolderOpen size={18} className="shrink-0 text-accent" />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[12px] text-text">{path.split(/[\\/]/).filter(Boolean).pop() ?? path}</div>
-                        <div className="truncate text-[10px] text-muted">{path}</div>
+                      className="group flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors hover:bg-accent-bg">
+                      <MdFolderOpen size={16} className="shrink-0 text-accent" />
+                      <div className="flex min-w-0 flex-1 items-baseline gap-2 text-[12px]">
+                        <span className="shrink-0 text-text">{path.split(/[\\/]/).filter(Boolean).pop() ?? path}</span>
+                        <span className="min-w-0 truncate text-[10px] text-muted">{path}</span>
                       </div>
                       <button title={t('pane.removeRecent')} onClick={(e) => { e.stopPropagation(); removeRecent(path) }}
                         className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-colors hover:bg-line hover:text-text group-hover:opacity-100">
@@ -124,8 +119,20 @@ export function AgentsArea() {
                       </button>
                     </div>
                   ))}
+                  {recent.length > SHOWN_PROJECTS && (
+                    <button onClick={() => setAllProjects((v) => !v)} className="mt-0.5 self-start rounded-md px-2.5 py-1 text-[11px] text-accent transition-colors hover:bg-accent-bg">
+                      {allProjects ? t('pane.showLess') : t('pane.showMore', { n: recent.length - SHOWN_PROJECTS })}
+                    </button>
+                  )}
                 </div>
               )}
+              <div className="mt-6 flex w-full flex-col gap-1.5 border-t border-line pt-4">
+                {([['Ctrl + Shift + N', 'pane.hintOpenAgent'], ['Ctrl + Shift + T', 'pane.hintOpenTerminal'], ['Ctrl + Shift + B', 'pane.hintHideSidebar']] as const).map(([keys, what]) => (
+                  <div key={keys} className="flex items-center justify-between gap-6 text-[11px] text-muted">
+                    <span>{t(what)}</span><Kbd>{keys}</Kbd>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

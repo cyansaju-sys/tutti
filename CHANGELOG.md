@@ -2,6 +2,15 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.7
+
+### Cambios
+
+- **Abrir un proyecto ya no crea `.tutti`:** la carpeta aparece al añadir el primer elemento (una skill, un steering, un hook, el roadmap…). Si el proyecto usa `.agents` y no tiene `.tutti`, todo se guarda en `.agents`, como antes.
+- **Pantalla de inicio más ordenada:** la lista de proyectos muestra una línea por proyecto (nombre y ruta) y, si hay más de cinco, un botón **Ver más** para el resto. Los atajos pasan debajo de la lista y el logo queda centrado.
+- **Servidores MCP a todo el alto:** en la pestaña Tutti, la sección de servidores MCP ocupa el alto disponible en lugar de cortarse en una altura fija.
+- **La ventana y el sidebar se adaptan al espacio:** la ventana se abre con un máximo del 90 % de tu pantalla y puede reducirse hasta 560 × 400 px, así que cabe en media pantalla al lado de otra ventana. El ancho del sidebar que elegiste se respeta mientras quepa; en una ventana estrecha nunca pasa del 40 % de su ancho (mínimo 180 px).
+
 ## 1.4.6
 
 ### Cambios

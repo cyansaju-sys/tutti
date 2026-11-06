@@ -368,6 +368,8 @@
   "pane.hintHideSidebar": "Hide the sidebar",
   "pane.projects": "Projects",
   "pane.openOther": "Open another",
+  "pane.showMore": "Show more ({n})",
+  "pane.showLess": "Show less",
   "pane.projectsEmpty": "The projects you open will appear here.",
   "pane.removeRecent": "Remove from history",
   "term.title": "Terminal",

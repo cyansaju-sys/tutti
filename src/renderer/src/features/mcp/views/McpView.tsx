@@ -102,10 +102,10 @@ const Tag = ({ children }: { children: React.ReactNode }) => (
   <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-medium text-accent">{children}</span>
 )
 
-/** Los instalados llevan su pliegue «Instalados»; incrustados en la pestaña Tutti (compact) la sección ya lo dice: van sin título, con la misma altura máxima y scroll que la tienda. */
+/** Los instalados llevan su pliegue «Instalados»; incrustados en la pestaña Tutti (compact) la sección ya lo dice: van sin título y ocupan el alto disponible (el scroll lo pone la sección). */
 function InstalledWrap({ compact, count, children }: { compact: boolean; count: number; children: React.ReactNode }) {
   const t = useT()
-  return compact ? <div className="sect-scroll max-h-60 overflow-y-auto">{children}</div> : <Fold id="installed" title={t('st.installed')} count={count} resize>{children}</Fold>
+  return compact ? <div>{children}</div> : <Fold id="installed" title={t('st.installed')} count={count} resize>{children}</Fold>
 }
 
 /**

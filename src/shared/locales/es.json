@@ -368,6 +368,8 @@
   "pane.hintHideSidebar": "Ocultar la barra lateral",
   "pane.projects": "Proyectos",
   "pane.openOther": "Abrir otro",
+  "pane.showMore": "Ver más ({n})",
+  "pane.showLess": "Ver menos",
   "pane.projectsEmpty": "Aquí aparecerán los proyectos que abras.",
   "pane.removeRecent": "Quitar del historial",
   "term.title": "Terminal",
