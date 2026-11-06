@@ -2,6 +2,12 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.5
+
+### Cambios
+
+- **Nueva estructura de los Powers:** un Power se describe ahora con un `plugin.json` (`name`, `description` y `keywords`) y puede traer `mcp.json`, `steering/`, `skills/` y `hooks/`, todo opcional. El `POWER.md` pasa a ser una guía opcional, sin cabecera, que `use_power` entrega a los agentes. **Crear con lo que tengo** genera el `plugin.json` y un `POWER.md` con el título y la descripción. Los Powers anteriores (con la cabecera en `POWER.md` y sin `plugin.json`) se siguen leyendo igual. Un `plugin.json` ilegible o con un `mcp.json` roto deja el Power en rojo con el motivo.
+
 ## 1.4.4
 
 ### Funcional

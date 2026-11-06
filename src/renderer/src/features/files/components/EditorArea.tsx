@@ -40,7 +40,28 @@ interface PendingExternal {
   accepted: Set<number>
 }
 
-export function EditorArea() {
+/** Cierra un archivo; si tiene cambios sin guardar, pregunta antes. */
+export function closeDocAsk(d: Doc): void {
+  if (!isDirty(d)) { useStore.getState().closeDoc(d.path); return }
+  void confirmAsk(t('app.unsaved', { title: d.title }), t('app.closeAnyway')).then((yes) => { if (yes) useStore.getState().closeDoc(d.path) })
+}
+
+/** Pestaña de un archivo dentro de la barra de pestañas de los agentes (el contenido lo pinta EditorArea con `embedded`). */
+export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  return (
+    <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
+      className={clsx('group flex min-w-[120px] max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-t-accent bg-surface text-text' : 'border-t-transparent bg-bar text-muted hover:bg-raised')}>
+      {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
+      <span className="min-w-0 flex-1 truncate text-[12px]">{d.title}</span>
+      {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
+      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
+    </div>
+  )
+}
+
+export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   const t = useT()
   const docs = useStore((s) => s.docs)
   const activePath = useStore((s) => s.activeDoc)
@@ -154,8 +175,8 @@ export function EditorArea() {
   }, [pending])
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface" onMouseDown={() => set({ focus: 'editor' })}>
-      <div className="flex shrink-0 items-end overflow-x-auto bg-bar pt-1">
+    <div className={clsx('flex min-w-0 flex-1 flex-col overflow-hidden bg-surface', embedded ? 'min-h-0' : 'rounded-lg border border-line')} onMouseDown={() => set({ focus: 'editor' })}>
+      {!embedded && <div className="flex shrink-0 items-end overflow-x-auto bg-bar pt-1">
         {docs.map((d) => {
           const active = d.path === activePath
           const code = statusOf(d)
@@ -179,7 +200,7 @@ export function EditorArea() {
             </div>
           )
         })}
-      </div>
+      </div>}
       {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">

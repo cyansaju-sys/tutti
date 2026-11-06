@@ -1,6 +1,6 @@
 /**
- * Powers al estilo de Kiro: una carpeta con POWER.md (cabecera con name, description y keywords) que puede traer, además, mcp.json (servidores
- * MCP), steering/, skills/ y hooks/. Viven en .tutti/powers (del proyecto) o en la configuración de Tutti (de todos tus proyectos).
+ * Powers: una carpeta con plugin.json (name, description y keywords) que puede traer mcp.json (servidores MCP), steering/, skills/ y hooks/, y un
+ * POWER.md opcional con la guía. El formato anterior (POWER.md con la cabecera name/description/keywords, al estilo de Kiro) se sigue leyendo. Viven en .tutti/powers (del proyecto) o en la configuración de Tutti (de todos tus proyectos).
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve, sep } from 'node:path'
@@ -42,21 +42,37 @@ function readMcp(file: string): McpSpec[] {
   })
 }
 
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((k): k is string => typeof k === 'string').map((k) => k.trim()).filter(Boolean) : typeof v === 'string' ? v.split(',').map((k) => k.trim()).filter(Boolean) : [])
+
+/** name, description y keywords de un Power: de plugin.json o, en el formato anterior, de la cabecera de POWER.md. Lanza si plugin.json no se puede leer. */
+function metaOf(dir: string, fallback: string): { name: string; description: string; keywords: string[] } | null {
+  const plugin = findFile(dir, 'plugin.json')
+  if (plugin) {
+    const data: unknown = JSON.parse(readFileSync(join(dir, plugin), 'utf8'))
+    if (!isObject(data)) throw new Error('plugin.json')
+    return { name: typeof data.name === 'string' && data.name.trim() ? data.name.trim() : fallback, description: typeof data.description === 'string' ? data.description.trim() : '', keywords: strings(data.keywords) }
+  }
+  const md = findFile(dir, 'power.md')
+  if (!md) return null
+  const raw = readFileSync(join(dir, md), 'utf8')
+  const head = parseSteering(join(dir, md), raw)
+  return { name: head.name === 'POWER' || head.name === 'power' ? fallback : head.name, description: head.description, keywords: keywordsOf(raw) }
+}
+
 /** Lee la carpeta de un Power. Si no es válido, `error` dice por qué (y el resto va vacío). */
 export function parsePower(dir: string, scope: PowerScope): PowerInfo {
   const fallback = basename(dir)
   const empty: PowerInfo = { name: fallback, description: '', keywords: [], scope, dir, mcp: [], steering: [], skills: [], hooks: [] }
-  const md = findFile(dir, 'power.md')
-  if (!md) return { ...empty, error: tm('m.power.noPowerMd', { name: fallback }) }
-  const raw = readFileSync(join(dir, md), 'utf8')
-  const head = parseSteering(join(dir, md), raw)
-  const name = head.name === 'POWER' || head.name === 'power' ? fallback : head.name
+  let meta: ReturnType<typeof metaOf>
+  try { meta = metaOf(dir, fallback) } catch (e) { return { ...empty, error: tm('m.power.badPlugin', { name: fallback, message: e instanceof Error ? e.message : String(e) }) } }
+  if (!meta) return { ...empty, error: tm('m.power.noPluginJson', { name: fallback }) }
+  const { name } = meta
   if (!NAME_RE.test(name)) return { ...empty, error: tm('m.power.badName') }
   let mcp: McpSpec[] = []
   const mcpFile = findFile(dir, 'mcp.json')
   if (mcpFile) { try { mcp = readMcp(join(dir, mcpFile)) } catch (e) { return { ...empty, name, error: tm('m.power.badMcp', { name, message: e instanceof Error ? e.message : String(e) }) } } }
   return {
-    ...empty, name, description: head.description, keywords: keywordsOf(raw), mcp,
+    ...empty, name, description: meta.description, keywords: meta.keywords, mcp,
     steering: listDir(join(dir, 'steering'), (n) => n.toLowerCase().endsWith('.md')),
     skills: listDir(join(dir, 'skills'), (n) => !!findFile(join(dir, 'skills', n), 'skill.md')),
     hooks: listDir(join(dir, 'hooks'))
@@ -169,8 +185,8 @@ export async function createPower(project: string | null, draft: PowerDraft): Pr
     }
     for (const n of pick(draft.hooks, sources.hooks, (x) => x)) cpSync(join(hooksDir(project!), n), join(target, 'hooks', n), { recursive: true })
     const keywords = draft.keywords.map((k) => oneLine(k)).filter(Boolean)
-    const head = ['---', `name: ${name}`, `description: "${oneLine(draft.description)}"`, ...(keywords.length ? [`keywords: [${keywords.map((k) => `"${k}"`).join(', ')}]`] : []), '---', '', `# ${name}`, '', oneLine(draft.description)]
-    writeFileSync(join(target, 'POWER.md'), head.join('\n').trimEnd() + '\n', 'utf8')
+    writeFileSync(join(target, 'plugin.json'), JSON.stringify({ name, description: oneLine(draft.description), ...(keywords.length ? { keywords } : {}) }, null, 2) + '\n', 'utf8')
+    writeFileSync(join(target, 'POWER.md'), [`# ${name}`, '', oneLine(draft.description)].join('\n').trimEnd() + '\n', 'utf8')
   } catch (e) {
     rmSync(target, { recursive: true, force: true })
     return { ok: false, message: e instanceof Error ? e.message : String(e) }

@@ -143,6 +143,7 @@ export function App() {
       }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'P') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'quickOpen' }); return }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'G') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'goLine' }); return }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && (key === '1' || key === '2') && st.panes.length) { e.preventDefault(); e.stopPropagation(); st.toggleSplit(key === '2'); return }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'Q') { e.preventDefault(); e.stopPropagation(); window.api.window.close(); return }
       if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }
       if (!isGlobalShortcut(e)) return
@@ -169,7 +170,6 @@ export function App() {
   }, [])
 
   const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right')
-  const dragEditor = useDrag(() => useStore.getState().editorWidth, (v) => s.set({ editorWidth: v }), 320, 1600)
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
 
@@ -186,12 +186,6 @@ export function App() {
               <div className="flex min-w-[260px] flex-1 flex-col"><EditorArea /></div>
             ) : (
               <>
-                {s.docs.length > 0 && (
-                  <>
-                    <div style={{ flexBasis: s.editorWidth }} className="flex min-w-[260px] shrink flex-col"><EditorArea /></div>
-                    <Resizer onDrag={dragEditor} />
-                  </>
-                )}
                 <AgentsArea />
               </>
             )}

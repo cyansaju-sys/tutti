@@ -24,9 +24,9 @@ export function paintTheme(mode: ThemeMode): void { document.documentElement.dat
 /** Colores de la terminal (xterm no lee variables CSS). */
 export const TERMINAL_THEMES: Record<ThemeMode, Record<string, string>> = {
   dark: {
-    background: '#0d0f16', foreground: '#e6e8ef', cursor: '#9bb3ce', cursorAccent: '#0d0f16', selectionBackground: '#2c3a50',
-    black: '#1a1d2b', red: '#ff6b81', green: '#7ee0a1', yellow: '#e2c08d', blue: '#82aaff', magenta: '#c792ea', cyan: '#4cc9b0', white: '#e6e8ef',
-    brightBlack: '#6b7088', brightRed: '#ff8a9b', brightGreen: '#9bf0b9', brightYellow: '#f0d4a8', brightBlue: '#a3bdff',
+    background: '#0d0f16', foreground: '#e6e8ef', cursor: '#a9c2e0', cursorAccent: '#0d0f16', selectionBackground: '#33425a',
+    black: '#363c4f', red: '#ff6b81', green: '#7ee0a1', yellow: '#e2c08d', blue: '#82aaff', magenta: '#c792ea', cyan: '#4cc9b0', white: '#e6e8ef',
+    brightBlack: '#7a8099', brightRed: '#ff8a9b', brightGreen: '#9bf0b9', brightYellow: '#f0d4a8', brightBlue: '#a3bdff',
     brightMagenta: '#d9b3f5', brightCyan: '#6fe0c9', brightWhite: '#ffffff'
   },
   light: {
