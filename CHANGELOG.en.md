@@ -2,7 +2,7 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
-## 1.4.5
+## 1.4.6
 
 ### Changes
 
@@ -10,6 +10,12 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **What is new opens as an editor tab:** after updating, or when you click the version in the footer, the news appears as one more tab next to your files instead of a pop-up window, and closes like any other.
 - **Agents look for the Power that fits your request:** on receiving a request, the agent calls `list_powers` with it, and Powers that match (by keywords, name and description) come first, marked. If one fits it loads it with `use_power`; if there are no Powers or none fits, it carries on without loading any. Before, this guidance only applied when splitting up big tasks.
 - **The sidebar width is remembered:** the width you pick by dragging the sidebar's edge is saved in the global settings and applied to all your projects and when you reopen the app.
+
+## 1.4.5
+
+### Changes
+
+- **Projects with `.agents`:** if the project already uses `.agents` and has no `.tutti`, Tutti does not create `.tutti` when opening it: the Tutti section points to `.agents` and stores steering, hooks, skills and the rest there, without adding a README.
 
 ## 1.4.4
 

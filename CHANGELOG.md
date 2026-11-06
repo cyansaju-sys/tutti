@@ -2,7 +2,7 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
-## 1.4.5
+## 1.4.6
 
 ### Cambios
 
@@ -10,6 +10,12 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 - **Las novedades se abren como una pestaña del editor:** al actualizar, o al pulsar la versión en la barra inferior, las novedades aparecen como una pestaña más junto a tus archivos en lugar de una ventana emergente, y se cierran como cualquier otra.
 - **Los agentes buscan el Power que encaja con tu petición:** al recibir una petición, el agente consulta `list_powers` con ella y los Powers que coinciden (por palabras clave, nombre y descripción) salen primero, marcados. Si uno encaja, lo carga con `use_power`; si no hay Powers o ninguno encaja, sigue sin cargar nada. Antes esta pauta solo se daba al repartir tareas grandes.
 - **El ancho del sidebar se recuerda:** el ancho que eliges arrastrando el borde de la barra lateral se guarda en los ajustes globales y se aplica en todos tus proyectos y al reabrir la app.
+
+## 1.4.5
+
+### Cambios
+
+- **Proyectos con `.agents`:** si el proyecto ya usa `.agents` y no tiene `.tutti`, Tutti no crea `.tutti` al abrirlo: la sección Tutti apunta a `.agents` y guarda ahí steering, hooks, skills y demás, sin añadir un README.
 
 ## 1.4.4
 
