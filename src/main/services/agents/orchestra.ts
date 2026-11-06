@@ -15,6 +15,9 @@ const INSTRUCTIONS = `Eres un agente de una app que ejecuta varios agentes de pr
 - list_agents: agentes abiertos e instalados, con modelo actual, nivel (basic, standard, advanced), límite de uso y modelos que ofrece cada uno (available_models).
 - delegate_task: manda una tarea a otro agente; si no está abierto, la app lo abre en su propio panel. Con "model" eliges el modelo exacto.
 - read_agent_output / wait_agent: lee la pantalla de un agente o espera a que termine.
+- list_powers / use_power: los Powers son paquetes de herramientas y guías que se cargan solo cuando hacen falta.
+
+Al recibir una petición del usuario, antes de empezar: llama a list_powers con la petición en "task". Si no hay Powers, sigue sin más. Si alguno encaja (los que traen matches: true, o cuya descripción cuadre con la tarea), cárgalo con use_power y sigue su guía; si ninguno encaja, no cargues ninguno.
 
 Para repartir, llama a delegate_task con "difficulty" (easy, medium o hard) y la app asigna según capacidad y límite de uso. Lo fácil o mecánico \
 (renombrar, texto, boilerplate, tests simples, búsquedas) va a agentes basic o standard; lo difícil (arquitectura, bugs sutiles, cambios amplios) \
@@ -26,7 +29,7 @@ los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «
 Tarea grande o con varias partes: antes de repartir, escribe el plan (en .tutti/roadmap.md y, si es grande, en un cambio de OpenSpec) y revísalo: \
 ¿está completo?, ¿cada parte tiene criterio de terminado?, ¿hay partes que tocan los mismos archivos? Deriva de él los roles y envíalos con propose_roles: \
 cada rol con id, name, responsibility, deliverables, done (criterio de terminado), files (los que solo ese rol edita), difficulty (easy, medium o hard) y dependsOn. \
-Si hay Powers instalados (list_powers) y uno encaja con la tarea, cárgalo con use_power: así sus herramientas y su guía solo ocupan contexto cuando hacen falta. Mira antes list_role_templates: si el usuario guardó un rol que encaja (tests, revisión, docs…), úsalo con "template" y pon solo lo que cambie. \
+Mira antes list_role_templates: si el usuario guardó un rol que encaja (tests, revisión, docs…), úsalo con "template" y pon solo lo que cambie. \
 El agente y el modelo de cada rol los elige el usuario en el panel de la app (no los asignes tú; con el ajuste roles_assignment en auto, los asigna la app según \
 capacidad, límite de uso y modelos disponibles): un agente tiene un solo rol a la vez y, si el elegido no está libre, el rol espera. Si propose_roles devuelve errores, corrígelos y repítelo. Cuando el reparto te parezca bien llama a confirm_roles: la app \
 lanza los roles (tras la aprobación del usuario, si hace falta) cuando terminan sus dependencias y te avisa con «[Tutti]». Cada rol puede llevar un \
@@ -130,8 +133,8 @@ export const TOOLS = [
   },
   {
     name: 'list_powers',
-    description: 'Powers instalados (nombre, descripción y palabras clave). Si uno encaja con la tarea, cárgalo con use_power.',
-    inputSchema: { type: 'object', properties: {} }
+    description: 'Powers instalados (nombre, descripción y palabras clave). Pasa la petición del usuario en "task" y los que encajan salen primero, con matches: true. Si uno encaja, cárgalo con use_power.',
+    inputSchema: { type: 'object', properties: { task: { type: 'string', description: 'La petición del usuario o la tarea que vas a hacer, con sus palabras.' } } }
   },
   {
     name: 'use_power',
@@ -232,7 +235,7 @@ export interface Host {
   retryRole(caller: string, roleId: string): { ok: boolean; info: unknown }
   roleResult(caller: string, roleId: string): { ok: boolean; info: unknown }
   roleTemplates(caller: string): { ok: boolean; info: unknown }
-  listPowers(caller: string): { ok: boolean; info: unknown }
+  listPowers(caller: string, task?: string): { ok: boolean; info: unknown }
   usePower(caller: string, name: string): Promise<{ ok: boolean; info: unknown }>
   acceptRole(caller: string, roleId: string): { ok: boolean; info: unknown }
   askLeader(caller: string, question: string): { ok: boolean; info: unknown }
@@ -396,7 +399,7 @@ export class Orchestra {
       return text(info, !ok)
     }
     if (name === 'list_powers') {
-      const { ok, info } = this.host.listPowers(caller)
+      const { ok, info } = this.host.listPowers(caller, String(args.task ?? '').trim() || undefined)
       return text(info, !ok)
     }
     if (name === 'use_power') {

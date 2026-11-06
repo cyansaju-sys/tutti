@@ -62,7 +62,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     void (async () => {
     await Promise.all([document.fonts.load('13px "DejaVu Sans Mono"'), document.fonts.load('13px "Symbols Nerd Font Mono"')]).catch(() => undefined)
     if (disposed || !host.current) return
-    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.15, cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme: TERMINAL_THEMES[useStore.getState().themeMode], allowProposedApi: true })
+    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.2, fontWeight: '300', fontWeightBold: '500', cursorStyle: 'bar', cursorWidth: 2, cursorInactiveStyle: 'outline', cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme: TERMINAL_THEMES[useStore.getState().themeMode], allowProposedApi: true })
     const fit = new FitAddon()
     t.loadAddon(fit)
     t.loadAddon(new WebLinksAddon((_e, url) => window.open(url)))

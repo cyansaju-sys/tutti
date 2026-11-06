@@ -161,9 +161,9 @@ const host: Host = {
     return { ok: true, info: list.length ? { templates: list } : 'El usuario aún no guardó roles reutilizables.' }
   },
 
-  listPowers(caller) {
+  listPowers(caller, task) {
     const who = me(caller)
-    const list = powerSummaries(who ? projectRoot(who.cwd, knownProjects()) : null)
+    const list = powerSummaries(who ? projectRoot(who.cwd, knownProjects()) : null, task)
     return { ok: true, info: list.length ? { powers: list } : 'No hay Powers instalados.' }
   },
 

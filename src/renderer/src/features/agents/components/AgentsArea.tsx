@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Menu } from '../../../shared/components/Menu'
 import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdFolderOpen, MdSearch, MdTerminal } from 'react-icons/md'
 import { AgentIcon } from './AgentIcon'
@@ -7,6 +7,7 @@ import { useStore, type Pane } from '@/shared/store'
 import { Kbd } from '../../../shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
 import { TerminalPane } from './TerminalPane'
+import { EditorArea, DocTab } from '../../files/components/EditorArea'
 
 /** Color de la etiqueta del rol según cómo va su tarea, y el texto de ese estado. */
 const ROLE_CHIP = {
@@ -15,9 +16,9 @@ const ROLE_CHIP = {
 } as const
 const ROLE_STATUS = { working: 'ag.working', needs_input: 'ag.needsInput', done: 'ag.done', blocked: 'ag.blocked', failed: 'ag.failed', closed: 'ag.closed' } as const
 
-export function PaneBox({ pane }: { pane: Pane }) {
+/** Pestaña de un agente en la barra superior: solo se ve el cuerpo del activo (los demás siguen vivos, ocultos). */
+export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   const t = useT()
-  const active = useStore((s) => s.activePane === s.panes.find((p) => p.id === pane.id)?.id || s.activePane === pane.id)
   const closePane = useStore((s) => s.closePane)
   const leader = useStore((s) => pane.kind === 'agent' && s.paneLeader === pane.id)
   const canLead = useStore((s) => pane.kind === 'agent' && !!s.paneLeader && s.paneLeader !== pane.id)
@@ -26,9 +27,9 @@ export function PaneBox({ pane }: { pane: Pane }) {
   const asking = useStore((s) => s.paneAsking.includes(pane.id))
   const pending = useStore((s) => s.paneInbox[pane.id] ?? 0)
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden" onMouseDown={() => useStore.getState().focusPane(pane.id)}>
-      {/* preventDefault: si no, al pulsar la cabecera el navegador quita el foco a la terminal justo después de dárselo */}
-      <div onMouseDown={(e) => e.preventDefault()} className={clsx('flex shrink-0 items-center gap-2 border-b-2 px-2.5 py-1 transition-colors', active ? 'border-accent bg-panel' : 'border-line')}>
+    <>
+      {/* preventDefault: si no, al pulsar la pestaña el navegador quita el foco a la terminal justo después de dárselo */}
+      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-t-accent bg-surface' : 'border-t-transparent bg-bar')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
         {role && <span title={t('pane.roleTip', { name: role.name, id: role.id, status: t(ROLE_STATUS[role.status]) })} className={clsx('min-w-0 max-w-[45%] shrink truncate rounded-full px-2 py-0.5 text-[10px] font-medium', ROLE_CHIP[role.status])}>{t('pane.role', { name: role.name })}</span>}
@@ -43,8 +44,7 @@ export function PaneBox({ pane }: { pane: Pane }) {
           <MdClose size={13} />
         </button>
       </div>
-      <TerminalPane pane={pane} active={active} />
-    </div>
+    </>
   )
 }
 
@@ -62,8 +62,21 @@ export function AgentsArea() {
     const picked = await window.api.dialog.chooseFolder(project ?? undefined)
     if (picked) setProject(picked)
   }
-  // cuadrícula: 1-2 paneles en una fila, 3-4 en 2x2, 5-9 en 3 columnas...
-  const cols = panes.length > 2 ? Math.ceil(Math.sqrt(panes.length)) : Math.max(panes.length, 1)
+  const activePane = useStore((s) => s.activePane)
+  const current = panes.find((p) => p.id === activePane)?.id ?? panes.at(-1)?.id
+  const split = useStore((s) => s.paneSplit)
+  const docs = useStore((s) => s.docs)
+  const activeDoc = useStore((s) => s.activeDoc)
+  const focus = useStore((s) => s.focus)
+  // los archivos se abren como una pestaña más de esta sección: al abrir uno se ve el editor y al elegir un agente, su terminal
+  const [view, setView] = useState<'agent' | 'doc'>('agent')
+  useEffect(() => { if (focus === 'editor') setView('doc'); else if (focus === 'pane') setView('agent') }, [focus, activeDoc])
+  const docView = view === 'doc' && docs.some((d) => d.path === activeDoc)
+  const second = !docView && split && split !== current && panes.some((p) => p.id === split) ? split : null
+  const shown = (id: string): boolean => !docView && (id === current || id === second)
+  const order = (id: string | null | undefined): number => panes.findIndex((p) => p.id === id)
+  const left = second && current ? (order(current) < order(second) ? current : second) : current      // con la vista dividida, el de la lista que va antes queda a la izquierda
+  const right = second ? (left === current ? second : current) : null
 
   return (
     <div className="min-h-0 min-w-[260px] flex-1 overflow-hidden rounded-lg border border-line bg-surface">
@@ -117,8 +130,26 @@ export function AgentsArea() {
           </div>
         </div>
       ) : (
-        <div className="grid h-full" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridAutoRows: 'minmax(0, 1fr)' }}>
-          {panes.map((p) => <PaneBox key={p.id} pane={p} />)}
+        <div className={clsx('grid h-full min-h-0 min-w-0 overflow-hidden', second && 'gap-x-1 bg-bar p-1')} style={{ gridTemplateColumns: second ? '1fr 1fr' : '1fr', gridTemplateRows: 'auto minmax(0, 1fr)' }}>
+          {/* vista dividida: cada mitad es una tarjeta con su pestaña; las pestañas de los agentes ocultos quedan en la izquierda */}
+          <div style={{ gridColumn: 1, gridRow: 1 }} className={clsx('flex min-w-0 overflow-x-auto bg-bar', second ? 'rounded-t-lg border border-b-0 border-line' : 'border-b border-line')}>
+            {(second ? panes.filter((p) => p.id === left || !shown(p.id)) : panes).map((p) => <PaneTab key={p.id} pane={p} active={shown(p.id)} />)}
+            {docs.map((d) => <DocTab key={d.path} doc={d} active={docView && d.path === activeDoc} />)}
+          </div>
+          {second && (
+            <div style={{ gridColumn: 2, gridRow: 1 }} className="flex min-w-0 overflow-x-auto rounded-t-lg border border-b-0 border-line bg-bar">
+              {panes.filter((p) => p.id === right).map((p) => <PaneTab key={p.id} pane={p} active />)}
+            </div>
+          )}
+          {docs.length > 0 && (
+            <div style={{ gridColumn: 1, gridRow: 2 }} className={clsx('flex min-h-0 min-w-0 flex-col overflow-hidden', !docView && 'invisible pointer-events-none')}><EditorArea embedded /></div>
+          )}
+          {panes.map((p) => (
+            <div key={p.id} style={{ gridColumn: p.id === right ? 2 : 1, gridRow: 2 }} onMouseDown={() => useStore.getState().focusPane(p.id)}
+              className={clsx('flex min-h-0 min-w-0 flex-col overflow-hidden', !shown(p.id) && 'invisible pointer-events-none', second && shown(p.id) && 'rounded-b-lg border border-line')}>
+              <TerminalPane pane={p} active={!docView && p.id === current} />
+            </div>
+          ))}
         </div>
       )}
     </div>

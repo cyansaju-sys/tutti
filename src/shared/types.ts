@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform'
+  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform' | 'news'
   text: string
   crlf: boolean
   truncated: boolean
@@ -171,7 +171,7 @@ export interface PowerSources {
 }
 /** Lo elegido para crear un Power: nombres de MCP, ids de steering (`PowerSources`), skills y hooks. `withValues`: copiar también los valores de env y cabeceras de los MCP. */
 export interface PowerDraft { name: string; description: string; keywords: string[]; scope: PowerScope; mcp: string[]; steering: string[]; skills: string[]; hooks: string[]; withValues: boolean }
-/** Un Power (al estilo de Kiro): una carpeta con POWER.md que agrupa servidores MCP, steering, skills y hooks. */
+/** Un Power (al estilo de Kiro): una carpeta con plugin.json que agrupa servidores MCP (mcp.json), steering, skills y hooks, y una guía opcional en POWER.md. */
 export type PowerScope = 'global' | 'project'
 export interface PowerInfo {
   name: string; description: string; keywords: string[]; scope: PowerScope; dir: string

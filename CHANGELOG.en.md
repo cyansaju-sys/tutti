@@ -2,6 +2,15 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.6
+
+### Changes
+
+- **New Power structure:** a Power is now described by a `plugin.json` (`name`, `description` and `keywords`) and can bring `mcp.json`, `steering/`, `skills/` and `hooks/`, all optional. `POWER.md` becomes an optional guide, with no header, which `use_power` hands to agents. **Create from what I have** writes the `plugin.json` and a `POWER.md` with the title and description. Earlier Powers (header in `POWER.md`, no `plugin.json`) are still read as before. An unreadable `plugin.json` or a broken `mcp.json` leaves the Power in red with the reason.
+- **What is new opens as an editor tab:** after updating, or when you click the version in the footer, the news appears as one more tab next to your files instead of a pop-up window, and closes like any other.
+- **Agents look for the Power that fits your request:** on receiving a request, the agent calls `list_powers` with it, and Powers that match (by keywords, name and description) come first, marked. If one fits it loads it with `use_power`; if there are no Powers or none fits, it carries on without loading any. Before, this guidance only applied when splitting up big tasks.
+- **The sidebar width is remembered:** the width you pick by dragging the sidebar's edge is saved in the global settings and applied to all your projects and when you reopen the app.
+
 ## 1.4.5
 
 ### Changes

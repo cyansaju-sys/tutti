@@ -8,7 +8,8 @@ const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-power-'))
 function power(base: string, name: string, extra: Record<string, string> = {}): string {
   const d = join(base, name)
   mkdirSync(d, { recursive: true })
-  writeFileSync(join(d, 'POWER.md'), `---\nname: ${name}\ndescription: Hace cosas\nkeywords: [db, "sql"]\n---\n# ${name}`)
+  if (!('plugin.json' in extra)) writeFileSync(join(d, 'plugin.json'), JSON.stringify({ name, description: 'Hace cosas', keywords: ['db', 'sql'] }))
+  writeFileSync(join(d, 'POWER.md'), `# ${name}`)
   for (const [file, text] of Object.entries(extra)) { mkdirSync(join(d, file, '..'), { recursive: true }); writeFileSync(join(d, file), text) }
   return d
 }
@@ -26,9 +27,18 @@ describe('Powers', () => {
     expect(p.error).toBeUndefined()
   })
 
+  it('sigue leyendo el formato anterior: POWER.md con la cabecera y sin plugin.json', () => {
+    const d = join(dir(), 'viejo')
+    mkdirSync(d)
+    writeFileSync(join(d, 'POWER.md'), '---\nname: viejo\ndescription: Antes\nkeywords: [a, "b"]\n---\n# guía')
+    expect(parsePower(d, 'global')).toMatchObject({ name: 'viejo', description: 'Antes', keywords: ['a', 'b'] })
+    expect(parsePower(d, 'global').error).toBeUndefined()
+  })
+
   it('marca como inválido un Power sin POWER.md o con un mcp.json roto', () => {
     const base = dir(), vacio = join(base, 'vacio'); mkdirSync(vacio)
     expect(parsePower(vacio, 'project').error).toBeTruthy()
+    expect(parsePower(power(base, 'plugin-roto', { 'plugin.json': '{' }), 'project').error).toBeTruthy()
     expect(parsePower(power(base, 'roto', { 'mcp.json': '{' }), 'project').error).toBeTruthy()
     expect(parsePower(power(base, 'sin-comando', { 'mcp.json': JSON.stringify({ mcpServers: { a: {} } }) }), 'project').error).toBeTruthy()
   })
@@ -67,8 +77,8 @@ describe('Powers', () => {
   it('crea un Power copiando steering, skills y hooks del proyecto, y lo lee de vuelta', async () => {
     const project = join(dir(), 'proyecto')
     mkdirSync(join(project, '.tutti', 'steering'), { recursive: true }); writeFileSync(join(project, '.tutti', 'steering', 'estilo.md'), '# estilo')
-    mkdirSync(join(project, '.tutti', 'skills', 'revisar'), { recursive: true }); writeFileSync(join(project, '.tutti', 'skills', 'revisar', 'SKILL.md'), '# r')
     mkdirSync(join(project, '.tutti', 'hooks'), { recursive: true }); writeFileSync(join(project, '.tutti', 'hooks', 'a.json'), '{}')
+    mkdirSync(join(project, '.tutti', 'skills', 'revisar'), { recursive: true }); writeFileSync(join(project, '.tutti', 'skills', 'revisar', 'SKILL.md'), '# r')
     const draft = { name: 'mi-power', description: 'Reúne "cosas"\nvarias', keywords: ['db', 'sql'], scope: 'project' as const, mcp: [], steering: ['project:estilo.md'], skills: ['revisar', '../fuera'], hooks: ['a.json'], withValues: false }
     const res = await createPower(project, draft)
     expect(res).toEqual({ ok: true, message: join(project, '.tutti', 'powers', 'mi-power') })
@@ -92,5 +102,19 @@ describe('Powers', () => {
     expect(res.info).toMatchObject({ name: 'guiado', guide: '# guiado', mcp: [], steering: [join(project, '.tutti', 'powers', 'guiado', 'steering', 'estilo.md')], skills: [join(project, '.tutti', 'powers', 'guiado', 'skills', 'a')] })
     expect((await powerGuide(project, 'roto')).ok).toBe(false)
     expect((await powerGuide(project, 'nada')).ok).toBe(false)
+  })
+
+  it('powerSummaries con la tarea pone primero los Powers que encajan y los marca', () => {
+    const base = dir(), project = join(base, 'proyecto')
+    mkdirSync(project)
+    const hacer = (name: string, description: string, keywords: string[]): void => {
+      installPower(project, power(base, name, { 'plugin.json': JSON.stringify({ name, description, keywords }) }), 'project')
+    }
+    hacer('aaa-docs', 'Escribe documentación', ['readme', 'docs'])
+    hacer('zzz-datos', 'Trabaja con bases de datos', ['postgres', 'sql', 'consultas'])
+    expect(powerSummaries(project).map((p) => p.name)).toEqual(['aaa-docs', 'zzz-datos'])          // sin tarea, como siempre
+    const res = powerSummaries(project, 'Optimiza esta consulta SQL de Postgres')
+    expect(res.map((p) => [p.name, p.matches])).toEqual([['zzz-datos', true], ['aaa-docs', undefined]])
+    expect(powerSummaries(project, 'cambia el color del botón').every((p) => p.matches === undefined)).toBe(true)          // nada encaja: todos, sin marcar
   })
 })

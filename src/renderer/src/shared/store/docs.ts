@@ -31,6 +31,11 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const doc: Doc = { kind: 'graph', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: 'Commits' }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
+  openNews: (since) => {
+    const path = 'news:changelog'
+    const doc: Doc = { kind: 'news', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'dlg.news') }
+    set((s) => ({ newsSince: since, docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+  },
   openSkillForm: () => {
     const path = 'skill:new'
     const doc: Doc = { kind: 'skillform', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'skf.tabTitle') }
