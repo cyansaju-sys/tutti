@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, NewsDialog, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
 import { Footer } from '@/shared/components/Footer'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
@@ -18,12 +18,12 @@ import { loadIconTheme } from '@/shared/lib/icons'
 import { isDirty, useStore } from '@/shared/store'
 
 /** Arrastra un divisor: parte del ancho que tenía al empezar y suma el desplazamiento. */
-function useDrag(get: () => number, apply: (value: number) => void, min: number, max: number, invert = false) {
+function useDrag(get: () => number, apply: (value: number) => void, min: number, max: number, invert = false, onDone?: (value: number) => void) {
   const base = useRef<number | null>(null)
   return (delta: number, done: boolean): void => {
     if (base.current === null) base.current = get()
     apply(Math.max(min, Math.min(max, base.current + (invert ? -delta : delta))))
-    if (done) base.current = null
+    if (done) { base.current = null; onDone?.(get()) }
   }
 }
 
@@ -43,6 +43,8 @@ export function App() {
       if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
       const savedSide = await window.api.settings.get('sidebar_side')
       if (savedSide === 'left' || savedSide === 'right') useStore.setState({ sidebarSide: savedSide })
+      const savedWidth = await window.api.settings.get('sidebar_width')          // el ancho del sidebar es global: vale para todos los proyectos
+      if (typeof savedWidth === 'number' && Number.isFinite(savedWidth)) useStore.setState({ sidebarWidth: Math.max(220, Math.min(520, savedWidth)) })
       const savedLang = await window.api.settings.get('language')
       if (isLangPref(savedLang) && savedLang !== useStore.getState().langPref) useStore.getState().setLang(savedLang)
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
@@ -52,7 +54,7 @@ export function App() {
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
       const current = await window.api.update.version()
       const seen = (await window.api.settings.get('last_seen_version')) as string | undefined
-      if (seen && seen !== current) useStore.setState({ modal: 'news', newsSince: seen })
+      if (seen && seen !== current) useStore.getState().openNews(seen)
       void window.api.settings.set('last_seen_version', current)
       setReady(true)
     })()
@@ -169,7 +171,7 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
-  const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right')
+  const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right', (v) => { void window.api.settings.set('sidebar_width', v) })
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
 
@@ -203,7 +205,6 @@ export function App() {
       {s.modal === 'addAgent' && <AddAgentDialog />}
       {s.modal === 'shell' && <ShellDialog />}
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
-      {s.modal === 'news' && <NewsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}
       {s.modal === 'worktrees' && s.project && <WorktreeDialog />}
       {s.modal === 'quickOpen' && <QuickOpenDialog />}

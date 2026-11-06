@@ -10,6 +10,7 @@ export function Footer() {
   const git = useStore((s) => s.git)
   const set = useStore((s) => s.set)
   const openGraph = useStore((s) => s.openGraph)
+  const openNews = useStore((s) => s.openNews)
   const [version, setVersion] = useState('')
   useEffect(() => { void window.api.update.version().then(setVersion) }, [])
 
@@ -23,7 +24,7 @@ export function Footer() {
           </>
         )}
       </div>
-      {version && <button onClick={() => set({ modal: 'news', newsSince: null })} title={t('title.news')} className="text-[11px] text-muted opacity-70 transition-opacity hover:text-accent hover:opacity-100">v{version}</button>}
+      {version && <button onClick={() => openNews(null)} title={t('title.news')} className="text-[11px] text-muted opacity-70 transition-opacity hover:text-accent hover:opacity-100">v{version}</button>}
     </div>
   )
 }

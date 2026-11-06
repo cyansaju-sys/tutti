@@ -11,7 +11,7 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     const prev = get().project
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
-    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
+    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'news'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
     // se cierra todo: agentes, terminales y archivos
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
     set({ project: path, git: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, docs: [], activeDoc: null, tab: 'files', focus: 'tree' })

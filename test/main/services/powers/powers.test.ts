@@ -103,4 +103,18 @@ describe('Powers', () => {
     expect((await powerGuide(project, 'roto')).ok).toBe(false)
     expect((await powerGuide(project, 'nada')).ok).toBe(false)
   })
+
+  it('powerSummaries con la tarea pone primero los Powers que encajan y los marca', () => {
+    const base = dir(), project = join(base, 'proyecto')
+    mkdirSync(project)
+    const hacer = (name: string, description: string, keywords: string[]): void => {
+      installPower(project, power(base, name, { 'plugin.json': JSON.stringify({ name, description, keywords }) }), 'project')
+    }
+    hacer('aaa-docs', 'Escribe documentación', ['readme', 'docs'])
+    hacer('zzz-datos', 'Trabaja con bases de datos', ['postgres', 'sql', 'consultas'])
+    expect(powerSummaries(project).map((p) => p.name)).toEqual(['aaa-docs', 'zzz-datos'])          // sin tarea, como siempre
+    const res = powerSummaries(project, 'Optimiza esta consulta SQL de Postgres')
+    expect(res.map((p) => [p.name, p.matches])).toEqual([['zzz-datos', true], ['aaa-docs', undefined]])
+    expect(powerSummaries(project, 'cambia el color del botón').every((p) => p.matches === undefined)).toBe(true)          // nada encaja: todos, sin marcar
+  })
 })

@@ -4,7 +4,7 @@ import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'worktrees' | 'news' | 'quickOpen' | 'goLine'
+export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'worktrees' | 'quickOpen' | 'goLine'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
@@ -41,6 +41,7 @@ export interface DocsSlice {
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
+  openNews: (since: string | null) => void              // las novedades como pestaña del editor: desde `since` (tras actualizar) o solo las de la versión instalada
   openSkillForm: () => void                           // el formulario de una skill nueva
   openSteeringForm: () => void                        // el formulario de un steering nuevo
   openSpecForm: (prefill?: SpecPrefill) => void       // el diálogo de una spec nueva (desde el roadmap, ya rellenado)

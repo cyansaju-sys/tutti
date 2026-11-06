@@ -351,7 +351,6 @@
   "dlg.go": "Ir",
   "dlg.news": "Novedades",
   "dlg.newsOf": "Novedades de v{v}",
-  "dlg.gotIt": "Entendido",
   "pane.leader": "líder",
   "pane.makeLeader": "Hacer líder: reparte las tareas, recibe los avisos y dirige el plan de roles",
   "pane.openedBy": "Lo abrió {title}",

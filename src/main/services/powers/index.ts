@@ -196,9 +196,26 @@ export async function createPower(project: string | null, draft: PowerDraft): Pr
 
 // ---- carga bajo demanda: lo que ven los agentes por el servidor MCP de la app ----
 
-/** Una línea por Power: lo único que los agentes ven siempre. */
-export function powerSummaries(project: string | null): Array<{ name: string; description: string; keywords: string[] }> {
-  return listPowers(project).filter((p) => !p.error).map((p) => ({ name: p.name, description: p.description, keywords: p.keywords }))
+const words = (text: string): string[] => text.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2)
+const STEM = 5          // «consultas» y «consultar» comparten «consu»: coinciden aunque cambie la terminación
+
+/** Cuánto encaja un Power con la tarea: sus palabras clave pesan más que el nombre y la descripción. */
+function relevance(p: { name: string; description: string; keywords: string[] }, task: Set<string>): number {
+  const hits = (text: string): number => new Set(words(text).filter((w) => task.has(w.slice(0, STEM)))).size
+  return hits(p.keywords.join(' ')) * 3 + hits(p.name) * 2 + hits(p.description)
+}
+
+/**
+ * Una línea por Power: lo único que los agentes ven siempre. Con `task`, los que encajan con ella (por sus palabras clave, nombre y descripción)
+ * van primero y marcados con `matches: true`; si ninguno encaja, se devuelven todos como antes para que el agente decida.
+ */
+export function powerSummaries(project: string | null, task = ''): Array<{ name: string; description: string; keywords: string[]; matches?: boolean }> {
+  const list = listPowers(project).filter((p) => !p.error).map((p) => ({ name: p.name, description: p.description, keywords: p.keywords }))
+  const wanted = new Set(words(task).map((w) => w.slice(0, STEM)))
+  if (!wanted.size) return list
+  const scored = list.map((p) => ({ p, score: relevance(p, wanted) }))
+  if (!scored.some((x) => x.score > 0)) return list
+  return scored.sort((a, b) => b.score - a.score).map(({ p, score }) => (score > 0 ? { ...p, matches: true } : p))
 }
 
 /** La guía de un Power y lo que trae, y las herramientas de sus MCP (se arrancan solo ahora, para preguntarles y se cierran). */

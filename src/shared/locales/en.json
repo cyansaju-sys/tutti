@@ -351,7 +351,6 @@
   "dlg.go": "Go",
   "dlg.news": "What is new",
   "dlg.newsOf": "What is new in v{v}",
-  "dlg.gotIt": "Got it",
   "pane.leader": "leader",
   "pane.makeLeader": "Make leader: hands out tasks, gets the notices and runs the roles plan",
   "pane.openedBy": "Opened by {title}",
