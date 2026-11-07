@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdAccountTree, MdClose, MdCode, MdNewReleases, MdTune, MdVisibility } from 'react-icons/md'
+import { MdAccountTree, MdClose, MdNewReleases, MdTune } from 'react-icons/md'
+import { VscCode, VscOpenPreview, VscPreview } from 'react-icons/vsc'
 import type { GitBlame, GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { confirmAsk } from '@/shared/lib/confirm'
@@ -9,6 +10,7 @@ import { iconFor } from '@/shared/lib/icons'
 import { languageName } from '@/features/files/lib/languages'
 import { crumbs, relative, toPosix } from '@/shared/lib/paths'
 import { selectionMessage, selectionRef } from '@/features/files/lib/selectionRef'
+import { findConflicts, resolveConflict, type Choice } from '@/features/files/lib/conflicts'
 import { applyHunks, textHunks, type TextHunk } from '@/features/files/lib/textHunks'
 import { isDirty, useStore, type Doc } from '@/shared/store'
 import { CodeEditor, type ExternalChange } from './CodeEditor'
@@ -53,9 +55,9 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
   const set = useStore((s) => s.set)
   return (
     <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
-      className={clsx('group flex min-w-[120px] max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-t-accent bg-surface text-text' : 'border-t-transparent bg-bar text-muted hover:bg-raised')}>
+      className={clsx('group flex min-w-[120px] max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
       {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
-      <span className="min-w-0 flex-1 truncate text-[12px]">{d.title}</span>
+      <span className="min-w-0 flex-1 truncate text-[11px]">{d.title}</span>
       {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
       <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
     </div>
@@ -76,6 +78,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   const updateDocText = useStore((s) => s.updateDocText)
   const [marks, setMarks] = useState<GitMarks>({})
   const [blame, setBlame] = useState<GitBlame | null>(null)
+  const [sides, setSides] = useState<Record<string, boolean>>({})          // Markdown con el código a un lado y la vista al otro
   const [previews, setPreviews] = useState<Record<string, boolean>>({})        // vista Markdown por archivo (lo que no está aquí usa su valor por defecto)
   // cambios externos por decidir, por archivo: sobreviven al cambiar de pestaña
   const [pendings, setPendings] = useState<Record<string, PendingExternal>>({})
@@ -84,8 +87,15 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   const doc = docs.find((d) => d.path === activePath) ?? null
   // los .md se pueden ver como Markdown; los de la carpeta .tutti se abren así por defecto
   const isMd = !!doc && doc.kind === 'text' && /\.(md|markdown)$/i.test(doc.path)
+  const side = isMd && !!sides[doc!.path]
   const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|openspec)[\\/]/.test(doc!.path))
   const pending = doc ? pendings[doc.path] ?? null : null
+  const conflicts = useMemo(() => (doc?.kind === 'text' && !doc.readOnly ? findConflicts(doc.text) : []), [doc?.kind, doc?.readOnly, doc?.text])
+  const resolve = (index: number, choice: Choice): void => {
+    if (!doc) return
+    updateDocText(doc.path, resolveConflict(doc.text, conflicts[index], choice))
+    void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)
+  }
   const setPending = (path: string, value: PendingExternal | null): void =>
     setPendings((all) => { const next = { ...all }; if (value) next[path] = value; else delete next[path]; return next })
   // al cerrar una pestaña se descartan sus cambios pendientes
@@ -214,9 +224,15 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
           </div>
           <span className="flex shrink-0 items-center gap-2 pl-3 text-[10px] text-muted">
             {isMd && (
+              <button onClick={() => { setSides((p) => ({ ...p, [doc.path]: !side })); setPreviews((p) => ({ ...p, [doc.path]: false })) }} title={t('ed.previewSide')}
+                className={clsx('grid size-5 place-items-center rounded-md transition-colors hover:bg-accent-bg hover:text-accent', side && 'bg-accent-bg text-accent')}>
+                <VscOpenPreview size={14} />
+              </button>
+            )}
+            {isMd && (
               <button onClick={() => setPreviews((p) => ({ ...p, [doc.path]: !preview }))} title={preview ? t('ed.showSource') : t('ed.showPreview')}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] transition-colors hover:bg-accent-bg hover:text-accent">
-                {preview ? <><MdCode size={14} /> {t('ed.source')}</> : <><MdVisibility size={14} /> {t('ed.preview')}</>}
+                className="grid size-5 place-items-center rounded-md transition-colors hover:bg-accent-bg hover:text-accent">
+                {preview ? <VscCode size={14} /> : <VscPreview size={14} />}
               </button>
             )}
             {doc.kind === 'diff' ? t('ed.comparison') : languageName(doc.title)}
@@ -256,10 +272,11 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
           </div>
         </div>
       )}
-      {preview && doc && (() => {
+      <div className={side ? 'flex min-h-0 min-w-0 flex-1' : 'contents'}>
+      {(preview || side) && doc && (() => {
         const { meta, body } = splitFrontMatter(doc.text)
         return (
-          <div onDoubleClick={() => setPreviews((p) => ({ ...p, [doc.path]: false }))} title={t('ed.showSource')} className="selectable min-h-0 flex-1 cursor-text overflow-y-auto px-6 py-5">
+          <div onDoubleClick={side ? undefined : () => setPreviews((p) => ({ ...p, [doc.path]: false }))} title={side ? undefined : t('ed.showSource')} className={clsx('selectable min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-5', side ? 'order-2 border-l border-line' : 'cursor-text')}>
             <div className="mx-auto max-w-3xl">
               {meta.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1.5">
@@ -272,13 +289,16 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
         )
       })()}
       {doc?.kind === 'text' && !preview && (
+        <div className={side ? 'order-1 flex min-h-0 min-w-0 flex-1 flex-col' : 'contents'}>
         <CodeEditor
           path={doc.path} text={doc.text} readOnly={doc.readOnly || !editEnabled || !!visiblePending} marks={marks} blame={blame} changes={externalChanges}
-          onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)}
+          onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)} onResolve={resolve}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
           onSend={(sel) => sendSelection(doc.path, sel)}
         />
+        </div>
       )}
+      </div>
       {doc?.kind === 'graph' && <GitGraph />}
       {doc?.kind === 'hookform' && <HookFormView key={doc.path} path={doc.path} />}
       {doc?.kind === 'steeringform' && <SteeringFormView />}

@@ -108,6 +108,8 @@ export function parseClaudeJsonl(text: string): ClaudeFile {
   let title = '', lastPrompt = '', cwd = ''
   for (const line of text.split('\n')) {
     if (!line) continue
+    // la mayoría de las líneas son mensajes del usuario y resultados de herramientas (enormes): solo se interpreta lo que sirve
+    if (cwd && !line.includes('assistant') && !line.includes('ai-title') && !line.includes('last-prompt')) continue
     let d: Record<string, any>   // eslint-disable-line @typescript-eslint/no-explicit-any
     try { d = JSON.parse(line) } catch { continue }
     cwd ||= d.cwd ?? ''                                  // carpeta inicial de la sesión
@@ -249,6 +251,7 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
   const now = Date.now()
   const out: AgentUsage[] = []
   const all: SessionInfo[] = []
+  const claudeLimitsNow = agents.some((a) => a.command === 'claude') ? claudeLimits(fetchLimits) : null      // la consulta a Anthropic va mientras se leen los archivos
   for (const agent of agents) {
     let found: ReturnType<typeof claudeSessions> | null = null
     if (agent.command === 'claude') found = claudeSessions(now)
@@ -264,7 +267,7 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
       out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: tm('m.us.unreadable'), limits: [], limitsError: '', limitsAge: 0 })
       continue
     }
-    const lim = agent.command === 'claude' ? await claudeLimits(fetchLimits) : { limits: [], error: '', age: 0 }
+    const lim = agent.command === 'claude' && claudeLimitsNow ? await claudeLimitsNow : { limits: [], error: '', age: 0 }
     out.push({ ...found.usage, name: agent.name, limits: lim.limits, limitsError: lim.error, limitsAge: lim.age })
     all.push(...found.sessions)
   }

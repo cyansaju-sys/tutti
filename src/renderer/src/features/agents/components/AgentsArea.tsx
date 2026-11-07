@@ -31,9 +31,9 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   return (
     <>
       {/* preventDefault: si no, al pulsar la pestaña el navegador quita el foco a la terminal justo después de dárselo */}
-      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-t-accent bg-surface' : 'border-t-transparent bg-bar')}>
+      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
-        <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+        <span className={clsx('min-w-0 flex-1 truncate text-[11px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
         {role && <span title={t('pane.roleTip', { name: role.name, id: role.id, status: t(ROLE_STATUS[role.status]) })} className={clsx('min-w-0 max-w-[45%] shrink truncate rounded-full px-2 py-0.5 text-[10px] font-medium', ROLE_CHIP[role.status])}>{t('pane.role', { name: role.name })}</span>}
         {asking && <span title={t('pane.asking')} className="shrink-0 animate-pulse rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-medium text-danger">{t('pane.askingShort')}</span>}
         {pending > 0 && <span title={t('pane.inbox', { n: pending })} className="flex shrink-0 items-center gap-0.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"><MdMailOutline size={11} />{pending}</span>}
@@ -139,9 +139,10 @@ export function AgentsArea() {
       ) : (
         <div className={clsx('grid h-full min-h-0 min-w-0 overflow-hidden', second && 'gap-x-1 bg-bar p-1')} style={{ gridTemplateColumns: second ? '1fr 1fr' : '1fr', gridTemplateRows: 'auto minmax(0, 1fr)' }}>
           {/* vista dividida: cada mitad es una tarjeta con su pestaña; las pestañas de los agentes ocultos quedan en la izquierda */}
-          <div style={{ gridColumn: 1, gridRow: 1 }} className={clsx('flex min-w-0 overflow-x-auto bg-bar', second ? 'rounded-t-lg border border-b-0 border-line' : 'border-b border-line')}>
+          <div style={{ gridColumn: 1, gridRow: 1 }} className={clsx('flex min-w-0 overflow-x-auto bg-bar', second ? 'rounded-t-lg border border-b-0 border-line' : '')}>
             {(second ? panes.filter((p) => p.id === left || !shown(p.id)) : panes).map((p) => <PaneTab key={p.id} pane={p} active={shown(p.id)} />)}
             {docs.map((d) => <DocTab key={d.path} doc={d} active={docView && d.path === activeDoc} />)}
+            <div className="min-w-0 flex-1 border-b border-line" />
           </div>
           {second && (
             <div style={{ gridColumn: 2, gridRow: 1 }} className="flex min-w-0 overflow-x-auto rounded-t-lg border border-b-0 border-line bg-bar">
