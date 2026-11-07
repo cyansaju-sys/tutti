@@ -2,7 +2,7 @@ import { autocompletion, closeBrackets, closeBracketsKeymap, completeAnyWord, co
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { bracketMatching, foldGutter, foldKeymap, HighlightStyle, indentOnInput, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
-import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state'
+import { Compartment, EditorState, StateEffect, StateField, type Range } from '@codemirror/state'
 import { Decoration, drawSelection, EditorView, gutter, GutterMarker, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, ViewPlugin, WidgetType, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef, useState } from 'react'
@@ -276,7 +276,7 @@ class ConflictBar extends WidgetType {
 const buildConflicts = (state: EditorState): ReturnType<typeof Decoration.set> => {
   const found = findConflicts(state.doc.toString())
   if (!found.length) return Decoration.none
-  const ranges = []
+  const ranges: Range<Decoration>[] = []
   found.forEach((c, i) => {
     ranges.push(Decoration.widget({ widget: new ConflictBar(i, c.currentLabel, c.incomingLabel.slice(0, 12)), block: true, side: -1 }).range(state.doc.line(c.start + 1).from))
     for (let n = c.start; n < c.mid; n++) ranges.push(Decoration.line({ class: 'cm-conf-line-current' }).range(state.doc.line(n + 1).from))
