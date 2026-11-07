@@ -6,7 +6,8 @@ import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/s
 import { Decoration, drawSelection, EditorView, gutter, GutterMarker, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, ViewPlugin, WidgetType, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef, useState } from 'react'
-import { useT } from '@/shared/lib/i18n'
+import { t as translate, useT } from '@/shared/lib/i18n'
+import { findConflicts } from '@/features/files/lib/conflicts'
 import { ago } from '@/shared/lib/format'
 import { Menu } from '../../../shared/components/Menu'
 import type { GitBlame, GitMarks } from '@shared/types'
@@ -246,6 +247,60 @@ const changesField = StateField.define<ReturnType<typeof Decoration.set>>({
   provide: (field) => EditorView.decorations.from(field)
 })
 
+/** Conflicto de git: sobre la línea `<<<<<<<` van los botones para quedarse con una versión, y cada mitad lleva su color. */
+class ConflictBar extends WidgetType {
+  constructor(readonly index: number, readonly current: string, readonly incoming: string) { super() }
+  eq(o: ConflictBar): boolean { return o.index === this.index && o.current === this.current && o.incoming === this.incoming }
+  toDOM(view: EditorView): HTMLElement {
+    const bar = document.createElement('div')
+    bar.className = 'cm-conf-bar'
+    const add = (label: string, choice: string, cls: string): void => {
+      const b = document.createElement('button')
+      b.textContent = label
+      b.className = cls
+      b.onmousedown = (e) => e.preventDefault()
+      b.onclick = () => view.dom.dispatchEvent(new CustomEvent('tutti-conflict', { bubbles: true, detail: { index: this.index, choice } }))
+      bar.append(b)
+    }
+    add(translate('ed.keepCurrent'), 'current', 'cm-conf-current')
+    add(translate('ed.keepIncoming'), 'incoming', 'cm-conf-incoming')
+    add(translate('ed.keepBoth'), 'both', 'cm-conf-both')
+    const hint = document.createElement('span')
+    hint.className = 'cm-conf-hint'
+    hint.textContent = [this.current && `${translate('ed.conflictCurrent')}: ${this.current}`, this.incoming && `${translate('ed.conflictIncoming')}: ${this.incoming}`].filter(Boolean).join('  ·  ')
+    bar.append(hint)
+    return bar
+  }
+  ignoreEvent(): boolean { return false }
+}
+const buildConflicts = (state: EditorState): ReturnType<typeof Decoration.set> => {
+  const found = findConflicts(state.doc.toString())
+  if (!found.length) return Decoration.none
+  const ranges = []
+  found.forEach((c, i) => {
+    ranges.push(Decoration.widget({ widget: new ConflictBar(i, c.currentLabel, c.incomingLabel.slice(0, 12)), block: true, side: -1 }).range(state.doc.line(c.start + 1).from))
+    for (let n = c.start; n < c.mid; n++) ranges.push(Decoration.line({ class: 'cm-conf-line-current' }).range(state.doc.line(n + 1).from))
+    for (let n = c.mid; n <= c.end; n++) ranges.push(Decoration.line({ class: 'cm-conf-line-incoming' }).range(state.doc.line(n + 1).from))
+  })
+  return Decoration.set(ranges, true)
+}
+const conflictField = StateField.define<ReturnType<typeof Decoration.set>>({
+  create: buildConflicts,
+  update: (value, tr) => (tr.docChanged ? buildConflicts(tr.state) : value),
+  provide: (field) => EditorView.decorations.from(field)
+})
+const conflictTheme = EditorView.baseTheme({
+  '.cm-conf-bar': { display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 8px', fontFamily: 'var(--font-sans, sans-serif)', fontSize: '11px' },
+  '.cm-conf-bar button': { cursor: 'pointer', border: 'none', borderRadius: '4px', padding: '1px 8px', fontSize: '11px', color: 'inherit', background: 'color-mix(in srgb, currentColor 12%, transparent)' },
+  '.cm-conf-bar button:hover': { background: 'color-mix(in srgb, currentColor 22%, transparent)' },
+  '.cm-conf-bar .cm-conf-current': { color: 'var(--color-ok)' },
+  '.cm-conf-bar .cm-conf-incoming': { color: 'var(--color-accent)' },
+  '.cm-conf-bar .cm-conf-both': { color: 'var(--color-muted)' },
+  '.cm-conf-hint': { marginLeft: '4px', color: 'var(--color-muted)', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  '.cm-conf-line-current': { background: 'color-mix(in srgb, var(--color-ok) 13%, transparent)' },
+  '.cm-conf-line-incoming': { background: 'color-mix(in srgb, var(--color-accent) 13%, transparent)' }
+})
+
 interface Props {
   path: string
   text: string
@@ -255,6 +310,7 @@ interface Props {
   changes?: ExternalChange[]
   onChange: (text: string) => void
   onSave: () => void
+  onResolve?: (index: number, choice: 'current' | 'incoming' | 'both') => void
   focusToken: number
   onSend?: (sel: { startLine: number; endLine: number; text: string }) => void      // «enviar al agente»: la selección, o la línea del cursor si no hay
   reveal?: { path: string; line: number; col: number; length: number; token: number } | null
@@ -263,7 +319,7 @@ interface Props {
 const NO_CHANGES: ExternalChange[] = []
 
 /** Editor de código: guarda el estado de cada archivo (deshacer, cursor) al cambiar de pestaña. */
-export function CodeEditor({ path, text, readOnly, marks, blame = null, changes = NO_CHANGES, onChange, onSave, focusToken, reveal, onSend }: Props) {
+export function CodeEditor({ path, text, readOnly, marks, blame = null, changes = NO_CHANGES, onChange, onSave, onResolve, focusToken, reveal, onSend }: Props) {
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
   const host = useRef<HTMLDivElement>(null)
@@ -272,8 +328,8 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
   const states = useRef(new Map<string, EditorState>())
   const current = useRef(path)
   const ro = useRef(new Compartment())
-  const handlers = useRef({ onChange, onSave, onSend })
-  handlers.current = { onChange, onSave, onSend }
+  const handlers = useRef({ onChange, onSave, onSend, onResolve })
+  handlers.current = { onChange, onSave, onSend, onResolve }
 
   /** La selección con sus líneas (1..n); sin selección, la línea del cursor. */
   const selection = (v: EditorView): { startLine: number; endLine: number; text: string; empty: boolean } => {
@@ -300,7 +356,7 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
   const makeState = (p: string, doc: string, locked: boolean): EditorState => EditorState.create({
     doc,
     extensions: [
-      lineNumbers(), foldGutter({ markerDOM: foldMarker }), gitGutter, blameField, changesField, indentGuides, highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(), indentOnInput(), EditorView.lineWrapping,
+      lineNumbers(), foldGutter({ markerDOM: foldMarker }), gitGutter, blameField, changesField, conflictField, conflictTheme, indentGuides, highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(), indentOnInput(), EditorView.lineWrapping,
       bracketMatching(), closeBrackets(), highlightSelectionMatches(), syntaxHighlighting(highlight), theme,
       autocompletion({ override: undefined, activateOnTyping: true, icons: true }),
       EditorState.languageData.of(() => [{ autocomplete: /\.jsonc?$/i.test(p) ? completeJson : completeAnyWord }]),
@@ -331,6 +387,13 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
       })
     ]
   })
+
+  useEffect(() => {
+    const el = host.current
+    const on = (e: Event): void => { const d = (e as CustomEvent<{ index: number; choice: 'current' | 'incoming' | 'both' }>).detail; handlers.current.onResolve?.(d.index, d.choice) }
+    el?.addEventListener('tutti-conflict', on)
+    return () => el?.removeEventListener('tutti-conflict', on)
+  }, [])
 
   useEffect(() => {
     view.current = new EditorView({ parent: host.current!, state: makeState(path, text, readOnly) })

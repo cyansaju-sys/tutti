@@ -293,6 +293,7 @@ export interface Api {
     removeWorktree(root: string, path: string, force: boolean): Promise<string>                          // devuelve el error, o '' si salió bien
     blame(file: string): Promise<GitBlame | null>
     op(root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean): Promise<string>
+    abortOp(root: string): Promise<string>                                                                // cancela el merge, cherry-pick o revert con conflictos; devuelve el error, o '' si salió bien
     log(root: string, limit: number): Promise<GitCommit[]>
     pull(root: string): Promise<string>
     fetch(root: string): Promise<string>

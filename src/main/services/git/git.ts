@@ -154,11 +154,22 @@ export async function commitOp(root: string, op: GitOp, hash: string, arg?: stri
   const res = await run(root, args, undefined, 60000)
   if (res.ok) return ''
   if (['cherry-pick', 'revert', 'merge', 'rebase'].includes(op) && /conflict/i.test(res.out)) {
-    // no se deja el repositorio a medias (un merge --squash no deja estado de merge: se deshace con reset --merge)
-    await run(root, op === 'merge' && arg?.includes('squash') ? ['reset', '--merge'] : [op, '--abort'])
+    if (op !== 'rebase') {
+      // se deja el conflicto en los archivos para resolverlo (o cancelar la operación desde Git)
+      const files = await run(root, ['diff', '--name-only', '--diff-filter=U'])
+      return tm('m.git.conflictsOpen', { files: files.ok ? files.out.trim().split('\n').join(', ') : '' })
+    }
+    await run(root, [op, '--abort'])
     return tm('m.git.conflicts', { detail: flat(res) })
   }
   return flat(res)
+}
+
+/** Cancela la operación con conflictos que haya a medias (merge, cherry-pick o revert). Devuelve el error, o '' si salió bien. */
+export async function abortOp(root: string): Promise<string> {
+  const has = async (ref: string): Promise<boolean> => (await run(root, ['rev-parse', '-q', '--verify', ref])).ok
+  const args = await has('MERGE_HEAD') ? ['merge', '--abort'] : await has('CHERRY_PICK_HEAD') ? ['cherry-pick', '--abort'] : await has('REVERT_HEAD') ? ['revert', '--abort'] : ['reset', '--merge']      // un merge --squash no deja MERGE_HEAD
+  return flat(await run(root, args))
 }
 
 /** Historial de todas las ramas, de lo más nuevo a lo más viejo, con sus padres (para dibujar el grafo). */

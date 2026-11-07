@@ -111,7 +111,7 @@ export function GitView() {
 
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
     <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
-      <button className={`flex min-w-0 flex-1 items-center gap-2 text-left ${isStaged ? 'opacity-65' : ''}`} onClick={() => void openDiff(`${project}/${f.path}`, isStaged)} title={t('git.viewChanges')}>
+      <button className={`flex min-w-0 flex-1 items-center gap-2 text-left ${isStaged ? 'opacity-65' : ''}`} onClick={() => void (f.code === 'C' ? openDoc(`${project}/${f.path}`) : openDiff(`${project}/${f.path}`, isStaged))} title={t('git.viewChanges')}>
         <img src={iconFor(basename(f.path))} alt="" className="size-4 shrink-0" draggable={false} />
         <span className="truncate text-[12px]" style={{ color: GIT_COLOR[f.code] }}>{basename(f.path)}</span>
         <span className="truncate text-[10px] text-muted">{dirname(f.path) === f.path ? '' : dirname(f.path)}</span>
@@ -186,6 +186,12 @@ export function GitView() {
           {git.hasUpstream && (git.ahead || git.behind) ? `${git.behind}↓ ${git.ahead}↑ · ` : ''}{git.files.length} cambios
         </span>
       </button>
+      {git.files.some((f) => f.code === 'C') && (
+        <div className="flex flex-col gap-1.5 rounded-md border border-danger/30 bg-danger/[0.06] px-2 py-1.5 text-[11px]">
+          <span className="leading-snug text-muted">{t('git.conflictBanner')}</span>
+          <button disabled={busy} onClick={() => void run(t('git.abortOp'), () => window.api.git.abortOp(project))} className="self-start rounded bg-danger/15 px-2 py-0.5 text-danger hover:bg-danger/25 disabled:opacity-50">{t('git.abortOp')}</button>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {staged.length > 0 && <Group id="staged" title={t('git.staged', { n: staged.length })}>{staged.map((f) => <File key={`s${f.path}`} f={f} isStaged />)}</Group>}
         <Group id="changes" title={t('git.changes', { n: changes.length })} actions={changes.length > 0 ? [

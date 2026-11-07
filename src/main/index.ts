@@ -192,6 +192,7 @@ function registerIpc(): void {
   ipcMain.handle('git:checkout', (_e, root: string, name: string, remote: boolean) => git.checkout(root, name, remote))
   ipcMain.handle('git:createBranch', (_e, root: string, name: string, base?: string, switchTo?: boolean) => git.createBranch(root, name, base, switchTo))
   ipcMain.handle('git:show', (_e, root: string, rev: string, path: string) => git.show(root, rev, path))
+  ipcMain.handle('git:abortOp', (_e, root: string) => git.abortOp(root))
   ipcMain.handle('git:op', (_e, root: string, op: GitOp, hash: string, arg?: string, isMerge?: boolean) => git.commitOp(root, op, hash, arg, isMerge))
   ipcMain.handle('git:commitFiles', (_e, root: string, hash: string, parent: string | null) => git.commitFiles(root, hash, parent))
   ipcMain.handle('git:log', (_e, root: string, limit: number) => git.log(root, limit))
