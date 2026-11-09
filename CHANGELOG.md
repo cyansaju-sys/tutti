@@ -2,6 +2,25 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.9
+
+### Cambios
+
+- **Abrir o cambiar de proyecto recarga la ventana:** como en VSCode, la ventana se reinicia antes de cambiar y el proyecto nuevo arranca limpio, sin pantallas intermedias.
+- **Cada proyecto recuerda sus terminales:** las terminales que dejaste abiertas se vuelven a abrir (nuevas, hasta 5) al regresar a él.
+
+## 1.4.8
+
+### Cambios
+
+- **Resolver conflictos de fusión desde el editor:** al abrir un archivo con conflictos, cada uno se marca y puedes quedarte con la versión actual, la entrante o ambas; el archivo se guarda tras cada elección. En Git, los archivos con conflicto (C) se abren directamente y un aviso permite cancelar la operación (fusión, cherry-pick o revert).
+- **Los conflictos ya no se deshacen solos:** al fusionar o hacer cherry-pick con conflictos, se dejan en los archivos para que los resuelvas, en lugar de cancelar la operación.
+- **Los sub-agentes se abren al lado:** al repartir una tarea, el agente que la delega queda a un lado y el sub-agente aparece al otro, dividiendo la vista.
+- **Pestañas de agentes más limpias:** el título de la pestaña es solo el nombre del agente, con letra algo menor y una línea inferior continua.
+- **Vista previa al lado:** nueva opción para ver la vista previa de un documento junto al editor.
+- **Consumo más rápido:** la pestaña de consumo lee los historiales ignorando lo que no necesita y consulta los límites de Claude mientras tanto.
+- **Capturas de la documentación actualizadas.**
+
 ## 1.4.7
 
 ### Cambios

@@ -36,8 +36,10 @@ export function App() {
     void (async () => {
       await loadIconTheme()
       const empty = await window.api.window.isEmpty()
-      const fromArgs = await window.api.window.startProject()          // `tutti .` o `tutti archivo`: se abre eso en vez del último proyecto
-      const project = empty || fromArgs ? undefined : (await window.api.settings.get('project')) as string | undefined
+      let reloaded: { open: string | null } | null = null        // la ventana se recargó al abrir o cambiar de proyecto: se retoma ese proyecto
+      try { const raw = sessionStorage.getItem('tutti_reload'); sessionStorage.removeItem('tutti_reload'); if (raw) reloaded = JSON.parse(raw) } catch { /* sin sessionStorage */ }
+      const fromArgs = reloaded ? null : await window.api.window.startProject()          // `tutti .` o `tutti archivo`: se abre eso en vez del último proyecto
+      const project = (empty && !reloaded) || fromArgs ? undefined : (await window.api.settings.get('project')) as string | undefined
       const edit = await window.api.settings.get('edit_enabled')
       const savedTheme = await window.api.settings.get('theme')
       if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
@@ -50,7 +52,8 @@ export function App() {
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
-      if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined)            // lo guarda como último proyecto y en los recientes
+      if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined, false)            // lo guarda como último proyecto y en los recientes
+      if (reloaded && project) await useStore.getState().restoreProject(project, reloaded.open ?? undefined)
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
       const current = await window.api.update.version()
       const seen = (await window.api.settings.get('last_seen_version')) as string | undefined

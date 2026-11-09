@@ -128,9 +128,9 @@ La cabecera del árbol tiene los botones **Nuevo archivo**, **Nueva carpeta**, *
 proyecto**; también puedes pulsar en un espacio vacío del árbol para crear algo en la raíz. El nombre se escribe en el propio
 árbol, como en VS Code (`Enter` crea, `Esc` cancela).
 
-**Cada proyecto recuerda lo suyo.** Al cambiar de proyecto se cierran sus agentes, terminales y archivos (si hay cambios sin
-guardar, antes pregunta), y al volver a uno ya conocido se recupera la pestaña de la barra lateral y los archivos que tenías
-abiertos. Los **tooltips** son propios y muestran el atajo de teclado como tecla.
+**Cada proyecto recuerda lo suyo.** Al abrir o cambiar de proyecto la ventana se recarga y arranca limpia, como en VSCode: se cierran sus agentes,
+terminales y archivos (si hay cambios sin guardar, antes pregunta), y al volver a uno ya conocido se recupera la pestaña de la
+barra lateral, los archivos que tenías abiertos y las terminales que dejaste abiertas. Los **tooltips** son propios y muestran el atajo de teclado como tecla.
 
 Con **clic derecho** sobre un archivo o carpeta:
 

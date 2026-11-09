@@ -2,6 +2,25 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.9
+
+### Changes
+
+- **Opening or switching project reloads the window:** as in VSCode, the window restarts before switching and the new project starts clean, with no intermediate screens.
+- **Each project remembers its terminals:** the terminals you left open are opened again (new ones, up to 5) when you return to it.
+
+## 1.4.8
+
+### Changes
+
+- **Resolve merge conflicts from the editor:** opening a file with conflicts marks each one and lets you keep the current version, the incoming one or both; the file is saved after each choice. In Git, files with conflicts (C) open directly and a notice lets you cancel the operation (merge, cherry-pick or revert).
+- **Conflicts are no longer undone on their own:** when merging or cherry-picking with conflicts, they are left in the files for you to resolve instead of aborting the operation.
+- **Sub-agents open side by side:** when a task is delegated, the delegating agent stays on one side and the sub-agent appears on the other, splitting the view.
+- **Cleaner agent tabs:** the tab title is just the agent name, in slightly smaller text with a continuous bottom line.
+- **Side preview:** a new option shows a document's preview next to the editor.
+- **Faster usage:** the usage tab reads histories skipping what it does not need and queries Claude's limits in the meantime.
+- **Documentation screenshots updated.**
+
 ## 1.4.7
 
 ### Changes
