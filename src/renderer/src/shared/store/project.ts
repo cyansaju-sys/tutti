@@ -14,7 +14,8 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'news'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
     // se cierra todo: agentes, terminales y archivos
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
-    set({ project: path, git: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, docs: [], activeDoc: null, tab: 'files', focus: 'tree' })
+    // al recargar, la pantalla no cambia antes: el estado nuevo solo se pone aquí si no hay recarga (arranque con `tutti .`)
+    if (!reload) set({ project: path, git: null, panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, docs: [], activeDoc: null, tab: 'files', focus: 'tree' })
     // como VSCode: al abrir o cambiar de proyecto la ventana se recarga y arranca limpia (nada del anterior queda en memoria)
     void (async () => {
       const configs = { ...(((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}) }
