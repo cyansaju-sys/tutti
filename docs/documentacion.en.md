@@ -147,7 +147,7 @@ Highlighting for JavaScript/TypeScript, Python, SQL, JSON, CSS, HTML/XML, Markdo
 
 ### Each project remembers its own
 
-Switching project closes its agents, terminals and files (if there are unsaved changes, it asks first). Returning to a known project restores the sidebar tab and the files you had open.
+Opening or switching project reloads the window and starts clean, as in VSCode: its agents, terminals and files are closed (if there are unsaved changes, it asks first). Returning to a known project restores the sidebar tab, the files you had open and the terminals you left open (new ones, in the project folder, up to 5; they do not keep their contents). Agents are not reopened.
 
 <a id="buscar"></a>
 
@@ -602,7 +602,7 @@ Tutti stores its data in the system configuration folder: `~/.config/tutti` on L
 | `roles_assignment` | `auto` | Let Tutti choose each role's agent and model according to difficulty (by default you choose them) |
 | `edit_enabled` | boolean | File editing permission |
 | `project`, `recent_projects` | paths | The last project and the history |
-| `project_configs` | object | Each project's tab and open files |
+| `project_configs` | object | Each project's tab, open files and number of terminals |
 | `custom_agents` | list | The agents you added by hand |
 | `collapsed`, `session_names`, `last_seen_version`, `limits_cache` | — | Folded sections, session names, last news seen and the last limits data |
 

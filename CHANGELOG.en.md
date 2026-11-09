@@ -12,6 +12,8 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **Cleaner agent tabs:** the tab title is just the agent name, in slightly smaller text with a continuous bottom line.
 - **Side preview:** a new option shows a document's preview next to the editor.
 - **Faster usage:** the usage tab reads histories skipping what it does not need and queries Claude's limits in the meantime.
+- **Opening or switching project reloads the window:** as in VSCode, the window restarts before switching and the new project starts clean, with no intermediate screens.
+- **Each project remembers its terminals:** the terminals you left open are opened again (new ones, up to 5) when you return to it.
 - **Documentation screenshots updated.**
 
 ## 1.4.7

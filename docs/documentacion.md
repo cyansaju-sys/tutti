@@ -147,7 +147,7 @@ Resaltado para JavaScript/TypeScript, Python, SQL, JSON, CSS, HTML/XML, Markdown
 
 ### Cada proyecto recuerda lo suyo
 
-Al cambiar de proyecto se cierran sus agentes, terminales y archivos (si hay cambios sin guardar, antes pregunta). Al volver a uno ya conocido se recupera la pestaña de la barra lateral y los archivos que tenías abiertos.
+Al abrir o cambiar de proyecto la ventana se recarga y arranca limpia, como en VSCode: se cierran sus agentes, terminales y archivos (si hay cambios sin guardar, antes pregunta). Al volver a uno ya conocido se recupera la pestaña de la barra lateral, los archivos que tenías abiertos y las terminales que dejaste abiertas (nuevas, en la carpeta del proyecto, hasta 5; no conservan su contenido). Los agentes no se reabren.
 
 <a id="buscar"></a>
 
@@ -602,7 +602,7 @@ Tutti guarda sus datos en la carpeta de configuración del sistema: `~/.config/t
 | `roles_assignment` | `auto` | Que Tutti elija el agente y el modelo de cada rol según su dificultad (por defecto los eliges tú) |
 | `edit_enabled` | booleano | Permiso de edición de archivos |
 | `project`, `recent_projects` | rutas | El último proyecto y el historial |
-| `project_configs` | objeto | La pestaña y los archivos abiertos de cada proyecto |
+| `project_configs` | objeto | La pestaña, los archivos abiertos y el número de terminales de cada proyecto |
 | `custom_agents` | lista | Los agentes que añadiste a mano |
 | `collapsed`, `session_names`, `last_seen_version`, `limits_cache` | — | Secciones plegadas, nombres de sesiones, últimas novedades vistas y último dato de límites |
 
