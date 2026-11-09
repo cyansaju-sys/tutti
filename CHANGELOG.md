@@ -2,6 +2,13 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.9
+
+### Cambios
+
+- **Abrir o cambiar de proyecto recarga la ventana:** como en VSCode, la ventana se reinicia antes de cambiar y el proyecto nuevo arranca limpio, sin pantallas intermedias.
+- **Cada proyecto recuerda sus terminales:** las terminales que dejaste abiertas se vuelven a abrir (nuevas, hasta 5) al regresar a él.
+
 ## 1.4.8
 
 ### Cambios
@@ -12,8 +19,6 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 - **Pestañas de agentes más limpias:** el título de la pestaña es solo el nombre del agente, con letra algo menor y una línea inferior continua.
 - **Vista previa al lado:** nueva opción para ver la vista previa de un documento junto al editor.
 - **Consumo más rápido:** la pestaña de consumo lee los historiales ignorando lo que no necesita y consulta los límites de Claude mientras tanto.
-- **Abrir o cambiar de proyecto recarga la ventana:** como en VSCode, la ventana se reinicia antes de cambiar y el proyecto nuevo arranca limpio, sin pantallas intermedias.
-- **Cada proyecto recuerda sus terminales:** las terminales que dejaste abiertas se vuelven a abrir (nuevas, hasta 5) al regresar a él.
 - **Capturas de la documentación actualizadas.**
 
 ## 1.4.7
