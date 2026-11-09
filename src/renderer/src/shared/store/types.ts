@@ -27,7 +27,8 @@ export interface ProjectSlice {
   project: string | null
   recentProjects: string[]
   git: GitStatus | null
-  setProject: (path: string | null, open?: string) => void       // `open`: archivo que se abre en el editor al terminar
+  setProject: (path: string | null, open?: string, reload?: boolean) => void       // `open`: archivo que se abre en el editor al terminar
+  restoreProject: (path: string | null, open?: string) => Promise<void>
   removeRecentProject: (path: string) => void
 }
 
