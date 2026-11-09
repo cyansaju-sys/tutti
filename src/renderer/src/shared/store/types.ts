@@ -13,8 +13,8 @@ export interface Pane {
   id: string; kind: 'agent' | 'shell'; title: string; command: string; args: string[]; cwd: string
   name?: string; prompt?: string; parentId?: string      // agente que lo abrió y su tarea inicial (reparto de tareas)
 }
-/** Lo que se recuerda de cada proyecto al dejarlo: pestaña de la barra lateral y archivos abiertos. */
-export interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null }
+/** Lo que se recuerda de cada proyecto al dejarlo: pestaña de la barra lateral, archivos abiertos y terminales. */
+export interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null; shells?: number }
 /** Lo que trae una spec nueva que se crea desde un ítem del roadmap. */
 export interface SpecPrefill { name: string; description: string }
 export interface Toast { id: number; kind: ToastKind; message: string }

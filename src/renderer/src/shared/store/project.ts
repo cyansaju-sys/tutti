@@ -11,7 +11,7 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     const prev = get().project
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
-    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'news'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc }
+    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'news'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc, shells: state.shells.length }
     // se cierra todo: agentes, terminales y archivos
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
     // al recargar, la pantalla no cambia antes: el estado nuevo solo se pone aquí si no hay recarga (arranque con `tutti .`)
@@ -45,6 +45,7 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
         set({ tab: ['mcp', 'context'].includes(known.tab as string) ? 'tutti' : known.tab })       // las pestañas MCP y Contexto ya no existen: viven en Tutti
         for (const f of known.docs) await get().openDoc(f)
         if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
+        for (let i = 0; i < Math.min(known.shells ?? 0, 5); i++) await get().addShell()          // las terminales que se dejaron abiertas
         set({ focus: 'tree' })
       }
       if (open && get().project === path) { await get().openDoc(open); set({ activeDoc: open, focus: 'editor' }) }       // `tutti archivo`: queda delante
