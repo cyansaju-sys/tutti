@@ -7,6 +7,8 @@ export interface MenuItem { label: string; icon?: ReactNode; onClick?: () => voi
   detail?: string          // texto tenue a la derecha (p. ej. el valor actual de un submenú)
   checked?: boolean        // marca de selección a la derecha
   separator?: boolean      // línea fina encima del elemento
+  heading?: string         // título de apartado encima del elemento (abre un grupo)
+  onPreview?: (on: boolean) => void          // se llama con true al resaltar el elemento (ratón o flechas) y con false al dejarlo o cerrar el menú
 }
 
 const WIDTH = 190
@@ -71,6 +73,15 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
     } else if (sub !== null && !closeTimer.current) closeTimer.current = setTimeout(() => { closeTimer.current = undefined; setSub(null) }, 180)
   }
   useEffect(() => () => clearTimeout(closeTimer.current), [])
+  // vista previa: el elemento resaltado enseña su cambio mientras lo está, y lo retira al dejarlo
+  const lists = useRef({ shown, subItems })
+  lists.current = { shown, subItems }
+  useEffect(() => {
+    const item = sub !== null ? lists.current.subItems[subIndex] : lists.current.shown[index]
+    if (!item?.onPreview) return
+    item.onPreview(true)
+    return () => item.onPreview?.(false)
+  }, [sub, subIndex, index])
   const row = (item: MenuItem, active: boolean): string =>
     clsx('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12px] transition-colors',
       item.danger ? 'text-danger' : 'text-text', active && (item.danger ? 'bg-danger/10' : 'bg-accent/[0.16]'))
@@ -92,8 +103,10 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
         className={clsx('absolute animate-pop-in rounded-xl border border-ov/[0.08] bg-pop p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]', scroll && 'sect-scroll max-h-[60vh] overflow-y-auto')}
       >
         {shown.map((item, i) => (
-          <div key={item.label} className="relative">
-            {item.separator && i > 0 && <div className="mx-2 my-1 border-t border-ov/[0.08]" />}
+          <div key={item.label}>
+            {(item.separator || item.heading) && i > 0 && <div className="mx-2 my-1 border-t border-ov/[0.08]" />}
+            {item.heading && <div className="px-2.5 pb-1 pt-1.5 text-[11px] font-medium text-muted/75">{item.heading}</div>}
+            <div className="relative">
             <button
               role="menuitem" onMouseMove={() => hover(i)} aria-haspopup={item.submenu ? 'menu' : undefined}
               onClick={() => {
@@ -121,6 +134,7 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
                 ))}
               </div>
             )}
+            </div>
           </div>
         ))}
       </div>

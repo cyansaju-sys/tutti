@@ -200,6 +200,7 @@ export interface AgentUsage {
   name: string; command: string
   window: { start: number; end: number; tokens: number } | null      // ventana de 5 h en curso
   today: number; week: number; total: number
+  unit?: 'credits'          // en qué se miden hoy/semana/total cuando no son tokens (Kiro cobra en créditos)
   note: string; limits: LimitInfo[]; limitsError: string; limitsAge: number
 }
 export interface UsageData { agents: AgentUsage[]; history: SessionInfo[] }
@@ -220,6 +221,7 @@ export type Settings = Record<string, unknown>
 
 export interface Api {
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
+  theme: { accent(): Promise<string | null>; onAccent(cb: (color: string | null) => void): () => void }          // el color de acento del sistema (#rrggbb)
   dialog: { chooseFolder(start?: string): Promise<string | null> }
   ai: { cancel(kind: 'commit' | 'context'): Promise<void> }
   powers: {

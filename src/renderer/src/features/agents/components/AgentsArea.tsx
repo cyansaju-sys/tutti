@@ -1,7 +1,9 @@
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
 import { Menu } from '../../../shared/components/Menu'
-import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdFolderOpen, MdSearch, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdSearch, MdTerminal } from 'react-icons/md'
+import { AppIcon } from '@/shared/components/AppIcon'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { AgentIcon } from './AgentIcon'
 import { useStore, type Pane } from '@/shared/store'
 import { Kbd } from '../../../shared/components/ui'
@@ -87,7 +89,7 @@ export function AgentsArea() {
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-center justify-center gap-x-12 gap-y-8">
             <div className="flex w-[300px] max-w-full flex-col items-center">
-              <img src={`${import.meta.env.BASE_URL}icons/logo-contorno${mode === 'light' ? '-light' : ''}.svg`} alt="Tutti" width={180} height={180} draggable={false} />
+              <AppIcon src={`${import.meta.env.BASE_URL}icons/logo-contorno${mode === 'light' ? '-light' : ''}.svg`} color={mode === 'light' ? 'var(--color-accent)' : 'var(--color-accent-dim)'} alt="Tutti" size={180} />
               <p className="mt-3 text-[12px] text-muted">{t('pane.pickAgent')}</p>
               <button onClick={() => set({ modal: 'agents' })} className="mt-3 flex items-center gap-2 rounded-lg border border-line px-5 py-2.5 text-[13px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
                 <MdSearch size={16} /> {t('pane.chooseAgent')}
@@ -108,7 +110,7 @@ export function AgentsArea() {
                   {(allProjects ? recent : recent.slice(0, SHOWN_PROJECTS)).map((path) => (
                     <div key={path} title={path} onClick={() => setProject(path)}
                       className="group flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors hover:bg-accent-bg">
-                      <MdFolderOpen size={16} className="shrink-0 text-accent" />
+                      <FileIcon name={path.split(/[\\/]/).filter(Boolean).pop() ?? path} project />
                       <div className="flex min-w-0 flex-1 items-baseline gap-2 text-[12px]">
                         <span className="shrink-0 text-text">{path.split(/[\\/]/).filter(Boolean).pop() ?? path}</span>
                         <span className="min-w-0 truncate text-[10px] text-muted">{path}</span>

@@ -5,6 +5,7 @@ import { MdAdd, MdLanguage, MdSwapHoriz, MdOutlineSettings, MdPalette, MdTermina
 import { Menu } from '@/shared/components/Menu'
 import { useT } from '@/shared/lib/i18n'
 import { sidebarIcon } from '@/shared/lib/icons'
+import { AppIcon } from './AppIcon'
 import { useStore, type SidebarTab } from '@/shared/store'
 import { AgentsView } from '@/features/agents/views/AgentsView'
 import { FilesView } from '@/features/files/views/FilesView'
@@ -38,8 +39,8 @@ export function Sidebar() {
   const width = Math.max(180, Math.min(saved, Math.round(viewport * 0.4)))          // el ancho elegido se respeta mientras la ventana lo permita; en una estrecha, nunca pasa del 40 % (mínimo 180 px)
   const open = useStore((s) => s.sidebarOpen)
   const changes = useStore((s) => s.git?.files.length ?? 0)
-  const theme = useStore((s) => s.theme)
-  const setTheme = useStore((s) => s.setTheme)
+  const sysAccent = useStore((s) => s.sysAccent)
+  const setSysAccent = useStore((s) => s.setSysAccent)
   const langPref = useStore((s) => s.langPref)
   const setLang = useStore((s) => s.setLang)
   const side = useStore((s) => s.sidebarSide)
@@ -80,7 +81,7 @@ export function Sidebar() {
             onDoubleClick={() => set({ tab: tab_.id, sidebarOpen: !open })}
             className={clsx('relative grid size-9 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg', dragged === tab_.id && 'opacity-40', over === tab_.id && dragged !== tab_.id && 'ring-1 ring-accent')}
           >
-            <img src={sidebarIcon(tab_.icon)} alt="" className="size-6" draggable={false} />
+            <AppIcon src={sidebarIcon(tab_.icon)} className="size-6" />
             {tab_.id === 'git' && changes > 0 && (
               <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[9px] font-bold text-bg">
                 {changes > 99 ? '99+' : changes}
@@ -98,10 +99,10 @@ export function Sidebar() {
       </div>
       {menu && (
         <Menu width={230} anchor={menu} onClose={() => setMenu(null)} items={[
-          { label: t('theme.title'), icon: <MdPalette size={15} />, detail: t(`theme.s.${theme}`), submenu: [
-            { label: t('theme.dark'), checked: theme === 'dark', onClick: () => setTheme('dark') },
-            { label: t('theme.light'), checked: theme === 'light', onClick: () => setTheme('light') },
-            { label: t('theme.system'), checked: theme === 'system', onClick: () => setTheme('system') }
+          { label: t('theme.group'), icon: <MdPalette size={15} />, submenu: [
+            { label: t('theme.color'), onClick: () => set({ modal: 'theme' }) },
+            { label: t('icons.title'), onClick: () => set({ modal: 'iconTheme' }) },
+            { label: t('theme.accent'), checked: sysAccent, onClick: () => void setSysAccent(!sysAccent) }
           ] },
           { label: t('lang.title'), icon: <MdLanguage size={15} />, detail: t(`lang.s.${langPref}`), submenu: [
             { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },

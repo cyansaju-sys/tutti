@@ -2,6 +2,15 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.10
+
+### Changes
+
+- **Themes in one place:** Settings → Themes gathers the color theme, the icon variant and the system color, with a preview as you move through the options.
+- **Project name in the title bar,** centered in the window.
+- **Commit graph side by side:** with enough room, the history sits on the left and the commit detail on the right.
+- **Kiro usage:** the usage panel shows the credits Kiro spent today, in 7 days and in total. Kiro is now recognized as an agent (`kiro-cli`) and has its logo.
+
 ## 1.4.9
 
 ### Changes

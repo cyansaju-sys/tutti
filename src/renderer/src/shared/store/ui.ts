@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import { cacheLangPref, cachedLangPref, resolveLangPref } from '@/shared/lib/langPref'
-import { cacheTheme, cachedTheme, paintTheme, resolveTheme } from '@/shared/lib/theme'
+import { cacheAccent, cacheTheme, cachedAccent, cachedTheme, paintAccent, paintTheme, resolveTheme } from '@/shared/lib/theme'
+import { tr } from './helpers'
 import type { ToastKind } from './types'
 import type { State, UiSlice } from './types'
 let toastId = 1
@@ -15,7 +16,7 @@ const guessKind = (m: string): ToastKind => {
 
 
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
-  newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
+  newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {
@@ -32,6 +33,15 @@ export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) =>
     set({ theme: pref, themeMode: mode })
     void window.api.settings.set('theme', pref)
   },
+  setSysAccent: async (on) => {
+    set({ sysAccent: on })
+    void window.api.settings.set('system_accent', on)
+    const color = on ? await window.api.theme.accent() : null
+    if (get().sysAccent !== on) return          // cambió mientras se preguntaba
+    cacheAccent(on, color); paintAccent(color); set({ accent: color })
+    if (on && !color) get().toast(tr(get, 'theme.accentNone'), 'info')
+  },
+  setIconFlavor: (flavor) => { set({ iconFlavor: flavor }); void window.api.settings.set('icon_flavor', flavor) },
   setLang: (pref) => {
     cacheLangPref(pref)
     set({ langPref: pref, lang: resolveLangPref(pref) })

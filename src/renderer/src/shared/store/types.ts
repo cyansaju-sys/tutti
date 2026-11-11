@@ -1,10 +1,11 @@
 import type { AgentInfo, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
+import type { IconFlavor } from '@/shared/lib/icons'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'worktrees' | 'quickOpen' | 'goLine'
+export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'worktrees' | 'quickOpen' | 'goLine' | 'theme' | 'iconTheme'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
@@ -94,6 +95,10 @@ export interface UiSlice {
   editEnabled: boolean
   theme: ThemePref                       // lo elegido: oscuro, claro o el del sistema
   themeMode: ThemeMode                   // el que se está usando
+  sysAccent: boolean                     // el color de acento sigue al del sistema
+  accent: string | null                  // el color del sistema que se está pintando (#rrggbb), o null con los colores de Tutti
+  iconFlavor: IconFlavor                 // la paleta de los íconos de archivos (auto = según el tema)
+  iconPreview: IconFlavor | null         // paleta que se enseña mientras se pasa por ella en el menú, sin guardarla
   langPref: LangPref                     // lo elegido: español, inglés o el del sistema
   lang: Lang                             // el que se está usando
   searchReplace: boolean                 // Ctrl+Shift+H: el panel se abre con el campo de reemplazo
@@ -108,6 +113,8 @@ export interface UiSlice {
   toast: (message: string, kind?: ToastKind) => void
   dismissToast: (id: number) => void
   setTheme: (pref: ThemePref) => void
+  setSysAccent: (on: boolean) => Promise<void>
+  setIconFlavor: (flavor: IconFlavor) => void
   setLang: (pref: LangPref) => void
   setSidebarSide: (side: 'left' | 'right') => void
   setEdit: (enabled: boolean) => void

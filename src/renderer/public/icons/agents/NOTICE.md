@@ -2,6 +2,7 @@
 
 Los SVG de esta carpeta vienen de **@lobehub/icons-static-svg** v1.95.1 (https://github.com/lobehub/lobe-icons),
 publicado con licencia MIT (Copyright © 2023 LobeHub). Se copiaron solo los de los agentes que la app reconoce.
+El de Kiro (`kiro.svg`) es de la v1.102.0 del mismo paquete.
 
 Los logos y nombres pertenecen a sus respectivas empresas y proyectos (Anthropic, Google, OpenAI, Cursor, Mistral AI...).
 Se usan únicamente para identificar cada producto dentro de la lista de agentes (uso nominativo); no implican

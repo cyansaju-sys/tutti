@@ -73,6 +73,29 @@
   --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #9bb3ce44; --ed-match: #9bb3ce6e; --ed-indent: #00000022; --ed-shadow: #0000002e;
   --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00;
 }
+/* color del sistema (<html data-accent="system" style="--sys-accent: …">), como en Chrome: toda la interfaz se tiñe con su matiz —fondos, líneas y acento— y la luz y la saturación se ajustan a cada tema */
+:root[data-accent="system"] {
+  --color-bg: oklch(from var(--sys-accent) 0.13 min(c, 0.022) h); --color-bar: oklch(from var(--sys-accent) 0.15 min(c, 0.025) h);
+  --color-surface: oklch(from var(--sys-accent) 0.17 min(c, 0.027) h); --color-panel: oklch(from var(--sys-accent) 0.195 min(c, 0.03) h);
+  --color-raised: oklch(from var(--sys-accent) 0.22 min(c, 0.032) h); --color-pop: oklch(from var(--sys-accent) 0.19 min(c, 0.03) h);
+  --color-line: oklch(from var(--sys-accent) 0.35 min(c, 0.04) h); --color-muted: oklch(from var(--sys-accent) 0.62 min(c, 0.04) h);
+  --color-text: oklch(from var(--sys-accent) 0.93 min(c, 0.012) h);
+  --color-accent: oklch(from var(--sys-accent) 0.8 min(c, 0.12) h);
+  --color-accent-bg: oklch(from var(--sys-accent) 0.3 min(c, 0.06) h);
+  --color-accent-dim: oklch(from var(--sys-accent) 0.55 min(c, 0.07) h);
+  --ed-bracket: oklch(from var(--sys-accent) 0.5 min(c, 0.06) h / 0.4); --ed-match: oklch(from var(--sys-accent) 0.5 min(c, 0.06) h / 0.53);
+}
+:root[data-accent="system"][data-theme="light"] {
+  --color-bg: oklch(from var(--sys-accent) 0.905 min(c, 0.022) h); --color-bar: oklch(from var(--sys-accent) 0.885 min(c, 0.026) h);
+  --color-surface: oklch(from var(--sys-accent) 0.96 min(c, 0.012) h); --color-panel: oklch(from var(--sys-accent) 0.935 min(c, 0.016) h);
+  --color-raised: oklch(from var(--sys-accent) 0.975 min(c, 0.008) h); --color-pop: oklch(from var(--sys-accent) 0.975 min(c, 0.008) h);
+  --color-line: oklch(from var(--sys-accent) 0.84 min(c, 0.03) h); --color-muted: oklch(from var(--sys-accent) 0.5 min(c, 0.04) h);
+  --color-text: oklch(from var(--sys-accent) 0.3 min(c, 0.03) h);
+  --color-accent: oklch(from var(--sys-accent) 0.45 min(c, 0.14) h);
+  --color-accent-bg: oklch(from var(--sys-accent) 0.87 min(c, 0.05) h);
+  --color-accent-dim: oklch(from var(--sys-accent) 0.75 min(c, 0.07) h);
+  --ed-bracket: oklch(from var(--sys-accent) 0.75 min(c, 0.07) h / 0.27); --ed-match: oklch(from var(--sys-accent) 0.75 min(c, 0.07) h / 0.43);
+}
 :root[data-theme="light"] img[src*="icons/sidebar"] { filter: brightness(0.5) saturate(1.3); }
 
 html, body, #root { height: 100%; }

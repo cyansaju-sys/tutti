@@ -6,7 +6,7 @@ import type { GitBlame, GitMarks } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { confirmAsk } from '@/shared/lib/confirm'
 import { t, useT } from '@/shared/lib/i18n'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { languageName } from '@/features/files/lib/languages'
 import { crumbs, relative, toPosix } from '@/shared/lib/paths'
 import { selectionMessage, selectionRef } from '@/features/files/lib/selectionRef'
@@ -56,7 +56,7 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
   return (
     <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
       className={clsx('group flex min-w-[120px] max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
-      {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
+      {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
       <span className="min-w-0 flex-1 truncate text-[11px]">{d.title}</span>
       {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
       <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
@@ -201,7 +201,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
                 active ? 'border-accent bg-surface text-text' : 'border-panel bg-panel text-muted hover:bg-raised'
               )}
             >
-              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <img src={iconFor(d.title)} alt="" className="size-4" draggable={false} />}
+              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
               <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
               {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
               {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}

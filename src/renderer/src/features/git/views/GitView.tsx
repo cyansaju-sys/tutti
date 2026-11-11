@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdOpenInNew, MdRemove } from 'react-icons/md'
 import type { GitFile } from '@shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { basename, dirname } from '@/shared/lib/paths'
 import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { useT } from '@/shared/lib/i18n'
@@ -112,7 +112,7 @@ export function GitView() {
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
     <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
       <button className={`flex min-w-0 flex-1 items-center gap-2 text-left ${isStaged ? 'opacity-65' : ''}`} onClick={() => void (f.code === 'C' ? openDoc(`${project}/${f.path}`) : openDiff(`${project}/${f.path}`, isStaged))} title={t('git.viewChanges')}>
-        <img src={iconFor(basename(f.path))} alt="" className="size-4 shrink-0" draggable={false} />
+        <FileIcon name={basename(f.path)} />
         <span className="truncate text-[12px]" style={{ color: GIT_COLOR[f.code] }}>{basename(f.path)}</span>
         <span className="truncate text-[10px] text-muted">{dirname(f.path) === f.path ? '' : dirname(f.path)}</span>
       </button>

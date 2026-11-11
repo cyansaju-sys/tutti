@@ -2,6 +2,15 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.10
+
+### Cambios
+
+- **Temas en un solo lugar:** Configuración → Temas reúne el tema de color, la variante de los iconos y el color del sistema, con vista previa al recorrer las opciones.
+- **Nombre del proyecto en la barra de título,** centrado en la ventana.
+- **Grafo de commits lado a lado:** con espacio suficiente, el historial queda a la izquierda y el detalle del commit a la derecha.
+- **Consumo de Kiro:** el panel de uso muestra los créditos que gastó Kiro hoy, en 7 días y en total. Kiro se reconoce ya como agente (`kiro-cli`) y tiene su logo.
+
 ## 1.4.9
 
 ### Cambios

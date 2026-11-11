@@ -102,7 +102,7 @@ The sidebar folds to icons only with `Ctrl`+`Shift`+`B` or by double-clicking an
 
 ## Files and editor
 
-The tree uses *Material Icon Theme* icons and shows the git letter next to what changed (`M` modified, `A`/`U` new, `D` deleted). Files open in tabs, **already editable**, with colors, git marks in the gutter (green added, blue modified, red deleted), autocomplete and automatic reload if another tool changes the file and there are no unsaved changes here.
+The tree uses *Catppuccin Icons* icons and shows the git letter next to what changed (`M` modified, `A`/`U` new, `D` deleted). Files open in tabs, **already editable**, with colors, git marks in the gutter (green added, blue modified, red deleted), autocomplete and automatic reload if another tool changes the file and there are no unsaved changes here.
 
 ![Files and editor](img/archivos-y-editor.png)
 
@@ -542,10 +542,19 @@ The **Commits** chip opens the **graph of every branch**, with branch, remote an
 
 ## Appearance and language
 
-The gear at the bottom of the sidebar opens the settings, with two submenus that open on hover (they show the current value):
+The gear at the bottom of the sidebar opens the settings. **Themes** gathers everything that changes the look, and **Language** opens on hover and shows the current value.
 
-- **Theme:** dark, light or *Automatic* (follows the system). The light one uses soft tones, no pure white, to go easy on your eyes. It also changes the editor, the code colors and the terminals.
-- **Language:** *Spanish*, *English* or *Automatic* (the system's; if it is not Spanish, English). It changes the whole interface instantly and is remembered. The project context and error messages also come in your language, and the AI writes the context in it.
+### Themes
+
+- **Color theme:** dark, light or *Automatic* (follows the system). The light one uses soft tones, no pure white, to go easy on your eyes. It also changes the editor, the code colors and the terminals.
+- **File icon theme:** file and folder icons are those of *Catppuccin Icons*, drawn with thin strokes; folders have an icon per name (`src`, `docs`, `test`…) and an open version, and recent projects use the same set. You can choose the variant: *Automatic* (Mocha with the dark theme, Latte with the light one), *Latte*, *Frappé*, *Macchiato* or *Mocha*.
+- **Use the system color:** the whole interface (backgrounds, lines, accent, terminal and the app's own icons) is tinted with your desktop's accent color, as Chrome does, and adapts on its own to the dark and light themes. Folders and untyped files follow it too. On Linux the color is read from the desktop portal (KDE, GNOME…); if your system does not provide one, Tutti's stays. It refreshes when you return to the window.
+
+"Color theme" and "File icon theme" open like the agent picker: moving through the options with the mouse or the arrows shows the change right away, `Enter` or a click saves it and `Esc` keeps what you had.
+
+### Language
+
+*Spanish*, *English* or *Automatic* (the system's; if it is not Spanish, English). It changes the whole interface instantly and is remembered. The project context and error messages also come in your language, and the AI writes the context in it.
 
 ![Settings](img/ajustes.png)
 
@@ -596,6 +605,8 @@ Tutti stores its data in the system configuration folder: `~/.config/tutti` on L
 | Key | Values | What it is for |
 |---|---|---|
 | `theme` | `dark` · `light` · `system` | Interface theme |
+| `icon_flavor` | `auto` · `latte` · `frappe` · `macchiato` · `mocha` | File icon variant |
+| `system_accent` | `true` enables | Tint the interface with the system accent color |
 | `language` | `es` · `en` · `auto` | Interface language |
 | `orchestration` | `false` disables | The task delegation server |
 | `roles_approval` | `false` disables | Waiting for your approval before handing out a role plan |

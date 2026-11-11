@@ -6,7 +6,7 @@
 export interface AgentColors { from: string; to: string; text: string }
 
 /** Logo de un agente: archivo SVG y si es de un solo color (`mono`: se tiñe con el color del texto en vez de usarse tal cual). */
-export interface AgentLogo { file: string; mono: boolean }
+export interface AgentLogo { file: string; mono: boolean; tint?: string }          // `tint`: color propio de un logo `mono`, en vez del color del texto
 const LOGOS: Record<string, AgentLogo> = {
   claude: { file: 'claudecode-color', mono: false },
   opencode: { file: 'opencode', mono: true },
@@ -21,12 +21,13 @@ const LOGOS: Record<string, AgentLogo> = {
   cline: { file: 'cline', mono: true },
   qwen: { file: 'qwen-color', mono: false },
   copilot: { file: 'copilot-color', mono: false },
-  vibe: { file: 'mistral-color', mono: false }
+  vibe: { file: 'mistral-color', mono: false },
+  'kiro-cli': { file: 'kiro', mono: true, tint: '#9046ff' }
 }
 // otros nombres con los que se conoce al mismo agente (p. ej. al añadirlo a mano)
 const ALIASES: Record<string, string> = {
   antigravity: 'agy', 'claude-code': 'claude', claudecode: 'claude', cursor: 'cursor-agent', 'gemini-cli': 'gemini',
-  kilocode: 'kilo', 'kilo-code': 'kilo', 'mistral-vibe': 'vibe', 'qwen-code': 'qwen', 'copilot-cli': 'copilot'
+  kilocode: 'kilo', 'kilo-code': 'kilo', 'mistral-vibe': 'vibe', 'qwen-code': 'qwen', 'copilot-cli': 'copilot', kiro: 'kiro-cli'
 }
 
 const idOf = (key: string): string => (key.split(/[\\/]/).pop() ?? key).toLowerCase().trim().replace(/\.(exe|cmd|bat)$/, '')
@@ -51,7 +52,8 @@ const KNOWN: Record<string, AgentColors> = {
   copilot: { from: '#60c8f5', to: '#1d8fd1', text: '#ffffff' },
   droid: { from: '#fb923c', to: '#ea580c', text: '#ffffff' },
   kimi: { from: '#38bdf8', to: '#0b7fc0', text: '#ffffff' },
-  crush: { from: '#f472b6', to: '#c2257d', text: '#ffffff' }
+  crush: { from: '#f472b6', to: '#c2257d', text: '#ffffff' },
+  'kiro-cli': { from: '#a66bff', to: '#7a2ff0', text: '#ffffff' }
 }
 
 /** Número estable (0..2^32) a partir de un texto: el mismo nombre da siempre el mismo color. */

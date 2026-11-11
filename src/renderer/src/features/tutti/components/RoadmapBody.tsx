@@ -4,7 +4,7 @@ import { MdAdd, MdAutoAwesome, MdCheckCircle, MdChevronRight, MdHelpOutline, MdN
 import type { MsgKey } from '@shared/i18n'
 import type { RoadmapItem, RoadmapState } from '@shared/types'
 import { useT } from '@/shared/lib/i18n'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { useStore } from '@/shared/store'
 import { applyPrompt } from '../lib/openspec'
 import { draftRoadmapPrompt, phaseProgress, resumePrompt, roadmapTemplate } from '../lib/roadmap'
@@ -76,7 +76,7 @@ export function RoadmapBody({ state, project, onChanged }: { state: RoadmapState
     <div>
       <div className="flex items-center gap-1 px-1 pb-1">
         <button onClick={() => void openDoc(state.file)} title={state.rel} className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded px-2 pl-4 text-left text-[12px] transition-colors hover:bg-accent-bg">
-          <img src={iconFor(fileName, false)} alt="" className="size-4 shrink-0" draggable={false} />
+          <FileIcon name={fileName} />
           <span className="min-w-0 flex-1 truncate">{state.rel}</span>
         </button>
         <button onClick={() => void resume()} disabled={!ask.selected} title={ask.selected ? t('rm.resumeTip') : t('sa.noAgent')}
