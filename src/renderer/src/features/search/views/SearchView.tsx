@@ -4,7 +4,7 @@ import { MdChevronRight, MdExpandMore, MdFindReplace, MdMoreHoriz, MdUnfoldLess 
 import type { SearchFile, SearchResult } from '@shared/types'
 import { confirmAsk } from '@/shared/lib/confirm'
 import { useT } from '@/shared/lib/i18n'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { basename } from '@/shared/lib/paths'
 import { FIELD_SLIM } from '@/shared/components/ui'
 import { useStore } from '@/shared/store'
@@ -148,7 +148,7 @@ export function SearchView() {
             <Fragment key={f.path}>
               <button onClick={() => toggle(f.path)} className="flex w-full items-center gap-1 px-2 py-[3px] text-left text-[12px] hover:bg-white/[0.04]">
                 {open ? <MdExpandMore size={15} className="shrink-0 text-muted" /> : <MdChevronRight size={15} className="shrink-0 text-muted" />}
-                <img src={iconFor(basename(f.path))} alt="" className="size-4 shrink-0" draggable={false} />
+                <FileIcon name={basename(f.path)} />
                 <span className="truncate">{basename(f.path)}</span>
                 <span className="truncate text-[10.5px] text-muted">{dirOf(f.rel)}</span>
                 {replaceOpen && <span title={t('sr.replaceInFile')} onClick={(e) => { e.stopPropagation(); void replace([f]) }} className="ml-auto grid size-5 shrink-0 place-items-center rounded text-muted hover:text-accent"><MdFindReplace size={14} /></span>}

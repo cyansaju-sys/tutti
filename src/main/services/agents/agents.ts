@@ -12,7 +12,7 @@ export const KNOWN: Array<[string, string]> = [
   ['Aider', 'aider'], ['Cursor Agent', 'cursor-agent'], ['Goose', 'goose'], ['Amp', 'amp'], ['Qwen Code', 'qwen'],
   ['Copilot CLI', 'copilot'], ['Droid', 'droid'], ['Kimi CLI', 'kimi'], ['Crush', 'crush'], ['Kilo Code', 'kilo'],
   ['Cline', 'cline'], ['Plandex', 'plandex'], ['Auggie', 'auggie'], ['Forge', 'forge'], ['Mistral Vibe', 'vibe'],
-  ['Warp Agent', 'oz']
+  ['Warp Agent', 'oz'], ['Kiro', 'kiro-cli']
 ]
 
 interface CustomAgent { name: string; command: string; args: string[] }

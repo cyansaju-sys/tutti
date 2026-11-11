@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { MdAdd, MdArchive, MdChevronRight, MdContentCopy, MdFactCheck, MdPlayArrow, MdSettings } from 'react-icons/md'
 import type { OpenSpecChange, OpenSpecState } from '@shared/types'
 import { useT } from '@/shared/lib/i18n'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { useStore } from '@/shared/store'
 import { applyPrompt } from '../lib/openspec'
 import { useAskAgent } from '../lib/useAskAgent'
@@ -85,7 +85,7 @@ export function OpenSpecBody({ state, project, onChanged }: { state: OpenSpecSta
                 <>
                   {FILES.filter((f) => c[f.key]).map((f) => (
                     <button key={f.file} onClick={() => void openDoc(`${c.dir}/${f.file}`)} className="flex h-7 w-full items-center gap-2 rounded px-2 pl-9 text-left text-[12px] transition-colors hover:bg-accent-bg">
-                      <img src={iconFor(f.file, false)} alt="" className="size-4 shrink-0" draggable={false} /><span className="truncate">{f.file}</span>
+                      <FileIcon name={f.file} /><span className="truncate">{f.file}</span>
                     </button>
                   ))}
                 </>
@@ -101,7 +101,7 @@ export function OpenSpecBody({ state, project, onChanged }: { state: OpenSpecSta
         {state.specs.map((s) => (
           <li key={s.name}>
             <button onClick={() => void openDoc(s.file)} className="flex h-7 w-full items-center gap-2 rounded px-2 pl-5 text-left text-[12px] transition-colors hover:bg-accent-bg">
-              <img src={iconFor('spec.md', false)} alt="" className="size-4 shrink-0" draggable={false} />
+              <FileIcon name="spec.md" />
               <span className="min-w-0 flex-1 truncate">{s.name}</span>
               <span className="shrink-0 rounded-full bg-ov/[0.07] px-1.5 text-[9px] font-medium text-muted">{t('os.reqs', { n: s.requirements })}</span>
             </button>

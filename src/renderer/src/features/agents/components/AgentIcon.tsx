@@ -8,8 +8,8 @@ const sparkle = (cx: number, cy: number, r: number): string =>
   `M${cx} ${cy - r}Q${cx} ${cy} ${cx + r} ${cy}Q${cx} ${cy} ${cx} ${cy + r}Q${cx} ${cy} ${cx - r} ${cy}Q${cx} ${cy} ${cx} ${cy - r}Z`
 
 /**
- * Icono de un agente. Si tiene logo (Claude Code, OpenCode, Antigravity, Codex, Gemini...) se muestra en una pastilla
- * oscura; si no, y para cualquier agente nuevo, se genera uno: cuadrado con degradado, su inicial y una chispa de «IA».
+ * Icono de un agente. Si tiene logo (Claude Code, OpenCode, Antigravity, Codex, Gemini...) se muestra tal cual,
+ * sin recuadro; si no, y para cualquier agente nuevo, se genera uno: cuadrado con degradado, su inicial y una chispa de «IA».
  * `mark="spark"` dibuja solo la chispa (icono genérico de IA).
  */
 export function AgentIcon({ name, command, size = 18, mark = 'letter', className }: {
@@ -20,14 +20,12 @@ export function AgentIcon({ name, command, size = 18, mark = 'letter', className
   const logo = mark === 'letter' ? agentLogo(command ?? name) : null
   if (logo) {
     const url = `${base}icons/agents/${logo.file}.svg`
-    const inner = Math.round(size * 0.68)
     return (
-      <span role="img" aria-label={name} className={`grid shrink-0 place-items-center bg-ov/[0.07] ring-1 ring-inset ring-ov/[0.08] ${className ?? ''}`}
-        style={{ width: size, height: size, borderRadius: size * 0.28 }}>
+      <span role="img" aria-label={name} className={`grid shrink-0 place-items-center ${className ?? ''}`} style={{ width: size, height: size }}>
         {logo.mono
-          // un solo color: se usa como máscara y se pinta con el color del texto (sobre fondo oscuro un SVG negro no se vería)
-          ? <span style={{ width: inner, height: inner, backgroundColor: 'var(--color-text)', maskImage: `url(${url})`, WebkitMaskImage: `url(${url})`, maskSize: 'contain', WebkitMaskSize: 'contain', maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskPosition: 'center' }} />
-          : <img src={url} width={inner} height={inner} alt="" draggable={false} />}
+          // un solo color: se usa como máscara y se pinta con el color del texto, o con el suyo si lo tiene (sobre fondo oscuro un SVG negro no se vería)
+          ? <span style={{ width: size, height: size, backgroundColor: logo.tint ?? 'var(--color-text)', maskImage: `url(${url})`, WebkitMaskImage: `url(${url})`, maskSize: 'contain', WebkitMaskSize: 'contain', maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat', maskPosition: 'center', WebkitMaskPosition: 'center' }} />
+          : <img src={url} width={size} height={size} alt="" draggable={false} />}
       </span>
     )
   }

@@ -42,8 +42,10 @@ function Card({ u, now }: { u: AgentUsage; now: number }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const w = u.window
+  /** Tokens abreviados, o créditos con dos decimales (Kiro). */
+  const amount = (n: number): string => (u.unit === 'credits' ? t('us.credits', { n: n.toLocaleString(lang, { maximumFractionDigits: 2 }) }) : fmtTokens(n))
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-3">
+    <div className="flex flex-col gap-2.5 border-t border-line px-1.5 pb-1 pt-3 first:border-t-0 first:pt-1">
       <div className="flex items-center gap-2"><AgentIcon name={u.name} command={u.command} size={18} /><span className="text-[13px] font-semibold">{u.name}</span></div>
       {u.limits.length > 0 ? (
         <>
@@ -65,7 +67,7 @@ function Card({ u, now }: { u: AgentUsage; now: number }) {
       {u.limitsError && u.limits.length === 0 && <div className="text-[10px] text-muted">{u.limitsError}</div>}
       {(u.total > 0) && (
         <div className="flex flex-col gap-1 border-t border-line pt-2">
-          <Row label={t('us.today')} value={fmtTokens(u.today)} /><Row label={t('us.week')} value={fmtTokens(u.week)} /><Row label={t('us.total')} value={fmtTokens(u.total)} />
+          <Row label={t('us.today')} value={amount(u.today)} /><Row label={t('us.week')} value={amount(u.week)} /><Row label={t('us.total')} value={amount(u.total)} />
           {u.note && (w || u.limits.length > 0) && <div className="pt-1 text-[10px] text-muted">{u.note}</div>}
         </div>
       )}

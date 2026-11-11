@@ -119,7 +119,7 @@ nombre de la app.
 
 ### Archivos y editor
 
-Árbol con los íconos de Material Icon Theme y la letra de git en lo que cambió. Los archivos se abren en pestañas, ya editables,
+Árbol con los íconos de Catppuccin Icons y la letra de git en lo que cambió. Los archivos se abren en pestañas, ya editables,
 con colores, marcas de git en el margen (verde añadido, azul modificado, rojo borrado), autocompletado (`Enter` o `Tab` aceptan),
 `Ctrl+S` para guardar y recarga automática si otra herramienta cambia el archivo. **Selecciona código y pulsa `Ctrl+L`** (o clic derecho → *Enviar selección al agente*) para escribir en el prompt del agente activo la referencia `@archivo:12-30` y el trozo, sin enviarlo. El permiso **Edición** de la barra de título
 (o `Ctrl+Shift+L`) los deja en solo lectura. Con el árbol enfocado se navega con las flechas.

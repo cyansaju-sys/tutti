@@ -5,7 +5,7 @@ import type { DirEntry } from '@shared/types'
 import { Menu } from '@/shared/components/Menu'
 import { Modal } from '@/shared/components/ui'
 import { GIT_COLOR } from '@/features/git/lib/gitSync'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { basename, relative, toPosix } from '@/shared/lib/paths'
 import { RolesPlan } from '@/features/agents/components/RolesPlan'
 import { agentRef } from '@/features/agents/lib/agentRef'
@@ -357,7 +357,7 @@ export function FilesView() {
               )}
             >
               {entry.isDir ? <MdChevronRight size={14} className={clsx('-mr-0.5 shrink-0 text-muted transition-transform', expanded.has(entry.path) && 'rotate-90')} /> : <span className="-mr-0.5 w-3.5 shrink-0" />}
-              <img src={iconFor(entry.name, entry.isDir, expanded.has(entry.path))} alt="" className="size-4 shrink-0" draggable={false} />
+              <FileIcon name={entry.name} dir={entry.isDir} open={expanded.has(entry.path)} />
               <span className="min-w-0 flex-1 truncate" style={{ color }}>{entry.name}</span>
               {code && <span className={clsx('shrink-0 font-semibold', code === '●' ? 'text-[9px]' : 'text-[11px]')} style={{ color }}>{code}</span>}
             </button>}
@@ -455,7 +455,7 @@ function NameInput({ isDir, depth, initial = '', onOk, onCancel }: { isDir: bool
   return (
     <div style={{ paddingLeft: 14 + depth * 12 }} className="flex items-center gap-1.5 py-[3px] pr-1.5">
       <span className="-mr-0.5 w-3.5 shrink-0" />
-      <img src={iconFor(value || 'archivo', isDir, false)} alt="" className="size-4 shrink-0" draggable={false} />
+      <FileIcon name={value || 'archivo'} dir={isDir} />
       <input
         ref={input} value={value} spellCheck={false} placeholder={isDir ? t('fs.folderName') : t('fs.fileName')}
         onChange={(e) => setValue(e.target.value)} onClick={(e) => e.stopPropagation()}

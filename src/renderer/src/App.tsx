@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
 import { Footer } from '@/shared/components/Footer'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
@@ -13,8 +13,8 @@ import { refreshGit } from '@/features/git/lib/gitSync'
 import { t } from '@/shared/lib/i18n'
 import { isLangPref } from '@shared/i18n'
 import { isGlobalShortcut } from '@/shared/lib/shortcuts'
-import { isPref, resolveTheme, paintTheme } from '@/shared/lib/theme'
-import { loadIconTheme } from '@/shared/lib/icons'
+import { cacheAccent, isPref, resolveTheme, paintAccent, paintTheme } from '@/shared/lib/theme'
+import { isIconFlavor, loadIconTheme } from '@/shared/lib/icons'
 import { isDirty, useStore } from '@/shared/store'
 
 /** Arrastra un divisor: parte del ancho que tenía al empezar y suma el desplazamiento. */
@@ -43,6 +43,10 @@ export function App() {
       const edit = await window.api.settings.get('edit_enabled')
       const savedTheme = await window.api.settings.get('theme')
       if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
+      const savedAccent = await window.api.settings.get('system_accent')
+      if (typeof savedAccent === 'boolean') useStore.setState({ sysAccent: savedAccent })
+      const savedFlavor = await window.api.settings.get('icon_flavor')
+      if (isIconFlavor(savedFlavor)) useStore.setState({ iconFlavor: savedFlavor })
       const savedSide = await window.api.settings.get('sidebar_side')
       if (savedSide === 'left' || savedSide === 'right') useStore.setState({ sidebarSide: savedSide })
       const savedWidth = await window.api.settings.get('sidebar_width')          // el ancho del sidebar es global: vale para todos los proyectos
@@ -91,6 +95,19 @@ export function App() {
     query.addEventListener('change', onChange)
     return () => query.removeEventListener('change', onChange)
   }, [])
+
+  // el acento del sistema: se lee al arrancar, cuando el sistema avisa de que cambió y al volver a la ventana
+  const sysAccent = s.sysAccent
+  useEffect(() => {
+    if (!ready) return
+    if (!sysAccent) { paintAccent(null); useStore.setState({ accent: null }); return }
+    const apply = (color: string | null): void => { if (useStore.getState().sysAccent) { cacheAccent(true, color); paintAccent(color); useStore.setState({ accent: color }) } }
+    const refresh = (): void => { void window.api.theme.accent().then(apply) }
+    refresh()
+    const off = window.api.theme.onAccent(apply)
+    window.addEventListener('focus', refresh)
+    return () => { off(); window.removeEventListener('focus', refresh) }
+  }, [ready, sysAccent])
 
   // un agente pidió abrir otro (reparto de tareas) o avisó de algo
   useEffect(() => {
@@ -212,6 +229,8 @@ export function App() {
       {s.modal === 'worktrees' && s.project && <WorktreeDialog />}
       {s.modal === 'quickOpen' && <QuickOpenDialog />}
       {s.modal === 'goLine' && <GoLineDialog />}
+      {s.modal === 'theme' && <ThemePicker />}
+      {s.modal === 'iconTheme' && <IconThemePicker />}
       <ConfirmDialog />
       <Toasts />
       <Tooltips />

@@ -6,7 +6,7 @@ import { useT } from '@/shared/lib/i18n'
 import { Menu } from '../../../shared/components/Menu'
 import { t as tr } from '@/shared/lib/i18n'
 import { isGlobalShortcut } from '@/shared/lib/shortcuts'
-import { TERMINAL_THEMES } from '@/shared/lib/theme'
+import { terminalTheme } from '@/shared/lib/theme'
 import { useStore, type Pane } from '@/shared/store'
 
 // los prompts con íconos (powerlevel10k, starship) usan una Nerd Font: se prueban las más comunes antes de la fuente base
@@ -62,7 +62,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
     void (async () => {
     await Promise.all([document.fonts.load('13px "DejaVu Sans Mono"'), document.fonts.load('13px "Symbols Nerd Font Mono"')]).catch(() => undefined)
     if (disposed || !host.current) return
-    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.2, fontWeight: '300', fontWeightBold: '500', cursorStyle: 'bar', cursorWidth: 2, cursorInactiveStyle: 'outline', cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme: TERMINAL_THEMES[useStore.getState().themeMode], allowProposedApi: true })
+    const t = new Terminal({ fontFamily: FONT, fontSize: 13, lineHeight: 1.2, fontWeight: '300', fontWeightBold: '500', cursorStyle: 'bar', cursorWidth: 2, cursorInactiveStyle: 'outline', cursorBlink: true, scrollback: 5000, scrollOnUserInput: true, theme: terminalTheme(useStore.getState().themeMode), allowProposedApi: true })
     const fit = new FitAddon()
     t.loadAddon(fit)
     t.loadAddon(new WebLinksAddon((_e, url) => window.open(url)))
@@ -106,7 +106,8 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
   }, [pane.id])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const mode = useStore((s) => s.themeMode)
-  useEffect(() => { if (term.current) term.current.options.theme = TERMINAL_THEMES[mode] }, [mode])
+  const accent = useStore((s) => s.accent)
+  useEffect(() => { if (term.current) term.current.options.theme = terminalTheme(mode) }, [mode, accent])
   useEffect(() => { if (active) { term.current?.focus(); term.current?.scrollToBottom() } }, [active])
   const paneFocus = useStore((s) => s.paneFocus)
   useEffect(() => { if (paneFocus && isActive.current) term.current?.focus() }, [paneFocus])          // al cerrar un archivo o un panel

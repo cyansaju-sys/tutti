@@ -158,8 +158,10 @@ export function GitGraph() {
 
   if (!project) return <div className="grid flex-1 place-items-center text-[12px] text-muted">{t('gg.openProject')}</div>
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-    <div className="@container min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-2">
+    // con sitio a lo ancho, el historial y el detalle del commit van lado a lado, mitad y mitad; en una vista estrecha, uno encima del otro
+    <div className="@container/gg flex min-h-0 flex-1">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col @3xl/gg:flex-row">
+    <div className="@container min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-2">
       {commits === null && <p className="px-2 py-4 text-[12px] text-muted">{t('gg.reading')}</p>}
       {commits?.length === 0 && <p className="px-2 py-4 text-[12px] text-muted">{t('gg.noCommits')}</p>}
       <div className="relative">
@@ -200,6 +202,7 @@ export function GitGraph() {
       {ask && <AskDialog ask={ask} busy={busy} onClose={() => setAsk(null)} onOk={(op, commit, arg, done) => { setAsk(null); void run(op, commit, arg, done) }} />}
     </div>
     {detail && <CommitDetail commit={detail} project={project} onClose={() => setSelected(null)} onCopy={copy} />}
+    </div>
     </div>
   )
 }
@@ -297,7 +300,7 @@ function CommitDetail({ commit, project, onClose, onCopy }: { commit: GitCommit;
   const total = (files ?? []).reduce((n, f) => [n[0] + f.added, n[1] + f.deleted], [0, 0])
 
   return (
-    <div className="flex max-h-[48%] min-h-[120px] shrink-0 flex-col border-t border-line bg-panel">
+    <div className="flex max-h-[48%] min-h-[120px] shrink-0 flex-col border-t border-line bg-panel @3xl/gg:max-h-none @3xl/gg:w-1/2 @3xl/gg:border-l @3xl/gg:border-t-0">
       <div className="flex items-start gap-2 px-3 pb-1.5 pt-2">
         <div className="min-w-0 flex-1">
           <p className="break-words text-[12.5px] font-medium leading-snug">{commit.subject}</p>

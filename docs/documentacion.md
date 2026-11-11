@@ -102,7 +102,7 @@ La barra lateral se pliega a solo iconos con `Ctrl`+`Shift`+`B` o con doble clic
 
 ## Archivos y editor
 
-El árbol usa los íconos de *Material Icon Theme* y muestra la letra de git en lo que cambió (`M` modificado, `A`/`U` nuevo, `D` borrado). Los archivos se abren en pestañas, **ya editables**, con colores, marcas de git en el margen (verde añadido, azul modificado, rojo borrado), autocompletado y recarga automática si otra herramienta cambia el archivo y aquí no hay cambios sin guardar.
+El árbol usa los íconos de *Catppuccin Icons* y muestra la letra de git en lo que cambió (`M` modificado, `A`/`U` nuevo, `D` borrado). Los archivos se abren en pestañas, **ya editables**, con colores, marcas de git en el margen (verde añadido, azul modificado, rojo borrado), autocompletado y recarga automática si otra herramienta cambia el archivo y aquí no hay cambios sin guardar.
 
 ![Archivos y editor](img/archivos-y-editor.png)
 
@@ -542,10 +542,19 @@ El chip **Commits** abre el **grafo de todas las ramas**, con las etiquetas de r
 
 ## Apariencia e idioma
 
-La tuerca de abajo en la barra lateral abre los ajustes, con dos submenús que se abren al pasar el ratón (muestran el valor actual):
+La tuerca de abajo en la barra lateral abre los ajustes. **Temas** reúne todo lo que cambia el aspecto, e **Idioma** se abre al pasar el ratón y muestra el valor actual.
 
-- **Tema:** oscuro, claro o *Automático* (sigue al del sistema). El claro usa tonos suaves, sin blanco puro, para no cansar la vista. Cambia también el editor, los colores del código y las terminales.
-- **Idioma:** *Español*, *Inglés* o *Automático* (el del sistema; si no es español, inglés). Cambia toda la interfaz al instante y se recuerda. El contexto del proyecto y los mensajes de error también salen en tu idioma, y la IA redacta el contexto en él.
+### Temas
+
+- **Tema de color:** oscuro, claro o *Automático* (sigue al del sistema). El claro usa tonos suaves, sin blanco puro, para no cansar la vista. Cambia también el editor, los colores del código y las terminales.
+- **Tema de iconos de archivo:** los iconos de archivos y carpetas son los de *Catppuccin Icons*, de trazo fino; las carpetas tienen icono por nombre (`src`, `docs`, `test`…) y versión abierta, y los proyectos recientes usan el mismo juego. Puedes elegir la variante: *Automático* (Mocha con el tema oscuro, Latte con el claro), *Latte*, *Frappé*, *Macchiato* o *Mocha*.
+- **Usar el color del sistema:** la interfaz entera (fondos, líneas, acento, terminal e iconos propios de la app) se tiñe con el color de acento de tu escritorio, como hace Chrome, y se ajusta sola al tema oscuro y al claro. Las carpetas y los archivos sin tipo también lo siguen. En Linux el color se lee del portal de escritorio (KDE, GNOME…); si tu sistema no ofrece uno, se mantiene el de Tutti. Se actualiza al volver a la ventana.
+
+«Tema de color» y «Tema de iconos de archivo» se abren como el selector de agentes: al recorrer las opciones con el ratón o las flechas se ve el cambio al momento, `Enter` o un clic lo guarda y `Esc` deja lo que tenías.
+
+### Idioma
+
+*Español*, *Inglés* o *Automático* (el del sistema; si no es español, inglés). Cambia toda la interfaz al instante y se recuerda. El contexto del proyecto y los mensajes de error también salen en tu idioma, y la IA redacta el contexto en él.
 
 ![Ajustes](img/ajustes.png)
 
@@ -596,6 +605,8 @@ Tutti guarda sus datos en la carpeta de configuración del sistema: `~/.config/t
 | Clave | Valores | Para qué sirve |
 |---|---|---|
 | `theme` | `dark` · `light` · `system` | Tema de la interfaz |
+| `icon_flavor` | `auto` · `latte` · `frappe` · `macchiato` · `mocha` | Variante de los iconos de archivo |
+| `system_accent` | `true` activa | Teñir la interfaz con el color de acento del sistema |
 | `language` | `es` · `en` · `auto` | Idioma de la interfaz |
 | `orchestration` | `false` desactiva | El servidor de reparto de tareas |
 | `roles_approval` | `false` desactiva | Esperar tu aprobación antes de repartir un plan de roles |

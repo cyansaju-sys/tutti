@@ -13,7 +13,7 @@ import { SpecDialog } from '@/features/tutti/components/SpecDialog'
 import { HookChoiceDialog } from '@/features/tutti/components/HookChoiceDialog'
 import { agentsMdPrompt } from '@/features/tutti/lib/agentsMd'
 import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
 
@@ -279,7 +279,7 @@ export function TuttiView() {
           {creating === kind && target === e.path && NameInput(kind)}
           {openSpecs.has(e.path) && (specInfo[e.path]?.files ?? []).map((f) => (
             <button key={f.path} onClick={() => open(f)} className="flex h-7 w-full items-center gap-2 rounded px-2 pl-9 text-left text-[12px] transition-colors hover:bg-accent-bg">
-              <img src={iconFor(f.name, f.isDir)} alt="" className="size-4 shrink-0" draggable={false} />
+              <FileIcon name={f.name} dir={f.isDir} />
               <span className="truncate">{f.name}</span>
             </button>
           ))}
@@ -289,7 +289,7 @@ export function TuttiView() {
           <button onClick={() => open(e)} className="flex h-7 w-full items-center gap-2 rounded px-2 pl-5 text-left text-[12px] transition-colors hover:bg-accent-bg">
             {kind === 'steering' && !e.isDir
               ? <MdExplore size={15} className="shrink-0 text-accent" aria-hidden />          // las guías de steering llevan una brújula en lugar del icono de Markdown
-              : <img src={iconFor(e.name, e.isDir)} alt="" className="size-4 shrink-0" draggable={false} />}
+              : <FileIcon name={e.name} dir={e.isDir} />}
             <span className="min-w-0 flex-1 truncate">{kind === 'steering' && !e.isDir ? e.name.replace(/\.md$/i, '') : e.name}</span>
             {kind === 'steering' && steeringInfo[e.path] && <span className="shrink-0 rounded bg-ov/[0.07] px-1.5 py-px text-[9px] font-medium text-muted" title={steeringInfo[e.path].patterns.join(', ') || steeringInfo[e.path].description || undefined}>{steeringInfo[e.path].scope === 'global' ? `${t('stf.global')} · ` : ''}{t(`stf.m.${steeringInfo[e.path].inclusion}` as MsgKey)}</span>}
           </button>

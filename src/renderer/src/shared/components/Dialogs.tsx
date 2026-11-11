@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@shared/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MdAccountTree, MdAdd, MdCallSplit, MdCloudQueue, MdDeleteOutline, MdSearch, MdSmartToy, MdTerminal } from 'react-icons/md'
+import { MdAccountTree, MdAdd, MdBrightnessAuto, MdCallSplit, MdCloudQueue, MdDarkMode, MdDeleteOutline, MdLightMode, MdSearch, MdSmartToy, MdTerminal } from 'react-icons/md'
 import type { AgentCandidate, GitBranch, GitWorktree } from '@shared/types'
 import { ago } from '@/shared/lib/format'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
@@ -10,7 +10,9 @@ import { refreshGit } from '@/features/git/lib/gitSync'
 import { SECTIONS } from '@/shared/lib/shortcuts'
 import { useStore } from '@/shared/store'
 import { loadRecentFiles } from '@/shared/store/recentFiles'
-import { iconFor } from '@/shared/lib/icons'
+import { FileIcon } from '@/shared/components/FileIcon'
+import { ICON_FLAVORS, iconFor, type IconFlavor } from '@/shared/lib/icons'
+import { paintTheme, resolveTheme, type ThemePref } from '@/shared/lib/theme'
 import { basename, relative, toPosix } from '@/shared/lib/paths'
 import { AgentIcon } from '../../features/agents/components/AgentIcon'
 import { FIELD, Kbd, Modal } from './ui'
@@ -33,19 +35,24 @@ const matches = (text: string, query: string): boolean => {
  * Selector rápido (estilo de los de VS Code): barra de búsqueda sin borde de foco arriba y filas planas debajo. ↑↓ eligen, Enter acepta.
  * `extra` son filas que no se filtran (acciones) y van primero; `group` separa con una línea y rotula a la derecha; `footer` va bajo la lista.
  */
-function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, group, extra, initial, emptyInitial }: {
+function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, group, extra, initial, emptyInitial, start, onActive }: {
   placeholder: string; items: T[]; initial?: T[]; emptyInitial?: string; label: (i: T) => string; render: (i: T, active: boolean) => React.ReactNode
   onPick: (i: T, query: string) => void; empty: string; footer?: (query: string) => React.ReactNode; group?: (i: T) => string
   extra?: (query: string) => T[]
+  start?: number          // la fila resaltada al abrir (sin texto escrito)
+  onActive?: (i: T | undefined) => void          // vista previa: se llama con la fila resaltada cada vez que cambia, y con undefined al cerrar
 }) {
   const t = useT()
   const [query, setQuery] = useState('')
-  const [index, setIndex] = useState(0)
+  const [index, setIndex] = useState(start ?? 0)
   const input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLUListElement>(null)
   const shown = useMemo(() => [...(extra?.(query.trim()) ?? []), ...(initial && !query ? initial : items.filter((i) => matches(label(i), query)))], [items, initial, query, extra])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => input.current?.focus(), [])
-  useEffect(() => setIndex(0), [query])
+  useEffect(() => setIndex(query ? 0 : start ?? 0), [query])  // eslint-disable-line react-hooks/exhaustive-deps
+  const active = shown[index]
+  useEffect(() => { onActive?.(active) }, [active])  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => onActive?.(undefined), [])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { list.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'nearest' }) }, [index, shown])
   const key = (e: React.KeyboardEvent): void => {
     if (e.key === 'ArrowDown') { setIndex((i) => Math.min(i + 1, shown.length - 1)); e.preventDefault() }
@@ -58,7 +65,7 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
       <div className="p-1.5 pb-1">
         <div className="flex items-center rounded-md bg-ov/[0.04] px-2.5">
           <input ref={input} value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={key} placeholder={placeholder}
-            spellCheck={false} className="h-8 flex-1 bg-transparent text-[13px] caret-accent outline-none placeholder:text-muted/80" />
+            spellCheck={false} className="h-8 flex-1 bg-transparent text-[12px] caret-accent outline-none placeholder:text-muted/80" />
           {query && <span className="rounded bg-ov/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-muted">{shown.length}</span>}
         </div>
       </div>
@@ -73,7 +80,7 @@ function Palette<T>({ placeholder, items, label, render, onPick, empty, footer, 
               {heading && i > 0 && <div className="mx-0 my-1 border-t border-ov/[0.08]" />}
               {heading && <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted/80">{heading}</div>}
               <button data-active={active} onMouseMove={() => setIndex(i)} onClick={() => onPick(item, query)}
-                className={clsx('relative flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[13px] transition-colors', active ? 'bg-accent/[0.18]' : 'hover:bg-ov/[0.04]')}>
+                className={clsx('relative flex w-full items-start gap-2.5 px-3 py-1.5 text-left text-[12px] transition-colors', active ? 'bg-accent/[0.18]' : 'hover:bg-ov/[0.04]')}>
                 {render(item, active)}
               </button>
             </li>
@@ -118,7 +125,7 @@ export function QuickOpenDialog() {
   return <Modal onClose={() => set({ modal: null })} width={560}>
     <Palette
       placeholder={t('dlg.quickOpen')} items={files} initial={opened} emptyInitial={t('dlg.quickOpenHint')} label={(path) => toPosix(relative(project, path))} empty={t('dlg.noFileMatch')}
-      render={(path, active) => <><img src={iconFor(basename(path))} alt="" className="size-4 shrink-0" draggable={false} /><span className="truncate">{toPosix(relative(project, path))}</span></>}
+      render={(path, active) => <><FileIcon name={basename(path)} /><span className="truncate">{toPosix(relative(project, path))}</span></>}
       onPick={(path) => { if (path) { set({ modal: null }); void openDoc(path) } }}
     />
   </Modal>
@@ -165,7 +172,7 @@ export function AgentPicker() {
       ) : (
         <Palette
           placeholder={t('dlg.searchAgent')} items={agents} label={(a) => a.name} empty={agents.length ? t('dlg.noAgentMatch') : t('dlg.noAgents')}
-          render={(a, active) => (<><Chip active={active}><AgentIcon name={a.name} command={a.command} size={20} /></Chip><span className="flex-1 truncate">{a.name}</span><Tag>{a.command}</Tag></>)}
+          render={(a) => (<><span className="grid size-7 shrink-0 place-items-center"><AgentIcon name={a.name} command={a.command} size={22} /></span><span className="flex-1 truncate">{a.name}</span><Tag>{a.command}</Tag></>)}
           onPick={(a) => { if (a) void openAgent(a) }}
           footer={() => (
             <button onClick={() => set({ modal: 'addAgent' })}
@@ -174,6 +181,51 @@ export function AgentPicker() {
             </button>)}
         />
       )}
+    </Modal>
+  )
+}
+
+/** Elegir el tema de color, como se elige un agente: recorrer la lista enseña cada tema sin guardarlo. */
+export function ThemePicker() {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  const theme = useStore((s) => s.theme)
+  const setTheme = useStore((s) => s.setTheme)
+  const items: ThemePref[] = ['dark', 'light', 'system']
+  const icon = { dark: <MdDarkMode size={16} />, light: <MdLightMode size={16} />, system: <MdBrightnessAuto size={16} /> }
+  const preview = (pref: ThemePref | undefined): void => { const mode = resolveTheme(pref ?? useStore.getState().theme); paintTheme(mode); set({ themeMode: mode }) }
+  return (
+    <Modal onClose={() => set({ modal: null })} width={560}>
+      <Palette
+        placeholder={t('dlg.searchTheme')} items={items} label={(m) => t(`theme.${m}`)} empty={t('dlg.noThemeMatch')} start={items.indexOf(theme)} onActive={preview}
+        render={(m, active) => (<><Chip active={active}>{icon[m]}</Chip><span className="flex-1 self-center truncate">{t(`theme.${m}`)}</span>{m === theme && <Tag tone="accent">{t('dlg.current')}</Tag>}</>)}
+        onPick={(m) => { if (m) { setTheme(m); set({ modal: null }) } }}
+      />
+    </Modal>
+  )
+}
+
+/** Elegir la paleta de los iconos de archivo (las de Catppuccin): cada fila enseña una muestra y recorrerlas las aplica sin guardar. */
+export function IconThemePicker() {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  const mode = useStore((s) => s.themeMode)
+  const flavor = useStore((s) => s.iconFlavor)
+  const setIconFlavor = useStore((s) => s.setIconFlavor)
+  const sample = (f: IconFlavor, name: string, dir = false): string => iconFor(name, { dir, mode, flavor: f })?.url ?? ''
+  return (
+    <Modal onClose={() => set({ modal: null })} width={560}>
+      <Palette
+        placeholder={t('dlg.searchIconTheme')} items={ICON_FLAVORS} label={(f) => t(`icons.${f}`)} empty={t('dlg.noThemeMatch')} start={ICON_FLAVORS.indexOf(flavor)}
+        onActive={(f) => set({ iconPreview: f ?? null })}
+        render={(f, active) => (<>
+          <Chip active={active}><img src={sample(f, 'src', true)} alt="" className="size-4" draggable={false} /></Chip>
+          <span className="flex-1 self-center truncate">{t(`icons.${f}`)}</span>
+          <span className="flex shrink-0 items-center gap-1.5 self-center">{['a.ts', 'a.json', 'a.md', 'a.css', 'a.py'].map((n) => <img key={n} src={sample(f, n)} alt="" className="size-4" draggable={false} />)}</span>
+          {f === flavor && <Tag tone="accent">{t('dlg.current')}</Tag>}
+        </>)}
+        onPick={(f) => { if (f) { setIconFlavor(f); set({ modal: null }) } }}
+      />
     </Modal>
   )
 }
@@ -424,7 +476,7 @@ export function WorktreeDialog() {
       <Modal onClose={close} width={560}>
         <Palette
           placeholder={t('wt.pickAgent', { name: agentIn.label })} items={agents} label={(a) => a.name} empty={agents.length ? t('dlg.noAgentMatch') : t('dlg.noAgents')}
-          render={(a, active) => (<><Chip active={active}><AgentIcon name={a.name} command={a.command} size={20} /></Chip><span className="flex-1 truncate">{a.name}</span><Tag>{a.command}</Tag></>)}
+          render={(a) => (<><span className="grid size-7 shrink-0 place-items-center"><AgentIcon name={a.name} command={a.command} size={22} /></span><span className="flex-1 truncate">{a.name}</span><Tag>{a.command}</Tag></>)}
           onPick={(a) => { if (a) void openAgent(a, [], { cwd: agentIn.dir, title: `${a.name} · ${agentIn.label}` }) }}
         />
       </Modal>

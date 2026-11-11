@@ -15,6 +15,7 @@ import { basename, join, relative, isAbsolute } from 'node:path'
 import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../../../shared/types'
 import { deleteAgyConversation, readAgyConversations } from './agyDb'
 import { deleteCodexSession, readCodexData } from './codexDb'
+import { readKiroUsage } from './kiroDb'
 import { readOpenCodeSessions } from './opencodeDb'
 import { getSetting, setSetting } from '../settings'
 import { extendedPath } from '../../utils/shellpath'
@@ -247,6 +248,9 @@ export function codexSessions(now: number): { usage: Omit<AgentUsage, 'limits' |
   return { usage: { command: 'codex', window: null, ...data.usage, note: data.sessions.length ? '' : tm('m.us.noCodex') }, sessions: data.sessions, limits: data.limits, limitsAge: data.limitsAge }
 }
 
+/** Kiro se lanza como `kiro-cli` (o `kiro`), con o sin ruta. */
+const isKiro = (command: string): boolean => /^kiro(-cli)?(\.exe)?$/i.test(command.split(/[\\/]/).pop() ?? '')
+
 export async function collectUsage(agents: AgentInfo[], project: string | null, fetchLimits: boolean): Promise<UsageData> {
   const now = Date.now()
   const out: AgentUsage[] = []
@@ -257,6 +261,12 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
     if (agent.command === 'claude') found = claudeSessions(now)
     else if (agent.command === 'opencode') found = opencodeSessions(now)
     else if (agent.command === 'agy') found = agySessions(now)
+    else if (isKiro(agent.command)) {          // Kiro mide en créditos y no deja historial que se pueda retomar desde aquí
+      const k = readKiroUsage(now)
+      out.push({ name: agent.name, command: agent.command, window: null, today: k?.today ?? 0, week: k?.week ?? 0, total: k?.total ?? 0, unit: 'credits',
+        note: k?.total ? tm('m.us.kiroNote') : tm('m.us.kiroEmpty'), limits: [], limitsError: '', limitsAge: 0 })
+      continue
+    }
     else if (agent.command === 'codex') {
       const c = codexSessions(now)
       if (c) { out.push({ ...c.usage, name: agent.name, limits: c.limits, limitsError: '', limitsAge: c.limitsAge }); all.push(...c.sessions) }

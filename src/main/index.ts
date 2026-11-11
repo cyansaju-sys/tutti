@@ -1,5 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron'
-import { spawn } from 'node:child_process'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell, systemPreferences } from 'electron'
+import { execFile, spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
@@ -107,7 +107,31 @@ async function withTask<T>(kind: 'commit' | 'context', run: (signal: AbortSignal
   try { return await run(controller.signal) } finally { if (tasks.get(kind) === controller) tasks.delete(kind) }
 }
 
+/** El acento que publica el portal de escritorio en Linux (KDE, GNOME…): tres valores de 0 a 1. Electron no siempre lo lee. */
+function portalAccent(): Promise<string | null> {
+  const ask = (cmd: string, args: string[], pick: RegExp): Promise<string | null> => new Promise((done) => {
+    execFile(cmd, args, { timeout: 1500 }, (err, out) => {
+      const nums = err ? [] : [...out.matchAll(pick)].map((m) => Number(m[1]))
+      done(nums.length === 3 && nums.every((n) => n >= 0 && n <= 1) ? `#${nums.map((n) => Math.round(n * 255).toString(16).padStart(2, '0')).join('')}` : null)
+    })
+  })
+  const target = ['org.freedesktop.portal.Desktop', '/org/freedesktop/portal/desktop', 'org.freedesktop.portal.Settings.ReadOne']
+  return ask('gdbus', ['call', '--session', '--dest', target[0], '--object-path', target[1], '--method', target[2], 'org.freedesktop.appearance', 'accent-color'], /(\d(?:\.\d+)?(?:e-?\d+)?)(?=[,)])/g)
+    .then((c) => c ?? ask('dbus-send', ['--session', '--print-reply', `--dest=${target[0]}`, target[1], target[2], 'string:org.freedesktop.appearance', 'string:accent-color'], /double (\d(?:\.\d+)?(?:e-?\d+)?)/g))
+}
+
+/** El color de acento del sistema como #rrggbb, o null si el escritorio no lo ofrece. */
+async function systemAccent(): Promise<string | null> {
+  try {
+    const hex = systemPreferences.getAccentColor?.() ?? ''          // rrggbbaa
+    if (/^[0-9a-f]{6}/i.test(hex)) return `#${hex.slice(0, 6).toLowerCase()}`
+  } catch { /* se prueba con el portal */ }
+  return process.platform === 'linux' ? portalAccent() : null
+}
+
 function registerIpc(): void {
+  ipcMain.handle('theme:accent', () => systemAccent())
+  try { (systemPreferences as unknown as NodeJS.EventEmitter).on('accent-color-changed', () => void systemAccent().then((c) => win?.webContents.send('theme:accent', c))) } catch { /* sin aviso de cambios: se vuelve a leer al enfocar la ventana */ }
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: unknown) => setSetting(key, value))
   ipcMain.handle('dialog:chooseFolder', async (_e, start?: string) => {

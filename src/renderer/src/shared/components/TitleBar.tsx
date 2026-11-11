@@ -47,12 +47,14 @@ export function TitleBar() {
   const setEdit = useStore((s) => s.setEdit)
   const toggleShell = useStore((s) => s.toggleShell)
   const addShell = useStore((s) => s.addShell)
+  const project = useStore((s) => s.project)
+  const projectName = project?.split(/[\\/]/).filter(Boolean).pop()
 
   const [termMenu, setTermMenu] = useState<DOMRect | null>(null)
   useEffect(() => window.api.window.onMaximized((maximized) => set({ maximized })), [set])
 
   return (
-    <div className="drag flex h-[34px] shrink-0 items-center justify-between bg-bg pl-3 pr-1" onDoubleClick={() => window.api.window.toggleMaximize()}>
+    <div className="drag relative flex h-[34px] shrink-0 items-center justify-between bg-bg pl-3 pr-1" onDoubleClick={() => window.api.window.toggleMaximize()}>
       <div className="flex items-center gap-3">
         <span className="text-[12px] font-medium text-muted">Tutti</span>
         <Chip icon={<MdTerminal size={14} />} label={t('title.terminal')} active={shell} onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); setTermMenu(new DOMRect(r.left, r.bottom, 220, 0)) }} title={t('title.terminalTip')} />
@@ -63,6 +65,8 @@ export function TitleBar() {
           title={t('title.editTip')}
         />
       </div>
+      {/* el nombre del proyecto, centrado en la ventana; no recibe clics: la barra sigue arrastrándose por ahí */}
+      {projectName && <span title={project ?? undefined} className="pointer-events-none absolute left-1/2 top-1/2 max-w-[34%] -translate-x-1/2 -translate-y-1/2 truncate text-[12px] font-medium text-muted">{projectName}</span>}
       <div className="flex items-center gap-0.5">
         <UpdateButton />
         <IconButton title={t('title.newWindow')} onClick={() => window.api.window.openNew()}><MdOpenInNew size={15} /></IconButton>

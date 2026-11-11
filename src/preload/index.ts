@@ -9,6 +9,7 @@ const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => voi
 
 const api: Api = {
   settings: { get: (k) => ipcRenderer.invoke('settings:get', k), set: (k, v) => ipcRenderer.invoke('settings:set', k, v) },
+  theme: { accent: () => ipcRenderer.invoke('theme:accent'), onAccent: (cb) => subscribe<[string | null]>('theme:accent', cb) },
   dialog: { chooseFolder: (start) => ipcRenderer.invoke('dialog:chooseFolder', start) },
   search: { run: (root, opts) => ipcRenderer.invoke('search:run', root, opts), replace: (root, opts, text, paths) => ipcRenderer.invoke('search:replace', root, opts, text, paths) },
   fs: {
