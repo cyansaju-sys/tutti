@@ -2,6 +2,12 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.12
+
+### Changes
+
+- **Markdown with README HTML:** the preview understands `<div align="center">` (and `<p>`, `<center>`) with Markdown inside, plus `<br>`, `<img>` and `<a>`. Headings indented up to 3 spaces are also recognized.
+
 ## 1.4.11
 
 ### Changes

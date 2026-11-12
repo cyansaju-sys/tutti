@@ -25,3 +25,20 @@ describe('Markdown', () => {
     expect(splitFrontMatter('# Sin cabecera')).toEqual({ meta: [], body: '# Sin cabecera' })
   })
 })
+
+describe('HTML de los README', () => {
+  it('lee el Markdown dentro de <div align="center">', () => {
+    expect(parseBlocks('<div align="center">\n  # Memory\n</div>\n\ntexto')).toEqual([
+      { kind: 'box', align: 'center', blocks: [{ kind: 'h', level: 1, text: 'Memory' }] },
+      { kind: 'p', text: 'texto' }
+    ])
+  })
+  it('aguanta contenedores anidados y en una sola línea', () => {
+    const [b] = parseBlocks('<div align="right"><div>a</div>\n\n## T\n</div>')
+    expect(b).toMatchObject({ kind: 'box', align: 'right' })
+    expect(parseBlocks('<p align="center">hola</p>')[0]).toMatchObject({ kind: 'box', align: 'center', blocks: [{ kind: 'p', text: 'hola' }] })
+  })
+  it('sin cierre se deja como párrafo', () => {
+    expect(parseBlocks('<div>hola')[0]).toMatchObject({ kind: 'p' })
+  })
+})
