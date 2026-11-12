@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
+import { MdAdd, MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
 import type { DirEntry } from '@shared/types'
 import { Menu } from '@/shared/components/Menu'
 import { Modal } from '@/shared/components/ui'
@@ -43,6 +43,8 @@ export function FilesView() {
   const [clip, setClip] = useState<{ paths: string[]; cut: boolean } | null>(null)          // el portapapeles de archivos de Tutti: copiar o cortar y pegar en otra carpeta
   const [rootOpen, setRootOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rootCollapsed') !== '1' } catch { return true } })      // la raíz del proyecto es una sección plegable
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
+  const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
+  const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -365,6 +367,17 @@ export function FilesView() {
           )
         })}
       </div>}
+      </div>
+      {/* los roles quedan fijos abajo: el 30 % del explorador cuando está abierta, solo la cabecera plegada */}
+      <div style={rolesOpen ? { height: '30%' } : undefined} className="flex shrink-0 flex-col px-1 pt-1">
+        <div className="flex shrink-0 items-center">
+          <button onClick={toggleRoles} aria-expanded={rolesOpen} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-2 py-1 text-left transition-colors hover:text-accent">
+            <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', rolesOpen && 'rotate-90')} />
+            <span className="truncate text-[12px] font-semibold">{t('fs.roles')}</span>
+          </button>
+          <button title={t('fs.addRole')} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
+        </div>
+        {rolesOpen && <div className="min-h-0 flex-1 overflow-y-auto"><p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p></div>}
       </div>
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[

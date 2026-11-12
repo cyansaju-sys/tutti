@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
 import { Footer } from '@/shared/components/Footer'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
@@ -198,7 +198,7 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
-      <div className={`flex min-h-0 flex-1 p-1.5 pt-0.5 ${s.sidebarSide === 'right' ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex min-h-0 flex-1 p-[4px] pb-1 pt-0.5 ${s.sidebarSide === 'right' ? 'flex-row-reverse' : ''}`}>
         <Sidebar />
         {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
         <div className="relative flex min-w-0 flex-1 flex-col">
