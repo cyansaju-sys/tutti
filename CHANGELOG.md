@@ -2,6 +2,12 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.12
+
+### Cambios
+
+- **Markdown con HTML de README:** la vista previa entiende `<div align="center">` (y `<p>`, `<center>`) con Markdown dentro, además de `<br>`, `<img>` y `<a>`. Los títulos con sangría de hasta 3 espacios también se reconocen.
+
 ## 1.4.11
 
 ### Cambios

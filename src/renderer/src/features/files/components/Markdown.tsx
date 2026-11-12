@@ -3,8 +3,13 @@ import type { ReactNode } from 'react'
 /**
  * Vista de Markdown sin dependencias: títulos, listas, citas, código, énfasis y enlaces. Genera elementos de React (nunca HTML en crudo),
  * así que lo que haya en el texto no puede ejecutar nada; los enlaces solo se aceptan si son http(s).
+ * Acepta además el HTML habitual de los README: `<div|p|center align="...">` (con Markdown dentro), `<br>`, `<img>` y `<a href>`.
  */
-const INLINE = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(\*[^*\n]+\*)|(_[^_\n]+_)|(\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))/g
+const INLINE = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(\*[^*\n]+\*)|(_[^_\n]+_)|(\[[^\]\n]+\]\(https?:\/\/[^)\s]+\))|(<br\s*\/?>)|(<img\s[^>]*>)|(<a\s[^>]*>.*?<\/a>)/gi
+
+/** Valor de un atributo de una etiqueta HTML («align="center"»); vacío si no está. */
+const attr = (tag: string, name: string): string => new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag)?.slice(1).find((v) => v !== undefined) ?? ''
+const size = (v: string): number | undefined => (/^\d{1,4}$/.test(v) ? Number(v) : undefined)
 
 export function inline(text: string): ReactNode[] {
   const out: ReactNode[] = []
@@ -15,7 +20,17 @@ export function inline(text: string): ReactNode[] {
     if (i > last) out.push(text.slice(last, i))
     const t = m[0]
     const key = `i${n++}`
-    if (t.startsWith('`')) out.push(<code key={key} className="rounded bg-ov/[0.08] px-1 py-px font-mono text-[0.9em] text-accent">{t.slice(1, -1)}</code>)
+    if (/^<br/i.test(t)) out.push(<br key={key} />)
+    else if (/^<img/i.test(t)) {
+      const src = attr(t, 'src')
+      if (/^https?:\/\//i.test(src)) out.push(<img key={key} src={src} alt={attr(t, 'alt')} width={size(attr(t, 'width'))} height={size(attr(t, 'height'))} className="inline-block max-w-full align-middle" />)
+      else out.push(t)
+    } else if (/^<a\s/i.test(t)) {
+      const url = attr(t, 'href')
+      const label = t.replace(/^<a\s[^>]*>/i, '').replace(/<\/a>$/i, '')
+      if (/^https?:\/\//i.test(url)) out.push(<a key={key} href={url} onClick={(e) => { e.preventDefault(); window.open(url, '_blank') }} className="text-accent underline decoration-accent/40 hover:decoration-accent">{inline(label)}</a>)
+      else out.push(...inline(label))
+    } else if (t.startsWith('`')) out.push(<code key={key} className="rounded bg-ov/[0.08] px-1 py-px font-mono text-[0.9em] text-accent">{t.slice(1, -1)}</code>)
     else if (t.startsWith('**') || t.startsWith('__')) out.push(<strong key={key} className="font-semibold text-text">{inline(t.slice(2, -2))}</strong>)
     else if (t.startsWith('[')) {
       const [, label, url] = /^\[([^\]]+)\]\((.+)\)$/.exec(t) ?? []
@@ -34,6 +49,7 @@ type Block =
   | { kind: 'quote'; text: string }
   | { kind: 'code'; text: string }
   | { kind: 'hr' }
+  | { kind: 'box'; align: 'left' | 'center' | 'right' | ''; blocks: Block[] }                     // `<div align="center">…</div>` con Markdown dentro
   | { kind: 'table'; head: string[]; align: Array<'left' | 'center' | 'right'>; rows: string[][] }
 
 const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
@@ -81,7 +97,31 @@ export function parseBlocks(source: string): Block[] {
       blocks.push({ kind: 'table', head, align, rows })
       continue
     }
-    const h = /^(#{1,4})\s+(.*)$/.exec(line)
+    const box = /^\s*<(div|p|center)\b([^>]*)>(.*)$/i.exec(line)
+    if (box) {                                                    // contenedor HTML: se busca su cierre (con anidados) y se lee su interior como Markdown
+      const tag = box[1].toLowerCase()
+      const tags = new RegExp(`<(/?)${tag}\\b[^>]*>`, 'gi')
+      const inner: string[] = []
+      let depth = 1
+      let end = -1
+      for (let j = i; j < lines.length && end < 0; j++) {
+        const chunk = j === i ? box[3] : lines[j]
+        let cut = chunk.length
+        for (const m of chunk.matchAll(tags)) {
+          depth += m[1] ? -1 : 1
+          if (depth === 0) { cut = m.index ?? 0; end = j; break }
+        }
+        inner.push(chunk.slice(0, cut))
+      }
+      if (end >= 0) {
+        flush()
+        const a = attr(box[2], 'align').toLowerCase()
+        blocks.push({ kind: 'box', align: tag === 'center' ? 'center' : a === 'center' || a === 'right' || a === 'left' ? a : '', blocks: parseBlocks(inner.join('\n')) })
+        i = end
+        continue
+      }
+    }
+    const h = /^ {0,3}(#{1,4})\s+(.*)$/.exec(line)
     const li = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line)
     if (h) { flush(); blocks.push({ kind: 'h', level: h[1].length, text: h[2].trim() }) }
     else if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flush(); blocks.push({ kind: 'hr' }) }
@@ -109,11 +149,10 @@ export function parseBlocks(source: string): Block[] {
 
 const HEADING = ['', 'text-[17px] font-semibold mt-1', 'text-[14px] font-semibold mt-4 text-text', 'text-[13px] font-semibold mt-3', 'text-[12px] font-semibold mt-3 text-muted']
 
-export function Markdown({ text }: { text: string }) {
-  return (
-    <div className="flex flex-col gap-2 text-[12.5px] leading-relaxed text-text/90">
-      {parseBlocks(text).map((b, i) => {
+function renderBlocks(blocks: Block[]): ReactNode[] {
+  return blocks.map((b, i) => {
         switch (b.kind) {
+          case 'box': return <div key={i} style={{ textAlign: b.align || undefined }} className="flex flex-col gap-2">{renderBlocks(b.blocks)}</div>
           case 'h': return <div key={i} role="heading" aria-level={b.level} className={HEADING[b.level]}>{inline(b.text)}</div>
           case 'p': return <p key={i} className="m-0">{inline(b.text)}</p>
           case 'quote': return <blockquote key={i} className="m-0 border-l-2 border-accent/50 pl-3 text-muted">{inline(b.text)}</blockquote>
@@ -149,9 +188,11 @@ export function Markdown({ text }: { text: string }) {
             )
           }
         }
-      })}
-    </div>
-  )
+  })
+}
+
+export function Markdown({ text }: { text: string }) {
+  return <div className="flex flex-col gap-2 text-[12.5px] leading-relaxed text-text/90">{renderBlocks(parseBlocks(text))}</div>
 }
 
 /** Separa la cabecera (--- clave: valor ---) de un archivo, como la de los steering de .tutti; devuelve sus pares y el resto del texto. */
