@@ -34,6 +34,28 @@ type Block =
   | { kind: 'quote'; text: string }
   | { kind: 'code'; text: string }
   | { kind: 'hr' }
+  | { kind: 'table'; head: string[]; align: Array<'left' | 'center' | 'right'>; rows: string[][] }
+
+const TABLE_SEP = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/
+
+/** Celdas de una fila «| a | b |»; respeta `\|` y los `|` dentro de `código`. */
+function cells(line: string): string[] {
+  const out: string[] = []
+  let cur = ''
+  let code = false
+  const s = line.trim()
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === '\\' && s[i + 1] === '|') { cur += '|'; i++ }
+    else if (c === '`') { code = !code; cur += c }
+    else if (c === '|' && !code) { out.push(cur.trim()); cur = '' }
+    else cur += c
+  }
+  out.push(cur.trim())
+  if (s.startsWith('|')) out.shift()
+  if (s.endsWith('|') && !s.endsWith('\\|')) out.pop()
+  return out
+}
 
 export function parseBlocks(source: string): Block[] {
   const lines = source.replace(/\r/g, '').split('\n')
@@ -47,6 +69,16 @@ export function parseBlocks(source: string): Block[] {
       const code: string[] = []
       for (i++; i < lines.length && !/^\s*```/.test(lines[i]); i++) code.push(lines[i])
       blocks.push({ kind: 'code', text: code.join('\n') })
+      continue
+    }
+    if (line.includes('|') && i + 1 < lines.length && lines[i + 1].includes('-') && TABLE_SEP.test(lines[i + 1])) {   // tabla: cabecera + separador + filas
+      flush()
+      const head = cells(line)
+      const align = cells(lines[i + 1]).map((c) => (c.startsWith(':') && c.endsWith(':') ? 'center' : c.endsWith(':') ? 'right' : 'left') as 'left' | 'center' | 'right')
+      const rows: string[][] = []
+      for (i += 2; i < lines.length && lines[i].trim() && lines[i].includes('|'); i++) rows.push(cells(lines[i]))
+      i--
+      blocks.push({ kind: 'table', head, align, rows })
       continue
     }
     const h = /^(#{1,4})\s+(.*)$/.exec(line)
@@ -87,6 +119,20 @@ export function Markdown({ text }: { text: string }) {
           case 'quote': return <blockquote key={i} className="m-0 border-l-2 border-accent/50 pl-3 text-muted">{inline(b.text)}</blockquote>
           case 'code': return <pre key={i} className="m-0 overflow-x-auto rounded-md bg-ov/[0.06] p-2.5 font-mono text-[11.5px] leading-snug">{b.text}</pre>
           case 'hr': return <hr key={i} className="my-1 border-line" />
+          case 'table': return (
+            <div key={i} className="overflow-x-auto">
+              <table className="border-collapse text-[12px]">
+                <thead>
+                  <tr>{b.head.map((c, j) => <th key={j} style={{ textAlign: b.align[j] }} className="whitespace-nowrap border border-line bg-ov/[0.06] px-1.5 py-2 font-semibold text-text">{inline(c)}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {b.rows.map((r, k) => (
+                    <tr key={k}>{b.head.map((_, j) => <td key={j} style={{ textAlign: b.align[j] }} className="whitespace-nowrap border border-line px-1.5 py-2 align-top">{inline(r[j] ?? '')}</td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
           default: {
             const Tag = b.kind
             return (

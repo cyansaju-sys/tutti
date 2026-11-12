@@ -1,13 +1,14 @@
 import { clsx } from 'clsx'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
+import { MdAdd, MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdAccountTree, MdDriveFileRenameOutline, MdEdit, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdPlayArrow, MdSend, MdSmartToy, MdUnfoldLess } from 'react-icons/md'
 import type { DirEntry } from '@shared/types'
+import { confirmAsk as confirmBox } from '@/shared/lib/confirm'
 import { Menu } from '@/shared/components/Menu'
 import { Modal } from '@/shared/components/ui'
 import { GIT_COLOR } from '@/features/git/lib/gitSync'
 import { FileIcon } from '@/shared/components/FileIcon'
 import { basename, relative, toPosix } from '@/shared/lib/paths'
-import { RolesPlan } from '@/features/agents/components/RolesPlan'
+import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { agentRef } from '@/features/agents/lib/agentRef'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -28,6 +29,17 @@ export function FilesView() {
   const git = useStore((s) => s.git)
   const setProject = useStore((s) => s.setProject)
   const openDoc = useStore((s) => s.openDoc)
+  const openRoleForm = useStore((s) => s.openRoleForm)
+  const openRoleGraph = useStore((s) => s.openRoleGraph)
+  const paneRoles = useStore((s) => s.paneRoles)
+  const [playing, setPlaying] = useState(false)          // el diálogo que pide el objetivo para lanzar los roles
+  const working = (name: string): boolean => Object.values(paneRoles).some((r) => r.working && r.role === name.replace(/\.md$/i, ''))          // un plan tiene a este rol trabajando
+  const removeRole = async (r: { name: string; path: string }): Promise<void> => {
+    if (!(await confirmBox(t('fs.confirmDeleteRole', { name: r.name.replace(/\.md$/i, '') })))) return
+    const res = await window.api.fs.trash(r.path)
+    if (!res.ok) { useStore.getState().toast(res.message, 'error'); return }
+    useStore.getState().dropDocs(r.path); void loadRoles()
+  }
   const set = useStore((s) => s.set)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
@@ -44,6 +56,9 @@ export function FilesView() {
   const [clip, setClip] = useState<{ paths: string[]; cut: boolean } | null>(null)          // el portapapeles de archivos de Tutti: copiar o cortar y pegar en otra carpeta
   const [rootOpen, setRootOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rootCollapsed') !== '1' } catch { return true } })      // la raíz del proyecto es una sección plegable
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
+  const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
+  const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
+  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/roles
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -60,7 +75,18 @@ export function FilesView() {
   // al cambiar de proyecto se empieza de cero
   useEffect(() => { setExpanded(new Set()); setChildren({}); setIgnored(new Set()); setCursor(null); if (project) void load(project) }, [project])  // eslint-disable-line react-hooks/exhaustive-deps
   // las carpetas abiertas se releen cuando cambia git y cada pocos segundos
-  const reload = useCallback(() => { if (project) { void load(project); expanded.forEach((d) => void load(d)) } }, [project, expanded, load])
+  const loadRoles = useCallback(async () => {
+    if (!project) return
+    const dir = await window.api.context.dir(project)
+    const files = await window.api.fs.list(`${dir}/roles`).catch(() => [] as DirEntry[])
+    // el agente de cada rol está en su cabecera («agent: claude»): da su icono
+    const list = await Promise.all(files.filter((f) => !f.isDir).map(async (f) => {
+      const text = await window.api.fs.read(f.path).then((d) => d.text, () => '')
+      return { ...f, agent: /^---\n[\s\S]*?^agent:[ \t]*(\S+)[ \t]*$/m.exec(text)?.[1] ?? '' }
+    }))
+    setRoles((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
+  }, [project])
+  const reload = useCallback(() => { if (project) { void load(project); void loadRoles(); expanded.forEach((d) => void load(d)) } }, [project, expanded, load, loadRoles])
   useEffect(() => { const t = setInterval(reload, 5000); return () => clearInterval(t) }, [reload])
   useEffect(() => { reload() }, [git?.files.length])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -367,7 +393,35 @@ export function FilesView() {
         })}
       </div>}
       </div>
-      <RolesPlan />
+      {/* los roles quedan fijos abajo: el 30 % del explorador cuando está abierta, solo la cabecera plegada */}
+      <div style={rolesOpen ? { height: '30%' } : undefined} className="flex shrink-0 flex-col px-1 pt-1">
+        <div className="flex shrink-0 items-center">
+          <button onClick={toggleRoles} aria-expanded={rolesOpen} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-2 py-1 text-left transition-colors hover:text-accent">
+            <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', rolesOpen && 'rotate-90')} />
+            <span className="truncate text-[12px] font-semibold">{t('fs.roles')}</span>
+          </button>
+          <button title={t('fs.playRoles')} disabled={roles.length === 0} onClick={() => setPlaying(true)} className="grid size-[26px] shrink-0 place-items-center rounded-md text-ok transition-colors hover:bg-ok/15 disabled:cursor-not-allowed disabled:opacity-40"><MdPlayArrow size={18} /></button>
+          <button title={t('rg.open')} onClick={openRoleGraph} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAccountTree size={15} /></button>
+          <button title={t('fs.addRole')} onClick={() => openRoleForm()} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
+        </div>
+        {rolesOpen && (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {roles.map((r) => (
+              <div key={r.path} className={clsx('group flex items-center hover:bg-accent-bg', working(r.name) && 'bg-ok/10')}>
+                <button onClick={() => void openDoc(r.path)} className="flex min-w-0 flex-1 items-center gap-1.5 py-[3px] pl-[28px] pr-1.5 text-left text-[12px]">
+                  {r.agent ? <AgentIcon name={r.agent} command={r.agent} size={16} /> : <MdSmartToy size={16} className="shrink-0 text-muted" />}<span className={clsx('truncate', working(r.name) && 'font-medium text-ok')}>{r.name.replace(/\.md$/i, '')}</span>
+                  {working(r.name) && <span title={t('pane.roleWorkingShort')} className="ml-auto size-1.5 shrink-0 animate-pulse rounded-full bg-ok" />}
+                </button>
+                <button title={t('fs.editRole')} onClick={() => openRoleForm({ file: r.path, name: r.name.replace(/\.md$/i, '') })}
+                  className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100"><MdEdit size={13} /></button>
+                <button title={t('fs.deleteRole')} onClick={() => void removeRole(r)}
+                  className="mr-1.5 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-danger group-hover:opacity-100"><MdDeleteOutline size={14} /></button>
+              </div>
+            ))}
+            {roles.length === 0 && <p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p>}
+          </div>
+        )}
+      </div>
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
           { label: t('fs.newFile'), icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },
@@ -398,6 +452,7 @@ export function FilesView() {
           { label: t('fs.delete'), separator: true, icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: [menu.entry] }) }
         ]} />
       )}
+      {playing && project && <PlayRolesDialog project={project} onClose={() => setPlaying(false)} />}
       {ask?.kind === 'move' && <MoveDialog paths={ask.paths} dest={ask.dir === project ? basename(project) : toPosix(relative(project, ask.dir))} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
       {ask?.kind === 'delete' && <DeleteDialog entries={ask.entries} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
     </div>
@@ -407,6 +462,36 @@ export function FilesView() {
 async function chooseProject(setProject: (p: string | null) => void): Promise<void> {
   const picked = await window.api.dialog.chooseFolder(useStore.getState().project ?? undefined)
   if (picked) setProject(picked)
+}
+
+/** Pide el objetivo común y lanza todos los roles en el orden de sus dependencias (cada uno con su agente y modelo). */
+function PlayRolesDialog({ project, onClose }: { project: string; onClose: () => void }) {
+  const t = useT()
+  const toast = useStore((s) => s.toast)
+  const [goal, setGoal] = useState('')
+  const [busy, setBusy] = useState(false)
+  const run = async (): Promise<void> => {
+    if (!goal.trim() || busy) return
+    setBusy(true)
+    const res = await window.api.orchestra.runRoles(project, goal.trim())
+    setBusy(false)
+    toast(res.message, res.ok ? 'ok' : 'error')
+    if (res.ok) onClose()
+  }
+  return (
+    <Modal onClose={onClose} width={440} title={t('fs.playTitle')}>
+      <div className="flex flex-col gap-3 px-4 pb-4">
+        <p className="text-[12px] leading-relaxed text-muted">{t('fs.playBody')}</p>
+        <textarea autoFocus value={goal} onChange={(e) => setGoal(e.target.value)} rows={4} placeholder={t('fs.playGoalPh')} spellCheck={false}
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) void run() }}
+          className="w-full resize-none rounded-lg border border-line bg-transparent px-2.5 py-2 text-[12px] outline-none focus:border-accent" />
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
+          <button onClick={() => void run()} disabled={!goal.trim() || busy} className="flex items-center gap-1 rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110 disabled:opacity-50"><MdPlayArrow size={15} />{t('fs.playRun')}</button>
+        </div>
+      </div>
+    </Modal>
+  )
 }
 
 function MoveDialog({ paths, dest, onClose, onOk }: { paths: string[]; dest: string; onClose: () => void; onOk: () => void }) {

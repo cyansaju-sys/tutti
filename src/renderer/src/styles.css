@@ -58,7 +58,7 @@
 :root {
   color-scheme: dark;
   --ed-line: #ffffff08; --ed-field: #ffffff0a; --ed-bracket: #54637666; --ed-match: #54637688; --ed-indent: #ffffff20; --ed-shadow: #000a;
-  --syn-keyword: #c792ea; --syn-type: #4cc9b0; --syn-string: #7ccb8b; --syn-number: #f0b67f; --syn-func: #82aaff; --syn-tag: #f07178; --syn-attr: #ffcb6b;
+  --syn-keyword: #c792ea; --syn-type: #4cc9b0; --syn-string: #7ccb8b; --syn-number: #f0b67f; --syn-func: #82aaff; --syn-tag: #f07178; --syn-attr: #ffcb6b; --syn-op: #89ddff;
 }
 /* tema claro: se activa con <html data-theme="light"> */
 :root[data-theme="light"] {
@@ -71,7 +71,7 @@
   --color-git-m: #8f5f00; --color-git-a: #1f8f4e; --color-git-d: #c0422d; --color-git-c: #c92c47;
   --color-ov: #000000; --color-pop: #f6f7fa;
   --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #9bb3ce44; --ed-match: #9bb3ce6e; --ed-indent: #00000022; --ed-shadow: #0000002e;
-  --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00;
+  --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00; --syn-op: #0b7285;
 }
 /* color del sistema (<html data-accent="system" style="--sys-accent: …">), como en Chrome: toda la interfaz se tiñe con su matiz —fondos, líneas y acento— y la luz y la saturación se ajustan a cada tema */
 :root[data-accent="system"] {
@@ -83,6 +83,7 @@
   --color-accent: oklch(from var(--sys-accent) 0.8 min(c, 0.12) h);
   --color-accent-bg: oklch(from var(--sys-accent) 0.3 min(c, 0.06) h);
   --color-accent-dim: oklch(from var(--sys-accent) 0.55 min(c, 0.07) h);
+  --syn-op: oklch(from var(--sys-accent) 0.82 min(c, 0.13) h);
   --ed-bracket: oklch(from var(--sys-accent) 0.5 min(c, 0.06) h / 0.4); --ed-match: oklch(from var(--sys-accent) 0.5 min(c, 0.06) h / 0.53);
 }
 :root[data-accent="system"][data-theme="light"] {
@@ -94,6 +95,7 @@
   --color-accent: oklch(from var(--sys-accent) 0.45 min(c, 0.14) h);
   --color-accent-bg: oklch(from var(--sys-accent) 0.87 min(c, 0.05) h);
   --color-accent-dim: oklch(from var(--sys-accent) 0.75 min(c, 0.07) h);
+  --syn-op: oklch(from var(--sys-accent) 0.45 min(c, 0.14) h);
   --ed-bracket: oklch(from var(--sys-accent) 0.75 min(c, 0.07) h / 0.27); --ed-match: oklch(from var(--sys-accent) 0.75 min(c, 0.07) h / 0.43);
 }
 :root[data-theme="light"] img[src*="icons/sidebar"] { filter: brightness(0.5) saturate(1.3); }

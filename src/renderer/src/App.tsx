@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/Dialogs'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
 import { Footer } from '@/shared/components/Footer'
 import { Sidebar, TABS } from '@/shared/components/Sidebar'
@@ -49,6 +49,8 @@ export function App() {
       if (isIconFlavor(savedFlavor)) useStore.setState({ iconFlavor: savedFlavor })
       const savedSide = await window.api.settings.get('sidebar_side')
       if (savedSide === 'left' || savedSide === 'right') useStore.setState({ sidebarSide: savedSide })
+      const savedFont = await window.api.settings.get('editor_font')
+      if (typeof savedFont === 'string' && savedFont.trim()) useStore.setState({ editorFont: savedFont })
       const savedWidth = await window.api.settings.get('sidebar_width')          // el ancho del sidebar es global: vale para todos los proyectos
       if (typeof savedWidth === 'number' && Number.isFinite(savedWidth)) useStore.setState({ sidebarWidth: Math.max(220, Math.min(520, savedWidth)) })
       const savedLang = await window.api.settings.get('language')
@@ -125,7 +127,7 @@ export function App() {
       n.onclick = () => { window.focus(); useStore.getState().focusPane(id) }
     })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
-    const applyPanes = ({ leader, roles, inbox, asking }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneRoles: roles, paneInbox: inbox, paneAsking: asking })
+    const applyPanes = ({ leader, inbox, asking, roles }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneInbox: inbox, paneAsking: asking, paneRoles: roles })
     void window.api.orchestra.paneState().then(applyPanes)
     const offRoles = window.api.orchestra.onPaneState(applyPanes)
     return () => { offPane(); offAttention(); offToast(); offRoles() }
@@ -198,7 +200,7 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
-      <div className={`flex min-h-0 flex-1 p-1.5 pt-0.5 ${s.sidebarSide === 'right' ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex min-h-0 flex-1 p-[4px] pb-1 pt-0.5 ${s.sidebarSide === 'right' ? 'flex-row-reverse' : ''}`}>
         <Sidebar />
         {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
         <div className="relative flex min-w-0 flex-1 flex-col">
@@ -223,6 +225,7 @@ export function App() {
       <Footer />
       {s.modal === 'agents' && <AgentPicker />}
       {s.modal === 'addAgent' && <AddAgentDialog />}
+      {s.modal === 'editorSettings' && <EditorSettingsDialog />}
       {s.modal === 'shell' && <ShellDialog />}
       {s.modal === 'shortcuts' && <ShortcutsDialog />}
       {s.modal === 'branches' && s.project && <BranchPicker />}

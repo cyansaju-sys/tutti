@@ -6,6 +6,9 @@ import type { ToastKind } from './types'
 import type { State, UiSlice } from './types'
 let toastId = 1
 
+/** Fuente del editor de código si el usuario no pone otra. */
+export const DEFAULT_EDITOR_FONT = "'Droid Sans Mono', monospace"
+
 /** Deduce el tipo de aviso a partir del texto cuando no se indica. */
 const guessKind = (m: string): ToastKind => {
   const low = m.toLowerCase()
@@ -16,7 +19,7 @@ const guessKind = (m: string): ToastKind => {
 
 
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
-  newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
+  newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {
@@ -47,6 +50,7 @@ export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) =>
     set({ langPref: pref, lang: resolveLangPref(pref) })
     void window.api.settings.set('language', pref)
   },
+  setEditorFont: (font) => { set({ editorFont: font }); void window.api.settings.set('editor_font', font) },
   setSidebarSide: (side) => { set({ sidebarSide: side }); void window.api.settings.set('sidebar_side', side) },
   setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }
 })

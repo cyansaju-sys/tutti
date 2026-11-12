@@ -96,12 +96,12 @@ function Section({ title, id, detail, count, folded, onToggle, fill = false, res
       </button>
       {!folded && (
         <>
-          <div ref={size.body} style={size.height ? { height: size.height } : undefined} className={clsx('sect-scroll flex min-h-0 flex-col gap-2 overflow-y-auto', fill ? 'flex-1' : !size.height && 'max-h-96')}>{children}</div>
+          <div ref={size.body} style={!fill && size.height ? { height: size.height } : undefined} className={clsx('sect-scroll flex min-h-0 flex-col gap-2 overflow-y-auto', fill ? 'flex-1' : !size.height && 'max-h-96')}>{children}</div>
           {footer && <div className="shrink-0">{footer}</div>}
         </>
       )}
     </section>
-    {!folded && resize && (
+    {!folded && resize && !fill && (
       <div onPointerDown={size.start} onDoubleClick={size.reset} title={t('st.resize')} role="separator" aria-orientation="horizontal"
         className="group shrink-0 cursor-row-resize touch-none py-1"><div className="h-px bg-line transition-colors group-hover:bg-accent" /></div>
     )}
@@ -150,7 +150,7 @@ export function UsageView() {
 
   return (
     <div className="flex h-full flex-col gap-3 overflow-hidden px-2 pb-3">
-      <Section title={t('us.usage')} id="usage" folded={!!folded.usage} onToggle={toggle} resize>
+      <Section title={t('us.usage')} id="usage" folded={!!folded.usage} onToggle={toggle} fill={!!folded.history} resize>          {/* con el historial plegado, el consumo ocupa todo el espacio libre */}
         {data.agents.map((u) => <Card key={u.command} u={u} now={now} />)}
       </Section>
       <Section title={t('us.history')} id="history" detail={project ? basename(project) : ''} count={project ? data.history.length : undefined} folded={!!folded.history} onToggle={toggle} fill

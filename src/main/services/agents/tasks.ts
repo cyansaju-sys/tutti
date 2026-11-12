@@ -1,6 +1,6 @@
 /**
  * Registro de tareas delegadas (lo que muestra el panel «Tareas»): a quién se le pasó cada una, cómo va y cómo acabó.
- * Lo que decide si una tarea terminó vive aquí; el plan de roles lo lee para saber cuándo un rol acabó.
+ * Lo que decide si una tarea terminó vive aquí.
  */
 import type { TaskInfo } from '../../../shared/types'
 import { isDifficulty } from './assign'
@@ -40,13 +40,11 @@ const SLOW_MS = 30 * 60_000      // una tarea que dura más se le señala al lí
 export const INPUT_ROWS = 40
 const NUDGE = '[Tutti] Si ya terminaste la tarea que te pasaron, llama a report_done (status done, blocked o failed, y un summary). Si sigues con ella, ignora este mensaje.'
 
-/** Anota una tarea nueva para un agente. Si el agente estaba a medias o bloqueado con un rol, la nueva sigue con ese rol. */
-export function recordTask(caller: pty.Meta, agentId: string, agent: string, command: string, task: string, opts: { difficulty?: string; model?: string; role?: string }): TaskRecord {
+/** Anota una tarea nueva para un agente. */
+export function recordTask(caller: pty.Meta, agentId: string, agent: string, command: string, task: string, opts: { difficulty?: string; model?: string }): TaskRecord {
   const now = Date.now()
-  const prev = latestTaskOf(agentId)
-  const inherited = prev?.role && ['working', 'needs_input', 'blocked', 'failed'].includes(statusOf(prev)) ? prev.role : null
   for (const t of tasks) if (t.agentId === agentId && t.endedAt === null) t.endedAt = now      // si se reutiliza el agente, la anterior ya acabó
-  const record: TaskRecord = { id: tasks.length ? tasks[tasks.length - 1].id + 1 : 1, agentId, agent, callerId: caller.id, caller: label(caller.name), task, model: opts.model ?? null, difficulty: opts.difficulty ?? null, role: opts.role ?? inherited,
+  const record: TaskRecord = { id: tasks.length ? tasks[tasks.length - 1].id + 1 : 1, agentId, agent, callerId: caller.id, caller: label(caller.name), task, model: opts.model ?? null, difficulty: opts.difficulty ?? null,
     startedAt: now, endedAt: null, command, cwd: caller.cwd }
   tasks.push(record)
   if (tasks.length > 100) tasks.splice(0, tasks.length - 100)
@@ -67,7 +65,6 @@ export function statusOf(t: TaskRecord): TaskInfo['status'] {
 }
 export const active = (status: TaskInfo['status']): boolean => status === 'working' || status === 'needs_input'
 export const latestTaskOf = (agentId: string): TaskRecord | undefined => [...tasks].reverse().find((t) => t.agentId === agentId)
-export const latestRoleTask = (roleId: string): TaskRecord | undefined => [...tasks].reverse().find((t) => t.role === roleId)
 /** El modelo con el que trabajó: el que se pidió o, si no, el que tiene el agente. */
 export const modelOf = (t: TaskRecord): string | null => t.model ?? currentModel(t.command, t.cwd)
 
@@ -79,11 +76,11 @@ export function taskList(): TaskInfo[] {
   })
 }
 
-/** Quita las tareas terminadas o cuyo agente se cerró; las de un rol que no acabó bien se quedan hasta que se relance o se descarte el plan. */
+/** Quita las tareas terminadas o cuyo agente se cerró. */
 export function forgetFinished(): void {
   for (let i = tasks.length - 1; i >= 0; i--) {
     const status = statusOf(tasks[i])
-    if (!active(status) && (status === 'done' || !tasks[i].role)) tasks.splice(i, 1)
+    if (!active(status)) tasks.splice(i, 1)
   }
 }
 
@@ -91,15 +88,14 @@ const OUTCOME = { done: 'terminó', blocked: 'se bloqueó en', failed: 'no pudo 
 
 /** Lo que se le escribe al líder cuando una tarea suya acaba, según cómo acabó. */
 function outcomeNote(t: TaskRecord, status: keyof typeof OUTCOME): string {
-  const parts = [`[Tutti] ${t.agent} (${t.agentId}) ${OUTCOME[status]} la tarea «${oneLine(t.task, 80)}»${t.role ? ` (rol ${t.role})` : ''}.`]
+  const parts = [`[Tutti] ${t.agent} (${t.agentId}) ${OUTCOME[status]} la tarea «${oneLine(t.task, 80)}».`]
   if (t.report) parts.push(`Resumen: ${oneLine(t.report.summary, 600)}`)
   if (t.report?.files.length) parts.push(`Archivos: ${t.report.files.slice(0, 20).join(', ')}.`)
   if (status === 'done') {
     const how = t.report ? 'Revisa el resultado antes de darlo por bueno' : `No avisó con report_done: lee el resultado con read_agent_output(agent_id: "${t.agentId}")`
-    parts.push(`${how}${t.role ? ` (get_role_result(role_id: "${t.role}") te da sus archivos y cambios)` : ''}.`)
+    parts.push(`${how}.`)
   }
-  else if (status === 'blocked') parts.push(`Contéstale con answer_agent(agent_id: "${t.agentId}", answer: ...)${t.role ? '; el rol sigue siendo suyo' : ''}.`)
-  else if (t.role) parts.push(`El rol «${t.role}» no cuenta como terminado: resuelve lo que haga falta y relánzalo con retry_role(role_id: "${t.role}").`)
+  else if (status === 'blocked') parts.push(`Contéstale con answer_agent(agent_id: "${t.agentId}", answer: ...).`)
   else parts.push(status === 'closed' ? 'Si aún hace falta, vuelve a repartirla con delegate_task.' : 'Decide si repartirla de otra forma o hacerla tú.')
   return parts.join(' ')
 }
@@ -114,9 +110,8 @@ function score(t: TaskRecord, status: TaskInfo['status']): void {
 /**
  * Sigue las tareas delegadas: avisa al usuario si un agente espera un permiso, recuerda report_done a quien calla sin avisar,
  * señala al líder las que van para largo, anota en el historial cómo acabó cada una y se lo avisa a quien la pasó.
- * `byReview`: las tareas cuyo aviso da la revisión de su rol (con la comprobación ya hecha).
  */
-export function checkTasks(byReview: (t: TaskRecord) => boolean): void {
+export function checkTasks(): void {
   for (const t of tasks) {
     const status = statusOf(t)
     score(t, status)
@@ -139,7 +134,6 @@ export function checkTasks(byReview: (t: TaskRecord) => boolean): void {
       if (pty.lastSubmit(t.agentId) > t.asking.at) { t.asking = undefined; t.nudged = false }
       continue
     }
-    if (status === 'done' && byReview(t)) continue
     t.notified = true
     notify(t.callerId, outcomeNote(t, status))
   }

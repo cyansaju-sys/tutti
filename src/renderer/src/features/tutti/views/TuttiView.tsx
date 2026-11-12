@@ -31,7 +31,7 @@ function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title
   const { open, setOpen } = useContext(Accordion)
   const isOpen = open === id
   return (
-    <section className={clsx('border-t border-line first:border-t-0', isOpen ? 'flex min-h-0 flex-1 flex-col pb-1' : 'shrink-0')}>
+    <section className={clsx(isOpen ? 'flex min-h-0 flex-1 flex-col pb-1' : 'shrink-0')}>
       <div className="flex h-7 shrink-0 items-center">
         <button onClick={() => setOpen(isOpen ? null : id)} aria-expanded={isOpen} className="flex h-full min-w-0 flex-1 items-center gap-1 rounded px-1 text-left text-text transition-colors hover:text-accent">
           <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', isOpen && 'rotate-90')} />

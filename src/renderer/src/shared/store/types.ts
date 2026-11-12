@@ -1,11 +1,11 @@
-import type { AgentInfo, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
+import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 import type { IconFlavor } from '@/shared/lib/icons'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
-export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'shortcuts' | 'branches' | 'worktrees' | 'quickOpen' | 'goLine' | 'theme' | 'iconTheme'
+export type Modal = null | 'agents' | 'addAgent' | 'shell' | 'editorSettings' | 'shortcuts' | 'branches' | 'worktrees' | 'quickOpen' | 'goLine' | 'theme' | 'iconTheme'
 export type Focus = 'tree' | 'editor' | 'pane'
 
 /** Pestaña de archivo o, con kind 'diff', de comparación: `original` = antes, `text` = después, `diffOf` = el archivo real. */
@@ -44,6 +44,8 @@ export interface DocsSlice {
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
   openNews: (since: string | null) => void              // las novedades como pestaña del editor: desde `since` (tras actualizar) o solo las de la versión instalada
+  openRoleGraph: () => void                            // el grafo de dependencias entre roles
+  openRoleForm: (edit?: { file: string; name: string }) => void                            // el formulario de un rol nuevo (solo el nombre)
   openSkillForm: () => void                           // el formulario de una skill nueva
   openSteeringForm: () => void                        // el formulario de un steering nuevo
   openSpecForm: (prefill?: SpecPrefill) => void       // el diálogo de una spec nueva (desde el roadmap, ya rellenado)
@@ -67,10 +69,10 @@ export interface PanesSlice {
   /** Segundo agente visible al dividir la vista en dos (Ctrl+2); null = un solo agente. */
   paneSplit: string | null
   /** El rol del plan que lleva cada panel de agente (por id de panel); lo avisa la app. */
-  paneRoles: Record<string, PaneRole>
   /** Avisos de Tutti que esperan a que cada agente esté libre (o a que dejes de escribir en su panel). */
   paneInbox: Record<string, number>
   paneAsking: string[]
+  paneRoles: Record<string, { role: string; title: string; working: boolean }>          // el rol que lleva cada agente (por id de panel) y si está trabajando
   /** El agente líder; null si solo hay uno abierto. */
   paneLeader: string | null
   openAgent: (agent: { name: string; command: string; args?: string[] }, args?: string[], opts?: { cwd?: string; title?: string; prompt?: string }) => Promise<void>
@@ -89,6 +91,7 @@ export interface UiSlice {
   tab: SidebarTab
   sidebarOpen: boolean
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
+  editorFont: string                                    // font-family del editor de código, tal como lo escribe el usuario
   sidebarWidth: number
   editorWidth: number
   shellHeight: number
@@ -117,5 +120,6 @@ export interface UiSlice {
   setIconFlavor: (flavor: IconFlavor) => void
   setLang: (pref: LangPref) => void
   setSidebarSide: (side: 'left' | 'right') => void
+  setEditorFont: (font: string) => void
   setEdit: (enabled: boolean) => void
 }

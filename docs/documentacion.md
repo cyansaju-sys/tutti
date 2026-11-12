@@ -216,7 +216,7 @@ El botón de la barra de título (o *Nueva ventana vacía* en el menú del lanza
 
 ## Reparto de tareas
 
-Tutti abre un servidor MCP local (solo en `127.0.0.1`, con un token distinto en cada ejecución) y conecta a cada agente a él con seis herramientas:
+Tutti abre un servidor MCP local (solo en `127.0.0.1`, con un token distinto en cada ejecución) y conecta a cada agente a él con cuatro herramientas:
 
 | Herramienta | Para qué sirve |
 |---|---|
@@ -224,8 +224,6 @@ Tutti abre un servidor MCP local (solo en `127.0.0.1`, con un token distinto en 
 | `delegate_task` | Mandar una tarea a un agente abierto o pedir uno nuevo (incluso del mismo tipo) |
 | `wait_agent` | Esperar a que un agente termine y recibir las últimas líneas de su pantalla |
 | `read_agent_output` | Leer la pantalla de un agente y saber si sigue ocupado |
-| `propose_roles` | Proponer los roles de un plan: Tutti los valida y devuelve a qué agente y modelo iría cada uno, sin lanzar nada |
-| `confirm_roles` | Dar el plan por revisado: tras tu aprobación, Tutti reparte los roles |
 
 ![Agentes repartiéndose una tarea](img/agentes.png)
 
@@ -234,23 +232,6 @@ El primer agente que abres es el **líder**. Los que él (u otro) abre salen en 
 ### Asigna según la capacidad
 
 Si el agente pasa `difficulty` (`easy`, `medium`, `hard`), Tutti revisa la lista, comprueba el nivel del modelo (*basic*, *standard*, *advanced*) y su límite de uso, y elige el más adecuado: el justo para la tarea (no gasta uno avanzado en algo fácil), libre antes que ocupado y que no tenga el límite agotado. Con `agent: "auto"` elige él; si el pedido no tiene capacidad suficiente se rechaza y se propone otro (`force` lo mantiene). También se puede pedir un `model` concreto para los agentes que lo permiten al abrirse.
-
-### Roles para una tarea grande
-
-Cuando una tarea tiene varias partes, el agente líder sigue este flujo antes de repartir nada:
-
-1. **Plan.** Lo escribe en `.tutti/roadmap.md` y, si es grande, en un cambio de OpenSpec.
-2. **Revisión.** Lo repasa: ¿está completo?, ¿cada parte tiene criterio de terminado?, ¿hay partes que tocan los mismos archivos?
-3. **Roles.** Los deriva del plan con `propose_roles`. Cada rol lleva `id`, `name`, `responsibility`, `deliverables`, `done` (criterio de terminado), `files` (los que solo ese rol edita), `difficulty` y `dependsOn`. Tutti rechaza ids repetidos, dependencias en ciclo y archivos compartidos entre roles, y devuelve avisos (sin plan referenciado, roles en cadena sin paralelismo, roles sin agente libre…).
-4. **Elección de agentes.** Tú eliges, para cada rol, su agente y su modelo en el panel (pulsa el rol). Hasta que todos tengan agente, el plan no se puede aprobar.
-5. **Aprobación.** El líder llama a `confirm_roles` y el plan aparece en **Explorador → Plan de roles** (bajo el árbol; se pliega como la raíz del proyecto) con el botón **Aprobar y repartir**. Hasta que lo pulses, el líder no puede repartir otras tareas.
-6. **Reparto.** Tutti lanza cada rol en el agente y el modelo que elegiste cuando terminan los roles de los que depende. Avisa al líder al acabar cada rol y al acabar todos, y el líder revisa cada entregable contra su criterio de terminado.
-
-**Un agente, un rol a la vez.** Si el agente que elegiste está ocupado o sin cuota, el rol espera. Con `"roles_assignment": "auto"` en `settings.json` Tutti elige por ti según la dificultad, y si el agente ideal está ocupado, sin cuota o no ofrece el modelo, el rol pasa a otro: uno libre ya abierto, una instancia nueva de otro agente instalado o, si ninguno llega al nivel, el más capaz (se avisa). Si no queda ninguno, el rol espera en cola hasta que alguno se libere; no se lo queda el líder. Si un rol no se puede lanzar, se reintenta al minuto.
-
-El plan se guarda en `.tutti/roles.json` (qué roles hay, su estado y cuáles terminaron). Con `"roles_approval": false` en `settings.json` el plan se reparte en cuanto el líder lo confirma, sin esperar tu aprobación. El botón de la papelera descarta el plan (no está disponible con roles en marcha). Si cierras Tutti con un plan aprobado, al volver sale como «Aprobado, sin iniciar» y el botón **Iniciar el reparto** lo retoma (hace falta un agente abierto, que hará de líder). Los roles que no arrancan muestran debajo el motivo (sin agente libre, el modelo no está disponible, no se pudo abrir…).
-
-**Editar y asignar a mano.** Pulsa un rol que aún no ha empezado para cambiar su nombre, responsabilidad, entregables, criterio de terminado, archivos, dificultad y dependencias (Tutti vuelve a validar todo el plan). Ahí mismo eliges su **agente** (uno abierto o uno instalado) y, si el agente deja fijarlo al abrirse, su **modelo**. Lo elegido a mano se respeta y reserva su agente antes que el reparto automático; si ese agente está ocupado, sin cuota o ya no existe, el rol espera en cola en lugar de pasar a otro. Con «Automático» sigue eligiendo Tutti.
 
 ### Cómo se conecta cada agente
 
@@ -354,7 +335,6 @@ Tutti crea la carpeta `.tutti` del proyecto la primera vez que añades algo (un 
 ├─ docs/       documentación por categorías (tutorials, how-to, reference, explanation)
 ├─ steering/   contexto.md y las guías para los agentes (product.md, tech.md…)
 ├─ hooks/      un .json por hook (formato de Kiro)
-├─ roles.json  el plan de roles en curso (lo escribe el agente líder)
 └─ skills/     una carpeta por skill, con su SKILL.md
 ```
 
@@ -609,15 +589,13 @@ Tutti guarda sus datos en la carpeta de configuración del sistema: `~/.config/t
 | `system_accent` | `true` activa | Teñir la interfaz con el color de acento del sistema |
 | `language` | `es` · `en` · `auto` | Idioma de la interfaz |
 | `orchestration` | `false` desactiva | El servidor de reparto de tareas |
-| `roles_approval` | `false` desactiva | Esperar tu aprobación antes de repartir un plan de roles |
-| `roles_assignment` | `auto` | Que Tutti elija el agente y el modelo de cada rol según su dificultad (por defecto los eliges tú) |
 | `edit_enabled` | booleano | Permiso de edición de archivos |
 | `project`, `recent_projects` | rutas | El último proyecto y el historial |
 | `project_configs` | objeto | La pestaña, los archivos abiertos y el número de terminales de cada proyecto |
 | `custom_agents` | lista | Los agentes que añadiste a mano |
 | `collapsed`, `session_names`, `last_seen_version`, `limits_cache` | — | Secciones plegadas, nombres de sesiones, últimas novedades vistas y último dato de límites |
 
-Casi todo se cambia desde la app; editar el archivo a mano es útil sobre todo para `orchestration`, `roles_approval` y `roles_assignment`. Las ventanas comparten el archivo.
+Casi todo se cambia desde la app; editar el archivo a mano es útil sobre todo para `orchestration`. Las ventanas comparten el archivo.
 
 ### Lo que lee de tu equipo
 
