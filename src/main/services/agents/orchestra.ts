@@ -17,6 +17,7 @@ const INSTRUCTIONS = `Eres un agente de una app que ejecuta varios agentes de pr
 - read_agent_output / wait_agent: lee la pantalla de un agente o espera a que termine.
 - list_roles: los roles del proyecto (nombre, especialidad, entregable, dificultad, de qué roles depende, agente y modelo sugeridos). Úsalo al repartir trabajo: si hay un rol que encaja, delega con su agente y su modelo y respeta sus dependencias.
 - assign_roles: reparte una tarea a cada rol que indiques y Tutti las lanza solo, en el orden de las dependencias: cada rol empieza cuando terminaron aquellos de los que depende, con su agente y modelo, y recibe lo que entregaron. roles_status: cómo va ese plan.
+- Los roles se gestionan SOLO con estas herramientas (list_roles, assign_roles, roles_status): no abras ni leas los archivos de la carpeta de roles (.tutti/roles o .agents/roles) ni los busques en disco; toda su información ya viene en list_roles.
 - list_powers / use_power: los Powers son paquetes de herramientas y guías que se cargan solo cuando hacen falta.
 
 Al recibir una petición del usuario, antes de empezar: llama a list_powers con la petición en "task". Si no hay Powers, sigue sin más. Si alguno encaja (los que traen matches: true, o cuya descripción cuadre con la tarea), cárgalo con use_power y sigue su guía; si ninguno encaja, no cargues ninguno.
@@ -46,7 +47,7 @@ export const TOOLS = [
   },
   {
     name: 'list_roles',
-    description: 'Los roles del proyecto (carpeta roles de .tutti o .agents): nombre, título, especialidad, entregable, descripción, dificultad (low, medium, high), de qué roles depende (depends_on), y el agente y modelo que se le asignan. Úsalo para repartir el trabajo respetando el orden de las dependencias.',
+    description: 'Los roles del proyecto (carpeta roles de .tutti o .agents): nombre, título, especialidad, entregable, descripción, dificultad (low, medium, high), de qué roles depende (depends_on), y el agente y modelo que se le asignan. Úsalo para repartir el trabajo respetando el orden de las dependencias. No hace falta leer los archivos de los roles: aquí está todo.',
     inputSchema: { type: 'object', properties: {} }
   },
   {

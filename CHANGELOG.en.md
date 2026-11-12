@@ -2,6 +2,15 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.11
+
+### Changes
+
+- **Roles that distribute themselves:** the **Run roles** button launches every role with a shared goal, each with its own agent and model, in dependency order. Each agent's tab shows which role it carries and whether it is working or waiting.
+- **Agents assign roles through MCP:** they distribute work with Tutti's tools and no longer read the role files.
+- **Editor settings:** new searchable dialog for font, word wrap, line numbers, auto save and more.
+- **Image viewer** in the editor and improvements to the Markdown preview.
+
 ## 1.4.10
 
 ### Changes

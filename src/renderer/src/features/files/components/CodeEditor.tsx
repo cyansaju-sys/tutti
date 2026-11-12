@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from 'react'
 import { t as translate, useT } from '@/shared/lib/i18n'
 import { findConflicts } from '@/features/files/lib/conflicts'
 import { ago } from '@/shared/lib/format'
+import { useStore } from '@/shared/store'
+import { DEFAULT_EDITOR_FONT } from '@/shared/store/ui'
 import { Menu } from '../../../shared/components/Menu'
 import type { GitBlame, GitMarks } from '@shared/types'
 import { languageFor } from '@/features/files/lib/languages'
@@ -22,6 +24,7 @@ const highlight = HighlightStyle.define([
   { tag: [t.number, t.bool, t.null, t.atom], color: 'var(--syn-number)' },
   { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], color: 'var(--color-muted)', fontStyle: 'italic' },
   { tag: [t.function(t.variableName), t.function(t.propertyName), t.definition(t.function(t.variableName))], color: 'var(--syn-func)' },
+  { tag: [t.operator, t.function(t.punctuation)], color: 'var(--syn-op)' },          // = == => + && …  (la flecha => es function(punctuation))
   { tag: [t.tagName, t.angleBracket], color: 'var(--syn-tag)' },
   { tag: [t.attributeName], color: 'var(--syn-attr)' },
   { tag: [t.meta, t.annotation], color: 'var(--syn-attr)' },
@@ -74,7 +77,7 @@ const CHEVRON_RIGHT = 'M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z'
 
 const theme = EditorView.theme({
   '&': { color: 'var(--color-text)', backgroundColor: 'var(--color-surface)', fontSize: 'calc(12.5px * var(--cm-zoom, 1))' },
-  '.cm-content': { caretColor: 'var(--color-accent)', padding: '4px 0' },
+  '.cm-content': { fontFamily: 'var(--ed-font, "Droid Sans Mono", monospace)', fontVariantLigatures: 'contextual common-ligatures', fontFeatureSettings: '"liga", "calt"', caretColor: 'var(--color-accent)', padding: '4px 0' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--color-accent)', borderLeftWidth: '2px' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--color-accent-bg) !important' },
   '.cm-activeLine': { backgroundColor: 'var(--ed-line)' },
@@ -328,6 +331,8 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
   const states = useRef(new Map<string, EditorState>())
   const current = useRef(path)
   const ro = useRef(new Compartment())
+  const font = useStore((s) => s.editorFont)
+  useEffect(() => { document.documentElement.style.setProperty('--ed-font', font.trim() || DEFAULT_EDITOR_FONT) }, [font])
   const handlers = useRef({ onChange, onSave, onSend, onResolve })
   handlers.current = { onChange, onSave, onSend, onResolve }
 
@@ -356,7 +361,7 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
   const makeState = (p: string, doc: string, locked: boolean): EditorState => EditorState.create({
     doc,
     extensions: [
-      lineNumbers(), foldGutter({ markerDOM: foldMarker }), gitGutter, blameField, changesField, conflictField, conflictTheme, indentGuides, highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(), indentOnInput(), EditorView.lineWrapping,
+      lineNumbers(), foldGutter({ markerDOM: foldMarker }), gitGutter, blameField, changesField, conflictField, conflictTheme, indentGuides, highlightActiveLineGutter(), highlightActiveLine(), history(), drawSelection(), indentOnInput(),
       bracketMatching(), closeBrackets(), highlightSelectionMatches(), syntaxHighlighting(highlight), theme,
       autocompletion({ override: undefined, activateOnTyping: true, icons: true }),
       EditorState.languageData.of(() => [{ autocomplete: /\.jsonc?$/i.test(p) ? completeJson : completeAnyWord }]),

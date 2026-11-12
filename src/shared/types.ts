@@ -54,6 +54,8 @@ export interface PaneState {
   inbox: Record<string, number>
   /** Los agentes parados esperando un permiso o una respuesta en su panel. */
   asking: string[]
+  /** Los agentes que llevan un rol de un plan (assign_roles), por id de panel; `working`: está trabajando ahora mismo. */
+  roles: Record<string, { role: string; title: string; working: boolean }>
 }
 export interface PtyExit { id: string; code: number | null; error?: string }
 
@@ -300,6 +302,8 @@ export interface Api {
     paneState(): Promise<PaneState>
     /** Hace líder a un agente abierto: reparte, recibe los avisos y  */
     setLeader(id: string): Promise<boolean>
+    /** Lanza todos los roles del proyecto con un objetivo común, en el orden de sus dependencias (como assign_roles). Lo reparte el líder o el primer agente abierto. */
+    runRoles(project: string, goal: string): Promise<McpResult>
     onPaneState(cb: (state: PaneState) => void): () => void
   }
   pty: {

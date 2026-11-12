@@ -70,6 +70,7 @@ const api: Api = {
     onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb),
     paneState: () => ipcRenderer.invoke('orchestra:pane-state'),
     setLeader: (id) => ipcRenderer.invoke('orchestra:set-leader', id),
+    runRoles: (project, goal) => ipcRenderer.invoke('orchestra:run-roles', project, goal),
     onPaneState: (cb) => subscribe<[PaneState]>('orchestra:pane-state', cb)
   },
   pty: {

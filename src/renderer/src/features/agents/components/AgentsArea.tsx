@@ -22,12 +22,19 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   const parent = useStore((s) => (pane.parentId ? s.panes.find((p) => p.id === pane.parentId) : undefined))
   const asking = useStore((s) => s.paneAsking.includes(pane.id))
   const pending = useStore((s) => s.paneInbox[pane.id] ?? 0)
+  const role = useStore((s) => s.paneRoles[pane.id])
   return (
     <>
       {/* preventDefault: si no, al pulsar la pestaña el navegador quita el foco a la terminal justo después de dárselo */}
-      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar')}>
+      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar', role?.working && !active && 'border-t-ok bg-ok/10')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[11px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+        {role && (
+          <span title={t(role.working ? 'pane.roleWorking' : 'pane.roleIdle', { role: role.title })}
+            className={clsx('flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium', role.working ? 'bg-ok/20 text-ok' : 'bg-ov/[0.07] text-muted')}>
+            {role.working && <span className="size-1.5 animate-pulse rounded-full bg-ok" />}{role.title}
+          </span>
+        )}
         {asking && <span title={t('pane.asking')} className="shrink-0 animate-pulse rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-medium text-danger">{t('pane.askingShort')}</span>}
         {pending > 0 && <span title={t('pane.inbox', { n: pending })} className="flex shrink-0 items-center gap-0.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"><MdMailOutline size={11} />{pending}</span>}
         {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}

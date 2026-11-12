@@ -4,7 +4,7 @@
  * candidates.ts (a quién repartir) e history.ts (historial).
  */
 import type { BrowserWindow } from 'electron'
-import type { AppMcpInfo, OpenPane, PaneState } from '../../../shared/types'
+import type { AppMcpInfo, McpResult, OpenPane, PaneState } from '../../../shared/types'
 import { execFileSync } from 'node:child_process'
 import { detectAgents } from './agents'
 import { capable, capableFor, exhausted, isDifficulty, pickAgent, type Difficulty } from './assign'
@@ -53,8 +53,18 @@ export function setLeader(id: string): boolean {
 
 // --- lo que muestran las pestañas de los agentes ---
 /** El líder (si hay más de un agente) y cuántos avisos de Tutti le esperan. */
+/** Los roles en curso de los planes: qué agente lleva cada uno y si está trabajando (no parado esperando un permiso o una respuesta). */
+function activeRoles(): PaneState['roles'] {
+  const out: PaneState['roles'] = {}
+  for (const plan of plans) for (const item of plan.items) {
+    if (item.state !== 'running' || !item.agentId) continue
+    const t = tasks.find((x) => x.id === item.taskId)
+    out[item.agentId] = { role: item.role.name, title: item.role.title, working: !!t && statusOf(t) === 'working' }
+  }
+  return out
+}
 export function paneState(): PaneState {
-  return { leader: pty.agentSessions().length > 1 ? currentLeader()?.id ?? null : null, inbox: noticeCounts(), asking: askingIds() }
+  return { leader: pty.agentSessions().length > 1 ? currentLeader()?.id ?? null : null, inbox: noticeCounts(), asking: askingIds(), roles: activeRoles() }
 }
 let sentState = ''
 /** Avisa a la interfaz cuando cambia algo de lo que muestran las pestañas. */
@@ -138,7 +148,7 @@ const host: Host = {
     const project = who ? projectRoot(who.cwd, knownProjects()) : currentLeader()?.cwd
     if (!project) return { ok: false, info: 'No se sabe de qué proyecto: abre un agente en la carpeta del proyecto.' }
     const roles = listRoles(project)
-    return { ok: true, info: roles.length ? { roles } : 'No hay roles en este proyecto.' }
+    return { ok: true, info: roles.length ? { roles: roles.map(({ file: _file, ...r }) => r) } : 'No hay roles en este proyecto.' }
   },
 
   async assignRoles(caller, assignments) {
@@ -294,6 +304,19 @@ const host: Host = {
     const asking = idle >= BUSY_SECONDS && awaitingInput(pty.screenText(agentId, INPUT_ROWS))
     return { agent_id: agentId, busy: idle < BUSY_SECONDS, idle_seconds: Math.round(idle * 10) / 10, text: pty.screenText(agentId, Math.max(5, Math.min(lines, 400))), ...(report ? { report } : {}), ...(asking ? { awaiting_input: true } : {}), ...(question ? { question } : {}) }
   }
+}
+
+/** Lanza todos los roles del proyecto con un mismo objetivo, en el orden de sus dependencias; quien reparte (y recibe los avisos) es el líder, o el primer agente abierto en el proyecto. */
+export async function runRoles(project: string, goal: string): Promise<McpResult> {
+  const roles = listRoles(project)
+  if (!roles.length) return { ok: false, message: tm('m.hub.noRoles') }
+  const caller = pty.agentSessions().find((m) => m.id === currentLeader()?.id && projectRoot(m.cwd, knownProjects()) === project)
+    ?? pty.agentSessions().find((m) => projectRoot(m.cwd, knownProjects()) === project)
+  if (!caller) return { ok: false, message: tm('m.hub.noCaller') }
+  const built = buildPlan(caller.id, roles, roles.map((r) => ({ role: r.name, task: goal })))
+  if ('error' in built) return { ok: false, message: built.error }
+  await startReady(built.plan)
+  return { ok: true, message: tm('m.hub.rolesRunning', { agent: label(caller.name), order: launchOrder(built.plan).join(' → ') }) }
 }
 
 /** Abre el agente de un rol con su tarea (más lo que entregaron los roles de los que depende). */

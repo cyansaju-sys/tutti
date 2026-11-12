@@ -15,6 +15,7 @@ import { applyHunks, textHunks, type TextHunk } from '@/features/files/lib/textH
 import { isDirty, useStore, type Doc } from '@/shared/store'
 import { CodeEditor, type ExternalChange } from './CodeEditor'
 import { DiffView } from './DiffView'
+import { ImageViewer } from './ImageViewer'
 import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '../../git/components/GitGraph'
 import { NewsView } from './NewsView'
@@ -278,8 +279,8 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
       {(preview || side) && doc && (() => {
         const { meta, body } = splitFrontMatter(doc.text)
         return (
-          <div onDoubleClick={side ? undefined : () => setPreviews((p) => ({ ...p, [doc.path]: false }))} title={side ? undefined : t('ed.showSource')} className={clsx('selectable min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-5', side ? 'order-2 border-l border-line' : 'cursor-text')}>
-            <div className="mx-auto max-w-3xl">
+          <div onDoubleClick={side ? undefined : () => setPreviews((p) => ({ ...p, [doc.path]: false }))} title={side ? undefined : t('ed.showSource')} className={clsx('selectable min-h-0 min-w-0 flex-1 overflow-auto px-4 py-5', side ? 'order-2 border-l border-line' : 'cursor-text')}>
+            <div className="mx-auto max-w-5xl">
               {meta.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1.5">
                   {meta.map(([k, v]) => <span key={k} className="rounded-full bg-ov/[0.07] px-2.5 py-0.5 text-[10px] text-muted"><b className="font-semibold text-accent">{k}</b> {v}</span>)}
@@ -309,7 +310,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
       {doc?.kind === 'roleform' && <RoleFormView key={doc.path} path={doc.path} />}
       {doc?.kind === 'news' && <NewsView />}
       {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}
-      {doc?.kind === 'image' && <div className="grid flex-1 place-items-center overflow-auto p-4"><img src={doc.dataUrl} alt={doc.title} className="max-h-full max-w-full object-contain" /></div>}
+      {doc?.kind === 'image' && <ImageViewer src={doc.dataUrl ?? ''} alt={doc.title} />}
       {doc?.kind === 'binary' && <div className="grid flex-1 place-items-center text-[12px] text-muted">{t('ed.binary')}</div>}
     </div>
   )

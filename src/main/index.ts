@@ -31,7 +31,7 @@ import { applySync, pullSync, resolveSync, standardizeProject, syncState } from 
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
 import { ensureLauncher } from './services/cli'
-import { appMcpInfo, clearTasks, newId, paneState, setLeader, startHub, stopHub, taskList } from './services/agents/hub'
+import { appMcpInfo, clearTasks, newId, paneState, runRoles, setLeader, startHub, stopHub, taskList } from './services/agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -259,6 +259,7 @@ function registerIpc(): void {
   ipcMain.handle('orchestra:tasks', () => taskList())
   ipcMain.handle('orchestra:tasks-clear', () => clearTasks())
   ipcMain.handle('orchestra:pane-state', () => paneState())
+  ipcMain.handle('orchestra:run-roles', (_e, project: string, goal: string) => runRoles(project, goal))
   ipcMain.handle('orchestra:set-leader', (_e, id: string) => setLeader(id))
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:models', async (_e, command: string, cwd?: string) => (await availableModels(command, detectAgents().find((a) => a.command === command)?.path, cwd)).map((m) => m.id))

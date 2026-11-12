@@ -2,6 +2,15 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.11
+
+### Cambios
+
+- **Roles que se reparten solos:** el botón **Ejecutar roles** lanza todos los roles con un objetivo común, cada uno con su agente y modelo, en el orden de sus dependencias. En la pestaña de cada agente se ve qué rol lleva y si está trabajando o esperando.
+- **Los agentes asignan roles con MCP:** reparten el trabajo con las herramientas de Tutti y ya no leen los archivos de los roles.
+- **Ajustes del editor:** nuevo diálogo con búsqueda para la fuente, el ajuste de línea, los números de línea, el guardado automático y más.
+- **Visor de imágenes** en el editor y mejoras en la vista previa de Markdown.
+
 ## 1.4.10
 
 ### Cambios
