@@ -27,6 +27,7 @@ export function FilesView() {
   const git = useStore((s) => s.git)
   const setProject = useStore((s) => s.setProject)
   const openDoc = useStore((s) => s.openDoc)
+  const openRoleForm = useStore((s) => s.openRoleForm)
   const set = useStore((s) => s.set)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
@@ -45,6 +46,7 @@ export function FilesView() {
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
   const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
   const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
+  const [roles, setRoles] = useState<DirEntry[]>([])          // los roles del proyecto: archivos .md de .tutti/roles
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -61,7 +63,13 @@ export function FilesView() {
   // al cambiar de proyecto se empieza de cero
   useEffect(() => { setExpanded(new Set()); setChildren({}); setIgnored(new Set()); setCursor(null); if (project) void load(project) }, [project])  // eslint-disable-line react-hooks/exhaustive-deps
   // las carpetas abiertas se releen cuando cambia git y cada pocos segundos
-  const reload = useCallback(() => { if (project) { void load(project); expanded.forEach((d) => void load(d)) } }, [project, expanded, load])
+  const loadRoles = useCallback(async () => {
+    if (!project) return
+    const dir = await window.api.context.dir(project)
+    const list = await window.api.fs.list(`${dir}/roles`).catch(() => [] as DirEntry[])
+    setRoles((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
+  }, [project])
+  const reload = useCallback(() => { if (project) { void load(project); void loadRoles(); expanded.forEach((d) => void load(d)) } }, [project, expanded, load, loadRoles])
   useEffect(() => { const t = setInterval(reload, 5000); return () => clearInterval(t) }, [reload])
   useEffect(() => { reload() }, [git?.files.length])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -375,9 +383,18 @@ export function FilesView() {
             <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', rolesOpen && 'rotate-90')} />
             <span className="truncate text-[12px] font-semibold">{t('fs.roles')}</span>
           </button>
-          <button title={t('fs.addRole')} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
+          <button title={t('fs.addRole')} onClick={openRoleForm} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
         </div>
-        {rolesOpen && <div className="min-h-0 flex-1 overflow-y-auto"><p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p></div>}
+        {rolesOpen && (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {roles.filter((r) => !r.isDir).map((r) => (
+              <button key={r.path} onClick={() => void openDoc(r.path)} className="flex w-full items-center gap-1.5 py-[3px] pl-[28px] pr-1.5 text-left text-[12px] transition-colors hover:bg-accent-bg">
+                <FileIcon name={r.name} dir={false} /><span className="truncate">{r.name}</span>
+              </button>
+            ))}
+            {roles.length === 0 && <p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p>}
+          </div>
+        )}
       </div>
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
