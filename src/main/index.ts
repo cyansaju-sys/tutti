@@ -20,7 +20,7 @@ import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './servi
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { GitOp, PowerDraft, PowerScope, PtyOptions, RoleEdit, RoleTemplate, SearchOptions, StartProject } from '../shared/types'
+import type { GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '../shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -30,7 +30,7 @@ import { applySync, pullSync, resolveSync, standardizeProject, syncState } from 
 import { collectUsage, deleteSession, renameSession, sessionNames } from './services/usage/usage'
 import { runSelfTest } from './utils/selftest'
 import { ensureLauncher } from './services/cli'
-import { acceptRole, addRole, cancelRole, deletePlanTemplate, pauseRoles, planFromTemplate, planTemplates, saveAsPlanTemplate, appMcpInfo, deleteRoleTemplate, removeRole, roleTemplates, saveRoleTemplate, approveRoles, rejectRole, clearTasks, discardRoles, newId, paneState, retryRole, setLeader, roleOptions, rolesState, startHub, startRoles, stopHub, taskList, updateRole } from './services/agents/hub'
+import { appMcpInfo, clearTasks, newId, paneState, setLeader, startHub, stopHub, taskList } from './services/agents/hub'
 
 if (process.argv.includes('--tutti-version')) { console.log(app.getVersion()); app.exit(0) }      // para comprobar qué versión es un AppImage
 if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')     // un AppImage no puede dejar chrome-sandbox con permisos especiales
@@ -257,28 +257,8 @@ function registerIpc(): void {
   ipcMain.handle('orchestra:newId', () => newId())
   ipcMain.handle('orchestra:tasks', () => taskList())
   ipcMain.handle('orchestra:tasks-clear', () => clearTasks())
-  ipcMain.handle('orchestra:roles-approve', (_e, project: string) => approveRoles(project))
-  ipcMain.handle('orchestra:roles-start', (_e, project: string) => startRoles(project))
-  ipcMain.handle('orchestra:roles', (_e, project: string) => rolesState(project))
-  ipcMain.handle('orchestra:roles-discard', (_e, project: string) => discardRoles(project))
-  ipcMain.handle('orchestra:roles-retry', (_e, project: string, id: string) => retryRole(project, id))
   ipcMain.handle('orchestra:pane-state', () => paneState())
   ipcMain.handle('orchestra:set-leader', (_e, id: string) => setLeader(id))
-  ipcMain.handle('orchestra:roles-add', (_e, project: string, role: RoleEdit & { id?: string; template?: string }) => addRole(project, role))
-  ipcMain.handle('orchestra:roles-remove', (_e, project: string, id: string) => removeRole(project, id))
-  ipcMain.handle('orchestra:templates', () => roleTemplates())
-  ipcMain.handle('orchestra:templates-save', (_e, template: Partial<RoleTemplate>, previousId?: string) => { const { ok, errors } = saveRoleTemplate(template, previousId); return { ok, errors } })
-  ipcMain.handle('orchestra:templates-delete', (_e, id: string) => deleteRoleTemplate(id))
-  ipcMain.handle('orchestra:roles-pause', (_e, project: string) => pauseRoles(project))
-  ipcMain.handle('orchestra:roles-cancel', (_e, project: string, id: string) => cancelRole(project, id))
-  ipcMain.handle('orchestra:plan-templates', () => planTemplates())
-  ipcMain.handle('orchestra:plan-from-template', (_e, project: string, id: string, summary: string) => planFromTemplate(project, id, summary))
-  ipcMain.handle('orchestra:plan-templates-save', (_e, project: string, name: string) => saveAsPlanTemplate(project, name))
-  ipcMain.handle('orchestra:plan-templates-delete', (_e, id: string) => deletePlanTemplate(id))
-  ipcMain.handle('orchestra:roles-accept', (_e, project: string, id: string) => acceptRole(project, id))
-  ipcMain.handle('orchestra:roles-reject', (_e, project: string, id: string, feedback: string) => rejectRole(project, id, feedback))
-  ipcMain.handle('orchestra:roles-update', (_e, project: string, id: string, edit: RoleEdit) => updateRole(project, id, edit))
-  ipcMain.handle('orchestra:roles-options', (_e, project: string) => roleOptions(project))
   ipcMain.handle('agents:detect', () => detectAgents())
   ipcMain.handle('agents:shell', () => defaultShell())
   ipcMain.handle('agents:setShell', (_e, path: string) => setShell(path))

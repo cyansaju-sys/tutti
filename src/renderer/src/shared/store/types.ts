@@ -1,4 +1,4 @@
-import type { AgentInfo, FileData, GitStatus, PaneRole, UpdateState } from '@shared/types'
+import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
 import type { Lang, LangPref } from '@shared/i18n'
 import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
 import type { IconFlavor } from '@/shared/lib/icons'
@@ -67,7 +67,6 @@ export interface PanesSlice {
   /** Segundo agente visible al dividir la vista en dos (Ctrl+2); null = un solo agente. */
   paneSplit: string | null
   /** El rol del plan que lleva cada panel de agente (por id de panel); lo avisa la app. */
-  paneRoles: Record<string, PaneRole>
   /** Avisos de Tutti que esperan a que cada agente esté libre (o a que dejes de escribir en su panel). */
   paneInbox: Record<string, number>
   paneAsking: string[]

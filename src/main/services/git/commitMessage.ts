@@ -1,5 +1,9 @@
 /** Mensaje de commit (Conventional Commits) redactado por un agente en modo no interactivo. */
 import { execFile } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readdirSync, rmSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { AgentInfo, McpResult } from '../../../shared/types'
 import { detectAgents } from '../agents/agents'
 import * as git from './git'
@@ -49,6 +53,36 @@ export const ask = (agent: AgentInfo, args: string[], cwd: string, signal?: Abor
     execFile(agent.path, args, { cwd, timeout: 90_000, encoding: 'utf8', maxBuffer: 2_000_000, signal, env: { ...process.env, PATH: extendedPath() } },
       (err, stdout) => done(err ? null : stdout)).stdin?.end()
   })
+
+// --- Claude Code: una sola sesión por proyecto, que se reanuda en cada commit --------------------
+const MAX_SESSION = 3_000_000    // bytes del historial; al pasarse se empieza de cero para no arrastrar diffs viejos
+
+/** Id fijo (UUID válido) derivado de la carpeta: así cada proyecto tiene siempre la misma sesión de commits. */
+export function commitSessionId(root: string): string {
+  const h = createHash('sha1').update(`tutti-commit:${root}`).digest('hex')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`
+}
+
+const sessionFiles = (id: string): string[] => {
+  const base = join(homedir(), '.claude', 'projects')
+  try {
+    return readdirSync(base).map((dir) => join(base, dir, `${id}.jsonl`)).filter((f) => { try { return statSync(f).isFile() } catch { return false } })
+  } catch { return [] }
+}
+
+/** Pregunta a Claude reanudando la sesión de commits del proyecto (o creándola), en vez de dejar una nueva cada vez. */
+async function askClaude(agent: AgentInfo, prompt: string, root: string, signal?: AbortSignal): Promise<string | null> {
+  const id = commitSessionId(root)
+  const drop = (files: string[]): void => files.forEach((f) => rmSync(f, { force: true }))
+  let files = sessionFiles(id)
+  if (files.some((f) => statSync(f).size > MAX_SESSION)) { drop(files); files = [] }
+  if (files.length) {
+    const out = await ask(agent, ['-p', prompt, '--resume', id], root, signal)
+    if (out !== null || signal?.aborted) return out
+    drop(files)                                                    // no se pudo reanudar (historial dañado): se rehace
+  }
+  return ask(agent, ['-p', prompt, '--session-id', id], root, signal)
+}
 
 // --- sin IA: reglas sobre los archivos preparados -----------------------------------------------
 export interface FileChange { status: string; path: string; added: number; deleted: number }
@@ -108,7 +142,7 @@ export async function suggestCommit(root: string, onAgent: (name: string) => voi
     if (!agent) continue
     tried++
     onAgent(agent.name)
-    const out = await ask(agent, headlessArgs(command, prompt)!, root, signal)
+    const out = command === 'claude' ? await askClaude(agent, prompt, root, signal) : await ask(agent, headlessArgs(command, prompt)!, root, signal)
     if (signal?.aborted) return { ok: false, message: '' }               // cancelado: sin mensaje de error
     const message = out ? cleanMessage(out) : null
     if (message) return { ok: true, message, agent: agent.name }

@@ -216,7 +216,7 @@ The title bar button (or *New empty window* in the launcher menu, right-clicking
 
 ## Task delegation
 
-Tutti opens a local MCP server (only on `127.0.0.1`, with a different token on every run) and connects every agent to it with six tools:
+Tutti opens a local MCP server (only on `127.0.0.1`, with a different token on every run) and connects every agent to it with four tools:
 
 | Tool | What it is for |
 |---|---|
@@ -224,8 +224,6 @@ Tutti opens a local MCP server (only on `127.0.0.1`, with a different token on e
 | `delegate_task` | Hand a task to an open agent or ask for a new one (even of the same type) |
 | `wait_agent` | Wait for an agent to finish and get the last lines of its screen |
 | `read_agent_output` | Read an agent's screen and know whether it is still busy |
-| `propose_roles` | Propose the roles of a plan: Tutti validates them and returns which agent and model each would go to, without launching anything |
-| `confirm_roles` | Mark the plan as reviewed: once you approve it, Tutti hands the roles out |
 
 ![Agents splitting a task](img/agentes.png)
 
@@ -234,23 +232,6 @@ The first agent you open is the **leader**. The ones it (or another) opens appea
 ### Assigns by capability
 
 If the agent passes `difficulty` (`easy`, `medium`, `hard`), Tutti reviews the list, checks the model level (*basic*, *standard*, *advanced*) and its usage limit, and picks the most suitable: just enough for the task (it does not spend an advanced one on something easy), idle before busy, and not out of limit. With `agent: "auto"` it chooses; if the requested one lacks enough capability it is rejected and another is suggested (`force` keeps it). A specific `model` can also be requested for agents that allow it on launch.
-
-### Roles for a big task
-
-When a task has several parts, the leader agent follows this flow before handing anything out:
-
-1. **Plan.** It writes it in `.tutti/roadmap.md` and, if it is big, in an OpenSpec change.
-2. **Review.** It goes over it: is it complete, does each part have a definition of done, do any parts touch the same files?
-3. **Roles.** It derives them from the plan with `propose_roles`. Each role carries `id`, `name`, `responsibility`, `deliverables`, `done` (definition of done), `files` (the ones only that role edits), `difficulty` and `dependsOn`. Tutti rejects repeated ids, circular dependencies and files shared between roles, and returns warnings (no plan referenced, chained roles with no parallelism, roles with no free agent…).
-4. **Choosing agents.** You pick, for each role, its agent and model in the panel (click the role). Until every role has an agent, the plan cannot be approved.
-5. **Approval.** The leader calls `confirm_roles` and the plan shows up in **Explorer → Role plan** (under the tree; it folds like the project root) with the **Approve and start** button. Until you press it, the leader cannot hand out other tasks.
-6. **Handing out.** Tutti launches each role in the agent and model you chose when the roles it depends on finish. It notifies the leader as each role ends and when all are done, and the leader checks each deliverable against its definition of done.
-
-**One agent, one role at a time.** If the agent you chose is busy or out of quota, the role waits. With `"roles_assignment": "auto"` in `settings.json` Tutti chooses for you according to difficulty, and if the ideal agent is busy, out of quota or does not offer the model, the role goes to another: a free one that is already open, a new instance of another installed agent or, if none reaches the level, the most capable (you are told). If none is left, the role waits in a queue until one frees up; the leader does not take it. If a role cannot be launched, it is retried after a minute.
-
-The plan is saved in `.tutti/roles.json` (which roles there are, their status and which ones finished). With `"roles_approval": false` in `settings.json` the plan is handed out as soon as the leader confirms it, without waiting for your approval. The trash button discards the plan (not available while roles are running). If you close Tutti with an approved plan, it shows as “Approved, not started” when you come back and the **Start handing out** button resumes it (an open agent is needed, which acts as the leader). Roles that do not start show the reason below them (no free agent, the model is not available, it could not be opened…).
-
-**Edit and assign by hand.** Click a role that has not started to change its name, responsibility, deliverables, definition of done, files, difficulty and dependencies (Tutti validates the whole plan again). There you also pick its **agent** (an open or an installed one) and, if the agent lets you set it on launch, its **model**. What you pick by hand is respected and reserves its agent before the automatic assignment; if that agent is busy, out of quota or gone, the role waits in the queue instead of going to another. With “Automatic” Tutti still chooses.
 
 ### How each agent connects
 
@@ -354,7 +335,6 @@ Tutti creates the project's `.tutti` folder the first time you add something (a 
 ├─ docs/       documentation by category (tutorials, how-to, reference, explanation)
 ├─ steering/   contexto.md and the guides for the agents (product.md, tech.md…)
 ├─ hooks/      one .json per hook (Kiro's format)
-├─ roles.json  the role plan in progress (written by the leader agent)
 └─ skills/     one folder per skill, with its SKILL.md
 ```
 
@@ -609,15 +589,13 @@ Tutti stores its data in the system configuration folder: `~/.config/tutti` on L
 | `system_accent` | `true` enables | Tint the interface with the system accent color |
 | `language` | `es` · `en` · `auto` | Interface language |
 | `orchestration` | `false` disables | The task delegation server |
-| `roles_approval` | `false` disables | Waiting for your approval before handing out a role plan |
-| `roles_assignment` | `auto` | Let Tutti choose each role's agent and model according to difficulty (by default you choose them) |
 | `edit_enabled` | boolean | File editing permission |
 | `project`, `recent_projects` | paths | The last project and the history |
 | `project_configs` | object | Each project's tab, open files and number of terminals |
 | `custom_agents` | list | The agents you added by hand |
 | `collapsed`, `session_names`, `last_seen_version`, `limits_cache` | — | Folded sections, session names, last news seen and the last limits data |
 
-Almost everything is changed from the app; editing the file by hand is mostly useful for `orchestration`, `roles_approval` and `roles_assignment`. All windows share the file.
+Almost everything is changed from the app; editing the file by hand is mostly useful for `orchestration`. All windows share the file.
 
 ### What it reads from your machine
 

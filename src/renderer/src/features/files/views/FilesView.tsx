@@ -7,7 +7,6 @@ import { Modal } from '@/shared/components/ui'
 import { GIT_COLOR } from '@/features/git/lib/gitSync'
 import { FileIcon } from '@/shared/components/FileIcon'
 import { basename, relative, toPosix } from '@/shared/lib/paths'
-import { RolesPlan } from '@/features/agents/components/RolesPlan'
 import { agentRef } from '@/features/agents/lib/agentRef'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -367,7 +366,6 @@ export function FilesView() {
         })}
       </div>}
       </div>
-      <RolesPlan />
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
           { label: t('fs.newFile'), icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },

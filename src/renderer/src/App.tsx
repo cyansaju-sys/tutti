@@ -125,7 +125,7 @@ export function App() {
       n.onclick = () => { window.focus(); useStore.getState().focusPane(id) }
     })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
-    const applyPanes = ({ leader, roles, inbox, asking }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneRoles: roles, paneInbox: inbox, paneAsking: asking })
+    const applyPanes = ({ leader, inbox, asking }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneInbox: inbox, paneAsking: asking })
     void window.api.orchestra.paneState().then(applyPanes)
     const offRoles = window.api.orchestra.onPaneState(applyPanes)
     return () => { offPane(); offAttention(); offToast(); offRoles() }

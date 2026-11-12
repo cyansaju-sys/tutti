@@ -26,19 +26,7 @@ ese agente lista sus modelos y ejecútalo. Cada tarea debe ser autosuficiente (a
 los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «[Tutti]»: sigue con lo tuyo y lee el resultado con read_agent_output \
 (wait_agent solo si no puedes avanzar sin él). Revisa siempre el resultado antes de darlo por bueno.
 
-Tarea grande o con varias partes: antes de repartir, escribe el plan (en .tutti/roadmap.md y, si es grande, en un cambio de OpenSpec) y revísalo: \
-¿está completo?, ¿cada parte tiene criterio de terminado?, ¿hay partes que tocan los mismos archivos? Deriva de él los roles y envíalos con propose_roles: \
-cada rol con id, name, responsibility, deliverables, done (criterio de terminado), files (los que solo ese rol edita), difficulty (easy, medium o hard) y dependsOn. \
-Mira antes list_role_templates: si el usuario guardó un rol que encaja (tests, revisión, docs…), úsalo con "template" y pon solo lo que cambie. \
-El agente y el modelo de cada rol los elige el usuario en el panel de la app (no los asignes tú; con el ajuste roles_assignment en auto, los asigna la app según \
-capacidad, límite de uso y modelos disponibles): un agente tiene un solo rol a la vez y, si el elegido no está libre, el rol espera. Si propose_roles devuelve errores, corrígelos y repítelo. Cuando el reparto te parezca bien llama a confirm_roles: la app \
-lanza los roles (tras la aprobación del usuario, si hace falta) cuando terminan sus dependencias y te avisa con «[Tutti]». Cada rol puede llevar un \
-"check" (comando que la app ejecuta al terminarlo, p. ej. los tests de su parte). Cuando un rol termina pasa a revisión y la app te avisa: revísalo \
-contra su criterio de terminado (get_role_result te da su resumen, sus archivos, sus cambios sin commit y el resultado del check) y llama a \
-accept_role si está bien o a reject_role con qué corregir; los roles que dependen de él no empiezan hasta que lo aceptes. Un rol que falla o se \
-bloquea no cuenta como terminado: resuelve el problema y relánzalo con retry_role.
-
-report_done es solo para trabajadores: úsala si la tarea te llegó de otro agente (con delegate_task) o de la app (un mensaje «[Rol …]»). \
+report_done es solo para trabajadores: úsala si la tarea te llegó de otro agente (con delegate_task) o de la app. \
 Al acabarla llama a report_done: status "done" si la terminaste, "blocked" si necesitas una respuesta para seguir (explica cuál en summary) o \
 "failed" si no pudiste hacerla; en summary, qué hiciste y si algo del criterio de terminado no se cumple. Sin report_done, quien te la pasó no sabe \
 con certeza que acabaste. Si eres el líder o la tarea te la dio el usuario directamente, no la llames: contéstale a él.
@@ -47,24 +35,6 @@ Si mientras trabajas en una tarea delegada te falta información, pregunta con a
 «[Tutti] Respuesta…». Si te preguntan a ti (aviso «[Tutti] … pregunta»), contesta con answer_agent. Las decisiones que afectan a otros agentes \
 (nombres, contratos de API, formatos, convenciones) déjalas con post_note y lee las de los demás con read_notes antes de decidir algo parecido. \
 Los avisos «[Tutti]» te llegan escritos cuando estás libre; si trabajas mucho rato seguido, consúltalos con get_updates.`
-
-const ROLE_SCHEMA = {
-  type: 'object',
-  properties: {
-    template: { type: 'string', description: 'Opcional: id de un rol reutilizable del usuario (ver list_role_templates). Rellena los campos que no pongas.' },
-    id: { type: 'string', description: 'Identificador corto en minúsculas, números y guiones (p. ej. "api").' },
-    name: { type: 'string' },
-    responsibility: { type: 'string', description: 'Qué parte del plan hace este rol.' },
-    deliverables: { type: 'array', items: { type: 'string' }, description: 'Lo que debe entregar.' },
-    done: { type: 'string', description: 'Criterio de terminado: lo que comprobarás al revisar.' },
-    files: { type: 'array', items: { type: 'string' }, description: 'Archivos o carpetas que solo este rol edita. Vacío si solo lee.' },
-    difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'] },
-    dependsOn: { type: 'array', items: { type: 'string' }, description: 'Ids de roles que deben terminar antes.' },
-    check: { type: 'string', description: 'Opcional: comando que la app ejecuta en la raíz del proyecto cuando el rol termina (p. ej. "npm test -- api"). Si falla, la app le devuelve la salida al agente para que lo arregle.' }
-  },
-  // con `template` basta el id (o ni eso): la app rellena el resto y valida el plan entero
-  required: []
-}
 
 export const TOOLS = [
   {
@@ -92,25 +62,8 @@ export const TOOLS = [
     }
   },
   {
-    name: 'propose_roles',
-    description: 'Propone los roles de un plan ya escrito y revisado. La app comprueba que sean válidos (sin ciclos ni archivos compartidos) y devuelve a qué agente y modelo asignaría cada uno, sin lanzar nada. Si hay errores, corrígelos y vuelve a llamarla; sustituye a la propuesta anterior mientras no haya roles en marcha.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        summary: { type: 'string', description: 'Resumen del plan o dónde está (roadmap, cambio de OpenSpec).' },
-        roles: { type: 'array', items: ROLE_SCHEMA }
-      },
-      required: ['roles']
-    }
-  },
-  {
-    name: 'confirm_roles',
-    description: 'Da por revisado el plan de roles propuesto. Si hace falta, la app espera la aprobación del usuario; después lanza cada rol en su agente y modelo cuando terminan sus dependencias y te avisa al terminar.',
-    inputSchema: { type: 'object', properties: {} }
-  },
-  {
     name: 'report_done',
-    description: 'Solo para trabajadores: avisa del resultado de la tarea que te pasó otro agente (con delegate_task) o la app (un rol del plan). Llámala al acabar esa tarea: así quien te la pasó sabe que terminaste y qué hiciste. No la uses para las tareas que te da el usuario directamente.',
+    description: 'Solo para trabajadores: avisa del resultado de la tarea que te pasó otro agente (con delegate_task) o la app. Llámala al acabar esa tarea: así quien te la pasó sabe que terminaste y qué hiciste. No la uses para las tareas que te da el usuario directamente.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -122,16 +75,6 @@ export const TOOLS = [
     }
   },
   {
-    name: 'get_role_result',
-    description: 'Resultado de un rol del plan: estado, agente, el resumen que dejó con report_done, los archivos que tocó y sus cambios sin commit (git diff --stat). Úsala para revisar cada entregable sin leer la pantalla del agente.',
-    inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
-  },
-  {
-    name: 'list_role_templates',
-    description: 'Roles reutilizables que guardó el usuario (p. ej. tests, revisor, docs), con todos sus campos. Úsalos en propose_roles con "template": "<id>"; lo que pongas explícito manda sobre la plantilla.',
-    inputSchema: { type: 'object', properties: {} }
-  },
-  {
     name: 'list_powers',
     description: 'Powers instalados (nombre, descripción y palabras clave). Pasa la petición del usuario en "task" y los que encajan salen primero, con matches: true. Si uno encaja, cárgalo con use_power.',
     inputSchema: { type: 'object', properties: { task: { type: 'string', description: 'La petición del usuario o la tarea que vas a hacer, con sus palabras.' } } }
@@ -140,25 +83,6 @@ export const TOOLS = [
     name: 'use_power',
     description: 'Carga un Power cuando la tarea lo necesita: su guía, los archivos de steering y skills que trae y las herramientas de sus servidores MCP.',
     inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Nombre del Power (de list_powers).' } }, required: ['name'] }
-  },
-  {
-    name: 'accept_role',
-    description: 'Solo el líder: da por bueno un rol en revisión (cumple su criterio de terminado). Los roles que dependen de él pueden empezar.',
-    inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
-  },
-  {
-    name: 'reject_role',
-    description: 'Solo el líder: rechaza un rol en revisión. El feedback le llega a su agente, que sigue con su contexto y vuelve a avisar al terminar; si su agente ya no está, el rol se relanza con otro llevando el feedback.',
-    inputSchema: {
-      type: 'object',
-      properties: { role_id: { type: 'string' }, feedback: { type: 'string', description: 'Qué falla y qué debe corregir, concreto y comprobable.' } },
-      required: ['role_id', 'feedback']
-    }
-  },
-  {
-    name: 'retry_role',
-    description: 'Vuelve a lanzar un rol del plan que falló, se bloqueó o cuyo agente se cerró. La app lo reparte de nuevo como si no hubiera empezado.',
-    inputSchema: { type: 'object', properties: { role_id: { type: 'string' } }, required: ['role_id'] }
   },
   {
     name: 'ask_leader',
@@ -228,22 +152,15 @@ export interface AgentOutput {
 /** Lo que la app ofrece al servidor. */
 export interface Host {
   listAgents(caller: string): unknown | Promise<unknown>
-  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string; role?: string }): Promise<{ ok: boolean; info: unknown }>
-  proposeRoles(caller: string, summary: string, roles: unknown): Promise<{ ok: boolean; info: unknown }>
-  confirmRoles(caller: string): Promise<{ ok: boolean; info: unknown }>
+  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string }): Promise<{ ok: boolean; info: unknown }>
   report(caller: string, report: TaskReport): { ok: boolean; info: unknown }
-  retryRole(caller: string, roleId: string): { ok: boolean; info: unknown }
-  roleResult(caller: string, roleId: string): { ok: boolean; info: unknown }
-  roleTemplates(caller: string): { ok: boolean; info: unknown }
   listPowers(caller: string, task?: string): { ok: boolean; info: unknown }
   usePower(caller: string, name: string): Promise<{ ok: boolean; info: unknown }>
-  acceptRole(caller: string, roleId: string): { ok: boolean; info: unknown }
   askLeader(caller: string, question: string): { ok: boolean; info: unknown }
   answerAgent(caller: string, agentId: string, answer: string): { ok: boolean; info: unknown }
   postNote(caller: string, text: string): { ok: boolean; info: unknown }
   readNotes(caller: string, limit: number): { ok: boolean; info: unknown }
   updates(caller: string): { ok: boolean; info: unknown }
-  rejectRole(caller: string, roleId: string, feedback: string): { ok: boolean; info: unknown }
   output(agentId: string, lines: number): AgentOutput | null
   /** wait_agent ya entregó el resultado de este agente: no hace falta avisar al líder. */
   reported?(agentId: string): void
@@ -348,24 +265,12 @@ export class Orchestra {
       const { ok, info } = await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force), model: args.model === undefined ? undefined : String(args.model).trim() || undefined })
       return text(info, !ok)
     }
-    if (name === 'propose_roles') {
-      const { ok, info } = await this.host.proposeRoles(caller, String(args.summary ?? '').trim(), args.roles)
-      return text(info, !ok)
-    }
-    if (name === 'confirm_roles') {
-      const { ok, info } = await this.host.confirmRoles(caller)
-      return text(info, !ok)
-    }
     if (name === 'report_done') {
       const summary = String(args.summary ?? '').trim()
       if (!isReportStatus(args.status)) return text('`status` debe ser done, blocked o failed.', true)
       if (!summary) return text('Falta `summary`: di qué hiciste (o qué necesitas, o por qué falló).', true)
       const files = Array.isArray(args.files_changed) ? args.files_changed.filter((f): f is string => typeof f === 'string' && !!f.trim()).map((f) => f.trim()) : []
       const { ok, info } = this.host.report(caller, { status: args.status, summary, files })
-      return text(info, !ok)
-    }
-    if (name === 'get_role_result') {
-      const { ok, info } = this.host.roleResult(caller, String(args.role_id ?? '').trim())
       return text(info, !ok)
     }
     if (name === 'ask_leader') {
@@ -394,10 +299,6 @@ export class Orchestra {
       const { ok, info } = this.host.updates(caller)
       return text(info, !ok)
     }
-    if (name === 'list_role_templates') {
-      const { ok, info } = this.host.roleTemplates(caller)
-      return text(info, !ok)
-    }
     if (name === 'list_powers') {
       const { ok, info } = this.host.listPowers(caller, String(args.task ?? '').trim() || undefined)
       return text(info, !ok)
@@ -406,20 +307,6 @@ export class Orchestra {
       const power = String(args.name ?? '').trim()
       if (!power) return text('Falta `name`: el nombre de un Power de list_powers.', true)
       const { ok, info } = await this.host.usePower(caller, power)
-      return text(info, !ok)
-    }
-    if (name === 'accept_role') {
-      const { ok, info } = this.host.acceptRole(caller, String(args.role_id ?? '').trim())
-      return text(info, !ok)
-    }
-    if (name === 'reject_role') {
-      const feedback = String(args.feedback ?? '').trim()
-      if (!feedback) return text('Falta `feedback`: di qué debe corregir el agente.', true)
-      const { ok, info } = this.host.rejectRole(caller, String(args.role_id ?? '').trim(), feedback)
-      return text(info, !ok)
-    }
-    if (name === 'retry_role') {
-      const { ok, info } = this.host.retryRole(caller, String(args.role_id ?? '').trim())
       return text(info, !ok)
     }
     if (name === 'read_agent_output') {

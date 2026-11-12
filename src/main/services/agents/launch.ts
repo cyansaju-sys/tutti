@@ -9,8 +9,8 @@ export type ProjectServers = McpSpec[]
 export interface Launch { args: string[]; env: Record<string, string>; after?: () => void }
 
 // herramientas del servidor «tutti» que Claude Code puede usar sin pedir permiso cada vez
-export const TUTTI_TOOLS = ['mcp__tutti__list_agents', 'mcp__tutti__delegate_task', 'mcp__tutti__wait_agent', 'mcp__tutti__read_agent_output', 'mcp__tutti__report_done', 'mcp__tutti__get_role_result',
-  'mcp__tutti__ask_leader', 'mcp__tutti__answer_agent', 'mcp__tutti__post_note', 'mcp__tutti__read_notes', 'mcp__tutti__get_updates', 'mcp__tutti__list_role_templates', 'mcp__tutti__list_powers', 'mcp__tutti__use_power']
+export const TUTTI_TOOLS = ['mcp__tutti__list_agents', 'mcp__tutti__delegate_task', 'mcp__tutti__wait_agent', 'mcp__tutti__read_agent_output', 'mcp__tutti__report_done',
+  'mcp__tutti__ask_leader', 'mcp__tutti__answer_agent', 'mcp__tutti__post_note', 'mcp__tutti__read_notes', 'mcp__tutti__get_updates', 'mcp__tutti__list_powers', 'mcp__tutti__use_power']
 // cómo arrancar cada agente con una tarea inicial (el resto la recibe escrita cuando ya está listo)
 export const PROMPT_ARGS: Record<string, (text: string) => string[]> = {
   claude: (t) => [t], opencode: (t) => ['--prompt', t],

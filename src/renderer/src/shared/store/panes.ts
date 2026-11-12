@@ -6,7 +6,7 @@ const PENDING = '__pending__'   // paneSplit mientras se elige el agente que va 
 let paneId = 1   // solo para la terminal (los agentes piden su id a la app)
 
 export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, get) => ({
-  panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, paneSplit: null, paneRoles: {}, paneInbox: {}, paneAsking: [], paneLeader: null,
+  panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, paneSplit: null, paneInbox: {}, paneAsking: [], paneLeader: null,
 
   openAgent: async (agent, args = [], opts = {}) => {
     const cwd = opts.cwd || get().project

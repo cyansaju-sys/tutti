@@ -1,10 +1,10 @@
 /**
  * Une el servidor MCP con los agentes abiertos: arranca el servidor, atiende sus herramientas y lleva el ritmo (cada 2 s) de las tareas,
- * los avisos y los planes de roles. Lo de cada parte vive en su módulo: tasks.ts (tareas delegadas), inbox.ts (avisos), leader.ts (líder),
- * candidates.ts (a quién repartir), plans.ts (plan de roles), history.ts (historial) y roleTemplates.ts (roles reutilizables).
+ * y los avisos. Lo de cada parte vive en su módulo: tasks.ts (tareas delegadas), inbox.ts (avisos), leader.ts (líder),
+ * candidates.ts (a quién repartir) e history.ts (historial).
  */
 import type { BrowserWindow } from 'electron'
-import type { AppMcpInfo, OpenPane, PaneRole, PaneState } from '../../../shared/types'
+import type { AppMcpInfo, OpenPane, PaneState } from '../../../shared/types'
 import { execFileSync } from 'node:child_process'
 import { detectAgents } from './agents'
 import { capable, capableFor, exhausted, isDifficulty, pickAgent, type Difficulty } from './assign'
@@ -23,55 +23,36 @@ import { chooseLeader, currentLeader } from './leader'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
 import { appendNote, readNotes } from './notes'
 import { powerGuide, powerSummaries } from '../powers'
-import { listPlanTemplates, planTemplateInfo } from './planTemplates'
 import { Orchestra, TOOLS, type AgentOutput, type Host } from './orchestra'
-import * as plans from './plans'
 import * as pty from './pty'
-import { listTemplates } from './roleTemplates'
 import { appWindow, busy, BUSY_SECONDS, knownProjects, label, oneLine, setWindow, toast, toUi } from './runtime'
 import { checkTasks, connected, forgetFinished, INPUT_ROWS, latestTaskOf, overLimit, recordTask, statusOf, tasks } from './tasks'
 import { tm } from '../../utils/i18n'
 import { getSetting } from '../settings'
 
 // lo que usa la interfaz (index.ts) sigue saliendo de aquí
-export { acceptRole, addRole, approveRoles, cancelRole, discardRoles, pauseRoles, planFromTemplate, rejectRole, removeRole, retryRole, roleOptions, rolesState, saveAsPlanTemplate, startRoles, updateRole } from './plans'
-export { deletePlanTemplate } from './planTemplates'
-/** Las plantillas de plan para elegirlas en la interfaz. */
-export const planTemplates = (): ReturnType<typeof planTemplateInfo>[] => listPlanTemplates().map(planTemplateInfo)
 export { taskList } from './tasks'
-export { deleteTemplate as deleteRoleTemplate, listTemplates as roleTemplates, saveTemplate as saveRoleTemplate } from './roleTemplates'
 
 let orchestra: Orchestra | null = null
 let counter = 1
 export const newId = (): string => `a${counter++}`
 
-/** Quita del panel las tareas terminadas, después de anotar en su plan lo que acabó. */
+/** Quita del panel las tareas terminadas. */
 export function clearTasks(): void {
-  plans.syncAllPlans()
   forgetFinished()
 }
 
-/** El usuario elige otro líder: también pasa a dirigir los planes en marcha, y se le pone al día. */
+/** El usuario elige otro líder. */
 export function setLeader(id: string): boolean {
   if (!chooseLeader(id)) return false
-  plans.leadPlans(id)
   pushPaneState()
   return true
 }
 
 // --- lo que muestran las pestañas de los agentes ---
-/** El rol que lleva cada panel de agente abierto: el de su última tarea, con el nombre que tiene en el plan. */
-function paneRoles(): Record<string, PaneRole> {
-  const out: Record<string, PaneRole> = {}
-  for (const m of pty.agentSessions()) {
-    const t = latestTaskOf(m.id)
-    if (t?.role) out[m.id] = { id: t.role, name: plans.roleNameOf(t) ?? t.role, status: statusOf(t) }
-  }
-  return out
-}
-/** El líder (si hay más de un agente), el rol de cada panel y cuántos avisos de Tutti le esperan. */
+/** El líder (si hay más de un agente) y cuántos avisos de Tutti le esperan. */
 export function paneState(): PaneState {
-  return { leader: pty.agentSessions().length > 1 ? currentLeader()?.id ?? null : null, roles: paneRoles(), inbox: noticeCounts(), asking: askingIds() }
+  return { leader: pty.agentSessions().length > 1 ? currentLeader()?.id ?? null : null, inbox: noticeCounts(), asking: askingIds() }
 }
 let sentState = ''
 /** Avisa a la interfaz cuando cambia algo de lo que muestran las pestañas. */
@@ -143,22 +124,11 @@ const host: Host = {
   report(caller, report) {
     // la pendiente más reciente; si ya avisó de todas, se actualiza la última (p. ej. estaba bloqueado, el usuario le respondió en su panel y ahora terminó)
     const t = [...tasks].reverse().find((x) => x.agentId === caller && !x.report) ?? latestTaskOf(caller)
-    if (!t) return { ok: true, info: 'No hace falta: nadie te pasó una tarea con delegate_task ni un rol, así que no hay a quién avisar. Si la tarea te la dio el usuario, contéstale a él directamente.' }
+    if (!t) return { ok: true, info: 'No hace falta: nadie te pasó una tarea con delegate_task, así que no hay a quién avisar. Si la tarea te la dio el usuario, contéstale a él directamente.' }
     t.report = report
     t.endedAt = Date.now()
     t.notified = false          // si ya se avisó al líder por el silencio, ahora recibe el resumen
-    plans.recordRoleResult(t)
     return { ok: true, info: report.status === 'blocked' ? 'Recibido: la app avisa a quien te pasó la tarea. Espera su respuesta.' : 'Recibido: la app avisa a quien te pasó la tarea.' }
-  },
-
-  roleResult: (caller, roleId) => plans.roleResultFor(caller, roleId),
-  acceptRole: (caller, roleId) => plans.acceptRoleBy(caller, roleId),
-  rejectRole: (caller, roleId, feedback) => plans.rejectRoleBy(caller, roleId, feedback),
-  retryRole: (caller, roleId) => plans.retryRoleBy(caller, roleId),
-
-  roleTemplates() {
-    const list = listTemplates()
-    return { ok: true, info: list.length ? { templates: list } : 'El usuario aún no guardó roles reutilizables.' }
   },
 
   listPowers(caller, task) {
@@ -176,7 +146,7 @@ const host: Host = {
     const t = [...tasks].reverse().find((x) => x.agentId === caller && !x.report)
     if (!t) return { ok: false, info: 'ask_leader es para preguntar a quien te pasó una tarea, y no tienes ninguna pendiente. Si la tarea te la dio el usuario, pregúntale a él directamente.' }
     t.asking = { question, at: Date.now() }
-    notify(t.callerId, `[Tutti] ${t.agent} (${t.agentId})${t.role ? `, con el rol ${t.role},` : ''} pregunta sobre la tarea «${oneLine(t.task, 80)}»:\n${question}\nContéstale con answer_agent(agent_id: "${t.agentId}", answer: ...).`)
+    notify(t.callerId, `[Tutti] ${t.agent} (${t.agentId}) pregunta sobre la tarea «${oneLine(t.task, 80)}»:\n${question}\nContéstale con answer_agent(agent_id: "${t.agentId}", answer: ...).`)
     toast(tm('m.hub.asked', { agent: label(t.agent) }))
     return { ok: true, info: 'Pregunta enviada. Espera sin seguir con lo que dependa de ella: la respuesta te llegará escrita como «[Tutti] Respuesta…».' }
   },
@@ -198,8 +168,7 @@ const host: Host = {
   postNote(caller, text) {
     const who = me(caller)
     if (!who) return { ok: false, info: 'Solo los agentes abiertos en la app pueden dejar notas.' }
-    const role = latestTaskOf(caller)?.role
-    const author = `${label(who.name)} (${who.id}${role ? `, rol ${role}` : ''})`
+    const author = `${label(who.name)} (${who.id})`
     return appendNote(projectRoot(who.cwd, knownProjects()), author, text)
       ? { ok: true, info: 'Nota guardada en .tutti/notes.md: los demás la verán con read_notes.' }
       : { ok: false, info: 'No se pudo escribir .tutti/notes.md (¿proyecto de solo lectura?).' }
@@ -221,10 +190,6 @@ const host: Host = {
     const open = pty.agentSessions()
     const self = open.find((m) => m.id === caller)
     if (!self) return { ok: false, info: 'Solo los agentes abiertos en la app pueden repartir tareas.' }
-    // un plan revisado espera al usuario: hasta que lo apruebe, nadie reparte por su cuenta (los roles del propio plan sí pasan)
-    if (!opts.role && plans.waitingApproval(self.cwd)) {
-      return { ok: false, info: 'Hay un plan de roles esperando la aprobación del usuario. No repartas tareas hasta que la dé: la app lanzará los roles y te avisará con «[Tutti]».' }
-    }
     let target = requested
     const difficulty: Difficulty | undefined = isDifficulty(opts.difficulty) ? opts.difficulty : undefined
     let assigned = ''
@@ -281,19 +246,16 @@ const host: Host = {
         const request: OpenPane = { id, name: match.name, command: match.command, args: [...(match.args ?? []), ...modelArgs], cwd: self.cwd, prompt: task, parentId: caller }
         win.webContents.send('orchestra:open-pane', request)         // la interfaz crea su panel; la terminal inicia el proceso
         if (!(await pty.waitForSpawn(id, 20_000))) return { ok: false, info: `No se pudo abrir ${match.name}: no arrancó a tiempo.` }
-        plans.noteRoleTask(recordTask(self, id, match.name, match.command, task, { difficulty, model, role: opts.role }))
+        recordTask(self, id, match.name, match.command, task, { difficulty, model })
         toast(tm('m.hub.opened', { leader: label(self.name), agent: match.name }))
         return { ok: true, info: { agent_id: id, message: `${assigned} Abrí ${match.name}${model ? ` con el modelo ${model}` : ''} en su propio panel con la tarea. Usa wait_agent para esperar su resultado.`.trim() } }
       }
     }
     pty.sendPrompt(pane.id, task)
-    plans.noteRoleTask(recordTask(self, pane.id, pane.name, pane.command, task, { difficulty, model, role: opts.role }))
+    recordTask(self, pane.id, pane.name, pane.command, task, { difficulty, model })
     toast(tm('m.hub.delegated', { leader: label(self.name), agent: label(pane.name) }))
     return { ok: true, info: { agent_id: pane.id, message: `${assigned} Tarea enviada. Usa wait_agent para esperar su resultado.`.trim() } }
   },
-
-  proposeRoles: (caller, summary, input) => plans.proposePlan(caller, summary, input),
-  confirmRoles: (caller) => plans.confirmPlan(caller, host.delegate),
 
   output(agentId, lines): AgentOutput | null {
     if (!pty.hasSession(agentId)) return null
@@ -307,13 +269,12 @@ const host: Host = {
 }
 
 let ticker: ReturnType<typeof setInterval> | null = null
-/** Cada 2 s: sigue las tareas, entrega los avisos, actualiza las pestañas y avanza los planes. */
+/** Cada 2 s: sigue las tareas, entrega los avisos, y actualiza las pestañas. */
 function tick(): void {
-  checkTasks(plans.byReview)
+  checkTasks()
   deliverNotices()
   checkAttention()
   pushPaneState()
-  void plans.tickRoles(host.delegate).catch(() => undefined)
 }
 
 /** Arranca el servidor de reparto de tareas (se desactiva con `"orchestration": false` en los ajustes). */

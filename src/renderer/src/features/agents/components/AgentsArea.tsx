@@ -11,13 +11,6 @@ import { useT } from '@/shared/lib/i18n'
 import { TerminalPane } from './TerminalPane'
 import { EditorArea, DocTab } from '../../files/components/EditorArea'
 
-/** Color de la etiqueta del rol según cómo va su tarea, y el texto de ese estado. */
-const ROLE_CHIP = {
-  working: 'bg-accent/15 text-accent', needs_input: 'bg-accent/15 text-accent', blocked: 'bg-accent/15 text-accent',
-  done: 'bg-ok/15 text-ok', failed: 'bg-danger/15 text-danger', closed: 'bg-ov/[0.06] text-muted'
-} as const
-const ROLE_STATUS = { working: 'ag.working', needs_input: 'ag.needsInput', done: 'ag.done', blocked: 'ag.blocked', failed: 'ag.failed', closed: 'ag.closed' } as const
-
 /** Pestaña de un agente en la barra superior: solo se ve el cuerpo del activo (los demás siguen vivos, ocultos). */
 const SHOWN_PROJECTS = 5
 
@@ -27,7 +20,6 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   const leader = useStore((s) => pane.kind === 'agent' && s.paneLeader === pane.id)
   const canLead = useStore((s) => pane.kind === 'agent' && !!s.paneLeader && s.paneLeader !== pane.id)
   const parent = useStore((s) => (pane.parentId ? s.panes.find((p) => p.id === pane.parentId) : undefined))
-  const role = useStore((s) => s.paneRoles[pane.id])
   const asking = useStore((s) => s.paneAsking.includes(pane.id))
   const pending = useStore((s) => s.paneInbox[pane.id] ?? 0)
   return (
@@ -36,7 +28,6 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
       <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar')}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[11px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
-        {role && <span title={t('pane.roleTip', { name: role.name, id: role.id, status: t(ROLE_STATUS[role.status]) })} className={clsx('min-w-0 max-w-[45%] shrink truncate rounded-full px-2 py-0.5 text-[10px] font-medium', ROLE_CHIP[role.status])}>{t('pane.role', { name: role.name })}</span>}
         {asking && <span title={t('pane.asking')} className="shrink-0 animate-pulse rounded-full bg-danger/15 px-2 py-0.5 text-[10px] font-medium text-danger">{t('pane.askingShort')}</span>}
         {pending > 0 && <span title={t('pane.inbox', { n: pending })} className="flex shrink-0 items-center gap-0.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-medium text-accent"><MdMailOutline size={11} />{pending}</span>}
         {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}

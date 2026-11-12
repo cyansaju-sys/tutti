@@ -68,7 +68,7 @@ function Tasks() {
                   {t('ag.summary')}: {task.summary}{expanded === task.id && task.files?.length ? `\n${task.files.join('\n')}` : ''}
                 </div>
               )}
-              <div className="mt-0.5 truncate text-[10px] text-muted/80">{t('ag.from', { caller: task.caller })}{task.model ? ` · ${task.model}` : ''}{task.difficulty ? ` · ${task.difficulty}` : ''}{task.role ? ` · ${t('ag.role', { role: task.role })}` : ''}</div>
+              <div className="mt-0.5 truncate text-[10px] text-muted/80">{t('ag.from', { caller: task.caller })}{task.model ? ` · ${task.model}` : ''}{task.difficulty ? ` · ${task.difficulty}` : ''}</div>
             </li>
           )
         })}

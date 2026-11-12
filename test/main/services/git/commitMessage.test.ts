@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPrompt, cleanMessage, headlessArgs, heuristicMessage } from '../../../../src/main/services/git/commitMessage'
+import { buildPrompt, cleanMessage, commitSessionId, headlessArgs, heuristicMessage } from '../../../../src/main/services/git/commitMessage'
 
 describe('mensaje de commit con un agente', () => {
   it('limpia comillas, bloques de código y charla previa', () => {
@@ -23,6 +23,11 @@ describe('mensaje de commit con un agente', () => {
     expect(headlessArgs('opencode', 'P')).toEqual(['run', 'P'])
     expect(headlessArgs('codex', 'P')).toEqual(['exec', 'P'])
     expect(headlessArgs('aider', 'P')).toBeNull()
+  })
+  it('la sesión de commits de Claude es un UUID fijo por proyecto', () => {
+    expect(commitSessionId('/a')).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(commitSessionId('/a')).toBe(commitSessionId('/a'))
+    expect(commitSessionId('/a')).not.toBe(commitSessionId('/b'))
   })
 })
 
