@@ -19,6 +19,7 @@ import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '../../git/components/GitGraph'
 import { NewsView } from './NewsView'
 import { HookFormView } from '../../tutti/components/HookFormView'
+import { RoleGraphView } from '../../tutti/components/RoleGraphView'
 import { RoleFormView } from '../../tutti/components/RoleFormView'
 import { SkillFormView } from '../../tutti/components/SkillFormView'
 import { SteeringFormView } from '../../tutti/components/SteeringFormView'
@@ -57,7 +58,7 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
   return (
     <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
       className={clsx('group flex min-w-[120px] max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
-      {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
+      {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
       <span className="min-w-0 flex-1 truncate text-[11px]">{d.title}</span>
       {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
       <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
@@ -202,7 +203,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
                 active ? 'border-accent bg-surface text-text' : 'border-panel bg-panel text-muted hover:bg-raised'
               )}
             >
-              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
+              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
               <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
               {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
               {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
@@ -213,7 +214,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
           )
         })}
       </div>}
-      {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform', 'roleform', 'news'].includes(doc.kind) && (
+      {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">
             {crumbs(project, doc.diffOf ?? doc.path).map((c, i, all) => (
@@ -304,7 +305,8 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
       {doc?.kind === 'hookform' && <HookFormView key={doc.path} path={doc.path} />}
       {doc?.kind === 'steeringform' && <SteeringFormView />}
       {doc?.kind === 'skillform' && <SkillFormView />}
-      {doc?.kind === 'roleform' && <RoleFormView />}
+      {doc?.kind === 'rolegraph' && <RoleGraphView />}
+      {doc?.kind === 'roleform' && <RoleFormView key={doc.path} path={doc.path} />}
       {doc?.kind === 'news' && <NewsView />}
       {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}
       {doc?.kind === 'image' && <div className="grid flex-1 place-items-center overflow-auto p-4"><img src={doc.dataUrl} alt={doc.title} className="max-h-full max-w-full object-contain" /></div>}

@@ -11,6 +11,9 @@ const host: Host = {
   postNote: (caller, text) => { calls.push([caller, 'note', text]); return { ok: true, info: 'guardada' } },
   readNotes: (caller, limit) => { calls.push([caller, 'notes', limit]); return { ok: true, info: { notes: ['una'] } } },
   updates: (caller) => ({ ok: true, info: { updates: [`para ${caller}`] } }),
+  listRoles: () => ({ ok: true, info: { roles: [{ name: 'lider', depends_on: [] }] } }),
+  assignRoles: async (caller, tasks) => { calls.push([caller, 'assign', tasks]); return { ok: true, info: { launch_order: tasks.map((x) => x.role) } } },
+  rolesStatus: () => ({ ok: true, info: 'No has lanzado ningún plan con assign_roles.' }),
   listPowers: () => ({ ok: true, info: { powers: [{ name: 'db' }] } }),
   usePower: async (caller, name) => { calls.push([caller, 'power', name]); return name === 'db' ? { ok: true, info: { guide: 'usa pg' } } : { ok: false, info: 'no existe' } },
   seen: (caller) => { seen.add(caller) },
@@ -48,7 +51,7 @@ describe('servidor MCP de reparto de tareas', () => {
     expect(await (await post(rpc('ping'))).json()).toMatchObject({ result: {} })
     const tools = await (await post(rpc('tools/list'))).json()
     expect(tools.result.tools.map((t: { name: string }) => t.name)).toEqual(TOOLS.map((t) => t.name))
-    expect(tools.result.tools).toHaveLength(12)
+    expect(tools.result.tools).toHaveLength(15)
   })
 
   it('las notificaciones no tienen respuesta y un método desconocido da error', async () => {
@@ -114,6 +117,23 @@ describe('servidor MCP de reparto de tareas', () => {
     expect((await call('read_notes', { limit: 9999 })).isError).toBe(false)
     expect(JSON.parse((await call('get_updates', {})).content[0].text).updates).toEqual(['para a1'])
     expect(calls).toEqual([['a1', 'ask', '¿qué formato?'], ['a1', 'answer', 'a2', 'JSON'], ['a1', 'note', 'la API usa snake_case'], ['a1', 'notes', 200]])
+  })
+
+  it('list_roles devuelve los roles del proyecto', async () => {
+    const { post } = await start()
+    const res = (await (await post(rpc('tools/call', { name: 'list_roles', arguments: {} }))).json()).result
+    expect(res.isError).toBe(false)
+    expect(JSON.parse(res.content[0].text).roles[0].name).toBe('lider')
+  })
+
+  it('assign_roles pasa las tareas por rol y exige role y task', async () => {
+    const { post } = await start()
+    const call = async (name: string, args: object): Promise<{ isError: boolean; content: Array<{ text: string }> }> => (await (await post(rpc('tools/call', { name, arguments: args }))).json()).result
+    expect((await call('assign_roles', { tasks: [{ role: ' lider ', task: ' planea ' }, { role: 'dev', task: 'codifica' }] })).isError).toBe(false)
+    expect((await call('assign_roles', { tasks: [{ role: 'dev' }] })).isError).toBe(true)
+    expect((await call('assign_roles', {})).isError).toBe(true)
+    expect((await call('roles_status', {})).isError).toBe(false)
+    expect(calls).toEqual([['a1', 'assign', [{ role: 'lider', task: 'planea' }, { role: 'dev', task: 'codifica' }]]])
   })
 
   it('list_powers y use_power cargan un Power solo cuando se pide', async () => {

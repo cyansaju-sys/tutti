@@ -10,6 +10,8 @@ import { detectAgents } from './agents'
 import { capable, capableFor, exhausted, isDifficulty, pickAgent, type Difficulty } from './assign'
 import { candidates, nameOf, quotaOf } from './candidates'
 import { readContext } from '../context/context'
+import { listRoles } from '../context/roles'
+import { blockedByFailure, buildPlan, difficultyOf, finished, launchOrder, plans, planStatus, ready, rolePrompt, type Plan, type PlanItem } from './rolePlan'
 import { projectRoot } from '../context/projectRoot'
 import { codexConfig } from '../mcp/mcp'
 import { dropCodexBridgeCopy } from '../mcp/mirror'
@@ -129,6 +131,32 @@ const host: Host = {
     t.endedAt = Date.now()
     t.notified = false          // si ya se avisó al líder por el silencio, ahora recibe el resumen
     return { ok: true, info: report.status === 'blocked' ? 'Recibido: la app avisa a quien te pasó la tarea. Espera su respuesta.' : 'Recibido: la app avisa a quien te pasó la tarea.' }
+  },
+
+  listRoles(caller) {
+    const who = me(caller)
+    const project = who ? projectRoot(who.cwd, knownProjects()) : currentLeader()?.cwd
+    if (!project) return { ok: false, info: 'No se sabe de qué proyecto: abre un agente en la carpeta del proyecto.' }
+    const roles = listRoles(project)
+    return { ok: true, info: roles.length ? { roles } : 'No hay roles en este proyecto.' }
+  },
+
+  async assignRoles(caller, assignments) {
+    const who = me(caller)
+    if (!who) return { ok: false, info: 'Solo los agentes abiertos en la app pueden repartir tareas.' }
+    const roles = listRoles(projectRoot(who.cwd, knownProjects()))
+    if (!roles.length) return { ok: false, info: 'No hay roles en este proyecto: se crean desde Archivos > Roles.' }
+    const built = buildPlan(caller, roles, assignments)
+    if ('error' in built) return { ok: false, info: built.error }
+    const { plan } = built
+    await startReady(plan)
+    const status = planStatus(plan)
+    return { ok: true, info: { ...status, launch_order: launchOrder(plan), message: 'Plan en marcha: lancé los roles que no esperan a nadie. Tutti lanza el resto solo cuando terminen aquellos de los que dependen y te avisa con «[Tutti]»; no hace falta que lo vigiles. Consulta roles_status cuando quieras.' } }
+  },
+
+  rolesStatus(caller) {
+    const mine = plans.filter((p) => p.callerId === caller)
+    return { ok: true, info: mine.length ? { plans: mine.map(planStatus) } : 'No has lanzado ningún plan con assign_roles.' }
   },
 
   listPowers(caller, task) {
@@ -268,10 +296,60 @@ const host: Host = {
   }
 }
 
+/** Abre el agente de un rol con su tarea (más lo que entregaron los roles de los que depende). */
+async function launchItem(plan: Plan, item: PlanItem): Promise<void> {
+  item.launching = true
+  const { role } = item
+  const res = await host.delegate(plan.callerId, role.agent || 'auto', rolePrompt(plan, item), false, { difficulty: difficultyOf(role), model: role.agent && role.model ? role.model : undefined })
+  item.launching = false
+  const info = res.info as { agent_id?: string } | string
+  if (res.ok && typeof info === 'object' && info.agent_id) {
+    item.agentId = info.agent_id
+    item.taskId = latestTaskOf(info.agent_id)?.id
+    item.state = 'running'
+    notify(plan.callerId, `[Tutti] Plan ${plan.id}: empezó el rol «${role.name}» (${info.agent_id}).`)
+  } else if (typeof info === 'string' && info.startsWith('No se reparte ahora')) {
+    item.note = info          // sin sitio ahora: se reintenta en el siguiente ciclo
+  } else {
+    item.state = 'failed'
+    item.note = typeof info === 'string' ? info : JSON.stringify(info)
+    notify(plan.callerId, `[Tutti] Plan ${plan.id}: no se pudo lanzar el rol «${role.name}»: ${item.note}`)
+  }
+}
+const startReady = async (plan: Plan): Promise<void> => { for (const item of ready(plan)) await launchItem(plan, item) }
+
+/** Sigue los planes de roles: da por terminados los roles cuyo agente acabó, salta los que dependen de uno que falló y lanza los que ya pueden empezar. */
+function advancePlans(): void {
+  for (const plan of plans) {
+    if (plan.announced) continue
+    for (const item of plan.items.filter((i) => i.state === 'running')) {
+      const t = tasks.find((x) => x.id === item.taskId)
+      const status = t ? statusOf(t) : 'closed'
+      if (status === 'done') {
+        item.state = 'done'; item.summary = t?.report?.summary; item.files = t?.report?.files
+        notify(plan.callerId, `[Tutti] Plan ${plan.id}: terminó el rol «${item.role.name}».`)
+      } else if (status === 'failed' || status === 'closed') {
+        item.state = 'failed'; item.note = status === 'closed' ? 'su agente se cerró antes de terminar' : t?.report?.summary
+        notify(plan.callerId, `[Tutti] Plan ${plan.id}: falló el rol «${item.role.name}»${item.note ? `: ${item.note}` : ''}.`)
+      }
+    }
+    for (const item of blockedByFailure(plan)) {
+      item.state = 'skipped'; item.note = 'depende de un rol que falló'
+      notify(plan.callerId, `[Tutti] Plan ${plan.id}: no se lanza «${item.role.name}» porque ${item.waitsFor.join(', ')} no terminó bien.`)
+    }
+    void startReady(plan)
+    if (finished(plan)) {
+      plan.announced = true
+      notify(plan.callerId, `[Tutti] Plan ${plan.id} terminado:\n${plan.items.map((i) => `- ${i.role.name}: ${i.state}${i.summary ? ` — ${oneLine(i.summary, 120)}` : ''}${i.state !== 'done' && i.note ? ` (${oneLine(i.note, 120)})` : ''}`).join('\n')}`)
+    }
+  }
+}
+
 let ticker: ReturnType<typeof setInterval> | null = null
 /** Cada 2 s: sigue las tareas, entrega los avisos, y actualiza las pestañas. */
 function tick(): void {
   checkTasks()
+  advancePlans()
   deliverNotices()
   checkAttention()
   pushPaneState()

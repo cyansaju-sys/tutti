@@ -11,7 +11,7 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     const prev = get().project
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
-    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'roleform', 'news'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc, shells: state.shells.length }
+    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc, shells: state.shells.length }
     // se cierra todo: agentes, terminales y archivos
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
     // al recargar, la pantalla no cambia antes: el estado nuevo solo se pone aquí si no hay recarga (arranque con `tutti .`)

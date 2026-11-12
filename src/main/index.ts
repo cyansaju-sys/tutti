@@ -3,6 +3,7 @@ import { execFile, spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
+import { availableModels } from './services/agents/models'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent, setShell } from './services/agents/agents'
 import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './services/context/agentsPointer'
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, tuttiDir, openProjectContext, setWorkingFiles } from './services/context/context'
@@ -260,6 +261,7 @@ function registerIpc(): void {
   ipcMain.handle('orchestra:pane-state', () => paneState())
   ipcMain.handle('orchestra:set-leader', (_e, id: string) => setLeader(id))
   ipcMain.handle('agents:detect', () => detectAgents())
+  ipcMain.handle('agents:models', async (_e, command: string, cwd?: string) => (await availableModels(command, detectAgents().find((a) => a.command === command)?.path, cwd)).map((m) => m.id))
   ipcMain.handle('agents:shell', () => defaultShell())
   ipcMain.handle('agents:setShell', (_e, path: string) => setShell(path))
   ipcMain.handle('agents:candidates', () => candidateExecutables())

@@ -15,6 +15,8 @@ const INSTRUCTIONS = `Eres un agente de una app que ejecuta varios agentes de pr
 - list_agents: agentes abiertos e instalados, con modelo actual, nivel (basic, standard, advanced), límite de uso y modelos que ofrece cada uno (available_models).
 - delegate_task: manda una tarea a otro agente; si no está abierto, la app lo abre en su propio panel. Con "model" eliges el modelo exacto.
 - read_agent_output / wait_agent: lee la pantalla de un agente o espera a que termine.
+- list_roles: los roles del proyecto (nombre, especialidad, entregable, dificultad, de qué roles depende, agente y modelo sugeridos). Úsalo al repartir trabajo: si hay un rol que encaja, delega con su agente y su modelo y respeta sus dependencias.
+- assign_roles: reparte una tarea a cada rol que indiques y Tutti las lanza solo, en el orden de las dependencias: cada rol empieza cuando terminaron aquellos de los que depende, con su agente y modelo, y recibe lo que entregaron. roles_status: cómo va ese plan.
 - list_powers / use_power: los Powers son paquetes de herramientas y guías que se cargan solo cuando hacen falta.
 
 Al recibir una petición del usuario, antes de empezar: llama a list_powers con la petición en "task". Si no hay Powers, sigue sin más. Si alguno encaja (los que traen matches: true, o cuya descripción cuadre con la tarea), cárgalo con use_power y sigue su guía; si ninguno encaja, no cargues ninguno.
@@ -40,6 +42,25 @@ export const TOOLS = [
   {
     name: 'list_agents',
     description: 'Lista los agentes abiertos (con id, modelo, nivel y si están ocupados) y los instalados que se pueden abrir, ambos con la lista de modelos que ofrece cada agente (available_models) para elegir a quién asignar cada tarea.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'list_roles',
+    description: 'Los roles del proyecto (carpeta roles de .tutti o .agents): nombre, título, especialidad, entregable, descripción, dificultad (low, medium, high), de qué roles depende (depends_on), y el agente y modelo que se le asignan. Úsalo para repartir el trabajo respetando el orden de las dependencias.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'assign_roles',
+    description: 'Asigna una tarea a cada rol (de list_roles) y las lanza en el orden de sus dependencias (depends_on): los que no dependen de nadie empiezan ya, cada uno con el agente y modelo de su rol, y el resto cuando terminan aquellos de los que dependen (reciben su resumen). Si un rol falla, los que dependen de él no se lanzan. Tutti te avisa con «[Tutti]» al avanzar y al terminar; consulta el estado con roles_status.',
+    inputSchema: {
+      type: 'object',
+      properties: { tasks: { type: 'array', description: 'Una tarea por rol que participa.', items: { type: 'object', properties: { role: { type: 'string', description: 'Nombre del rol (de list_roles).' }, task: { type: 'string', description: 'Lo que debe hacer ese rol, con el contexto necesario.' } }, required: ['role', 'task'] } } },
+      required: ['tasks']
+    }
+  },
+  {
+    name: 'roles_status',
+    description: 'El estado de los planes de roles lanzados con assign_roles: cada rol en espera, en curso, hecho, fallido o saltado, de qué espera y su resumen al terminar.',
     inputSchema: { type: 'object', properties: {} }
   },
   {
@@ -154,6 +175,9 @@ export interface Host {
   listAgents(caller: string): unknown | Promise<unknown>
   delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string }): Promise<{ ok: boolean; info: unknown }>
   report(caller: string, report: TaskReport): { ok: boolean; info: unknown }
+  listRoles(caller: string): { ok: boolean; info: unknown }
+  assignRoles(caller: string, tasks: Array<{ role: string; task: string }>): Promise<{ ok: boolean; info: unknown }>
+  rolesStatus(caller: string): { ok: boolean; info: unknown }
   listPowers(caller: string, task?: string): { ok: boolean; info: unknown }
   usePower(caller: string, name: string): Promise<{ ok: boolean; info: unknown }>
   askLeader(caller: string, question: string): { ok: boolean; info: unknown }
@@ -297,6 +321,21 @@ export class Orchestra {
     }
     if (name === 'get_updates') {
       const { ok, info } = this.host.updates(caller)
+      return text(info, !ok)
+    }
+    if (name === 'assign_roles') {
+      const list = Array.isArray(args.tasks) ? args.tasks : []
+      const tasks = list.map((x) => ({ role: String((x as Record<string, unknown>)?.role ?? '').trim(), task: String((x as Record<string, unknown>)?.task ?? '').trim() }))
+      if (!tasks.length || tasks.some((x) => !x.role || !x.task)) return text('Falta `tasks`: una lista de { role, task } con el nombre de cada rol y su tarea.', true)
+      const { ok, info } = await this.host.assignRoles(caller, tasks)
+      return text(info, !ok)
+    }
+    if (name === 'roles_status') {
+      const { ok, info } = this.host.rolesStatus(caller)
+      return text(info, !ok)
+    }
+    if (name === 'list_roles') {
+      const { ok, info } = this.host.listRoles(caller)
       return text(info, !ok)
     }
     if (name === 'list_powers') {

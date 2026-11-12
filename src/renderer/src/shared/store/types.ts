@@ -44,7 +44,8 @@ export interface DocsSlice {
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
   openNews: (since: string | null) => void              // las novedades como pestaña del editor: desde `since` (tras actualizar) o solo las de la versión instalada
-  openRoleForm: () => void                            // el formulario de un rol nuevo (solo el nombre)
+  openRoleGraph: () => void                            // el grafo de dependencias entre roles
+  openRoleForm: (edit?: { file: string; name: string }) => void                            // el formulario de un rol nuevo (solo el nombre)
   openSkillForm: () => void                           // el formulario de una skill nueva
   openSteeringForm: () => void                        // el formulario de un steering nuevo
   openSpecForm: (prefill?: SpecPrefill) => void       // el diálogo de una spec nueva (desde el roadmap, ya rellenado)

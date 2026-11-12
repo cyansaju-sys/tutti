@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform' | 'roleform' | 'news'
+  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform' | 'roleform' | 'rolegraph' | 'news'
   text: string
   crlf: boolean
   truncated: boolean
@@ -250,6 +250,8 @@ export interface Api {
   }
   agents: {
     detect(): Promise<AgentInfo[]>
+    /** Los ids de los modelos que ofrece un agente (con su comando, su /model o una lista fija); `cwd` = la carpeta del proyecto. */
+    models(command: string, cwd?: string): Promise<string[]>
     shell(): Promise<string>
     setShell(path: string): Promise<McpResult>
     candidates(): Promise<AgentCandidate[]>

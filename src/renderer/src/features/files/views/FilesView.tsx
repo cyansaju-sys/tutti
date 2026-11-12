@@ -1,12 +1,14 @@
 import { clsx } from 'clsx'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdAdd, MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdDriveFileRenameOutline, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdUnfoldLess } from 'react-icons/md'
+import { MdAdd, MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdAccountTree, MdDriveFileRenameOutline, MdEdit, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdSend, MdSmartToy, MdUnfoldLess } from 'react-icons/md'
 import type { DirEntry } from '@shared/types'
+import { confirmAsk as confirmBox } from '@/shared/lib/confirm'
 import { Menu } from '@/shared/components/Menu'
 import { Modal } from '@/shared/components/ui'
 import { GIT_COLOR } from '@/features/git/lib/gitSync'
 import { FileIcon } from '@/shared/components/FileIcon'
 import { basename, relative, toPosix } from '@/shared/lib/paths'
+import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { agentRef } from '@/features/agents/lib/agentRef'
 import { useT } from '@/shared/lib/i18n'
 import { useStore } from '@/shared/store'
@@ -28,6 +30,13 @@ export function FilesView() {
   const setProject = useStore((s) => s.setProject)
   const openDoc = useStore((s) => s.openDoc)
   const openRoleForm = useStore((s) => s.openRoleForm)
+  const openRoleGraph = useStore((s) => s.openRoleGraph)
+  const removeRole = async (r: { name: string; path: string }): Promise<void> => {
+    if (!(await confirmBox(t('fs.confirmDeleteRole', { name: r.name.replace(/\.md$/i, '') })))) return
+    const res = await window.api.fs.trash(r.path)
+    if (!res.ok) { useStore.getState().toast(res.message, 'error'); return }
+    useStore.getState().dropDocs(r.path); void loadRoles()
+  }
   const set = useStore((s) => s.set)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
@@ -46,7 +55,7 @@ export function FilesView() {
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
   const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
   const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
-  const [roles, setRoles] = useState<DirEntry[]>([])          // los roles del proyecto: archivos .md de .tutti/roles
+  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/roles
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -66,7 +75,12 @@ export function FilesView() {
   const loadRoles = useCallback(async () => {
     if (!project) return
     const dir = await window.api.context.dir(project)
-    const list = await window.api.fs.list(`${dir}/roles`).catch(() => [] as DirEntry[])
+    const files = await window.api.fs.list(`${dir}/roles`).catch(() => [] as DirEntry[])
+    // el agente de cada rol está en su cabecera («agent: claude»): da su icono
+    const list = await Promise.all(files.filter((f) => !f.isDir).map(async (f) => {
+      const text = await window.api.fs.read(f.path).then((d) => d.text, () => '')
+      return { ...f, agent: /^---\n[\s\S]*?^agent:[ \t]*(\S+)[ \t]*$/m.exec(text)?.[1] ?? '' }
+    }))
     setRoles((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
   }, [project])
   const reload = useCallback(() => { if (project) { void load(project); void loadRoles(); expanded.forEach((d) => void load(d)) } }, [project, expanded, load, loadRoles])
@@ -383,14 +397,21 @@ export function FilesView() {
             <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', rolesOpen && 'rotate-90')} />
             <span className="truncate text-[12px] font-semibold">{t('fs.roles')}</span>
           </button>
-          <button title={t('fs.addRole')} onClick={openRoleForm} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
+          <button title={t('rg.open')} onClick={openRoleGraph} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAccountTree size={15} /></button>
+          <button title={t('fs.addRole')} onClick={() => openRoleForm()} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
         </div>
         {rolesOpen && (
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {roles.filter((r) => !r.isDir).map((r) => (
-              <button key={r.path} onClick={() => void openDoc(r.path)} className="flex w-full items-center gap-1.5 py-[3px] pl-[28px] pr-1.5 text-left text-[12px] transition-colors hover:bg-accent-bg">
-                <FileIcon name={r.name} dir={false} /><span className="truncate">{r.name}</span>
-              </button>
+            {roles.map((r) => (
+              <div key={r.path} className="group flex items-center hover:bg-accent-bg">
+                <button onClick={() => void openDoc(r.path)} className="flex min-w-0 flex-1 items-center gap-1.5 py-[3px] pl-[28px] pr-1.5 text-left text-[12px]">
+                  {r.agent ? <AgentIcon name={r.agent} command={r.agent} size={16} /> : <MdSmartToy size={16} className="shrink-0 text-muted" />}<span className="truncate">{r.name.replace(/\.md$/i, '')}</span>
+                </button>
+                <button title={t('fs.editRole')} onClick={() => openRoleForm({ file: r.path, name: r.name.replace(/\.md$/i, '') })}
+                  className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100"><MdEdit size={13} /></button>
+                <button title={t('fs.deleteRole')} onClick={() => void removeRole(r)}
+                  className="mr-1.5 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-danger group-hover:opacity-100"><MdDeleteOutline size={14} /></button>
+              </div>
             ))}
             {roles.length === 0 && <p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p>}
           </div>

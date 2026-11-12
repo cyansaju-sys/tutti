@@ -4,7 +4,8 @@ import { MdExpandMore } from 'react-icons/md'
 import { Menu } from '@/shared/components/Menu'
 import { FIELD } from '@/shared/components/ui'
 import { useT } from '@/shared/lib/i18n'
-import type { FormField, Values } from '../lib/formFields'
+import { splitDeps } from '../lib/roleGraph'
+import type { FieldOption, FormField, Values } from '../lib/formFields'
 
 interface Props {
   title: string
@@ -26,11 +27,11 @@ interface Props {
 const TONE = { warn: 'text-warn', danger: 'text-danger' } as const
 
 /** Un desplegable (menú anclado al campo) para los campos `select`. */
-function SelectField({ field, value, onPick, className }: { field: FormField; value: string; onPick: (v: string) => void; className: string }) {
+function SelectField({ field, options, value, onPick, className }: { field: FormField; options: FieldOption[]; value: string; onPick: (v: string) => void; className: string }) {
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
-  const text = (o: NonNullable<FormField['options']>[number]): string => o.label ?? (o.labelKey ? t(o.labelKey) : o.value)
-  const current = field.options?.find((o) => o.value === value)
+  const text = (o: FieldOption): string => o.label ?? (o.labelKey ? t(o.labelKey) : o.value)
+  const current = options.find((o) => o.value === value)
   return (
     <>
       <button type="button" onClick={(e) => setMenu(e.currentTarget.getBoundingClientRect())} aria-haspopup="menu" aria-expanded={!!menu}
@@ -41,7 +42,7 @@ function SelectField({ field, value, onPick, className }: { field: FormField; va
       </button>
       {menu && (
         <Menu anchor={menu} width={Math.max(300, menu.width)} onClose={() => setMenu(null)}
-          items={(field.options ?? []).map((o) => ({ label: text(o), detail: o.detailKey && t(o.detailKey), checked: o.value === value, onClick: () => onPick(o.value) }))} />
+          items={options.map((o) => ({ label: text(o), detail: o.detailKey && t(o.detailKey), checked: o.value === value, onClick: () => onPick(o.value) }))} />
       )}
     </>
   )
@@ -63,9 +64,11 @@ export function FieldsFormView({ title, subtitle, fields, values, onChange, subm
     void onSubmit(Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.trim()])))
   }
   const cols = Math.max(1, ...shown.map((f) => f.positionGrid.x))
+  const alone = (f: FormField): boolean => shown.filter((o) => o.positionGrid.y === f.positionGrid.y).length === 1          // un campo solo en su fila ocupa todo el ancho
   const text = (f: FormField): boolean => !f.kind || f.kind === 'input' || f.kind === 'textarea'
   const first = shown.filter(text).sort((a, b) => a.positionGrid.y - b.positionGrid.y || a.positionGrid.x - b.positionGrid.x)[0]
 
+  const optionsOf = (f: FormField): FieldOption[] => (typeof f.options === 'function' ? f.options(values) : f.options ?? [])
   const control = (f: FormField): React.ReactNode => {
     const { placeholder, className, ...rest } = f.inputProps ?? {}
     const off = !!f.disabled?.(values)
@@ -75,14 +78,26 @@ export function FieldsFormView({ title, subtitle, fields, values, onChange, subm
     if (f.kind === 'radio') {
       return (
         <div className={clsx('flex gap-1 rounded-lg border border-line p-0.5', ring)} role="radiogroup" aria-label={f.label && t(f.label)}>
-          {(f.options ?? []).map((o) => (
+          {optionsOf(f).map((o) => (
             <button key={o.value} type="button" role="radio" aria-checked={value === o.value} disabled={off} onClick={() => onChange({ [f.name]: o.value })}
               className={clsx('flex-1 rounded-md px-2 py-1 text-[12px] transition-colors', value === o.value ? 'bg-accent-bg font-medium text-accent' : 'text-muted hover:text-text')}>{o.label ?? (o.labelKey ? t(o.labelKey) : o.value)}</button>
           ))}
         </div>
       )
     }
-    if (f.kind === 'select') return <SelectField field={f} value={value} onPick={(v) => onChange({ [f.name]: v })} className={clsx(FIELD, ring)} />
+    if (f.kind === 'multiselect') {
+      const chosen = splitDeps(value)
+      const toggle = (v: string): void => onChange({ [f.name]: (chosen.includes(v) ? chosen.filter((c) => c !== v) : [...chosen, v]).join(', ') })
+      return (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={f.label && t(f.label)}>
+          {optionsOf(f).map((o) => (
+            <button key={o.value} type="button" aria-pressed={chosen.includes(o.value)} disabled={off} onClick={() => toggle(o.value)}
+              className={clsx('rounded-full border px-2.5 py-0.5 text-[12px] transition-colors', chosen.includes(o.value) ? 'border-accent bg-accent-bg font-medium text-accent' : 'border-line text-muted hover:border-accent hover:text-text')}>{o.label ?? (o.labelKey ? t(o.labelKey) : o.value)}</button>
+          ))}
+        </div>
+      )
+    }
+    if (f.kind === 'select') return <SelectField field={f} options={optionsOf(f)} value={value} onPick={(v) => onChange({ [f.name]: v })} className={clsx(FIELD, ring)} />
     if (f.kind === 'checkbox') {
       return (
         <label className={clsx('flex items-center gap-2 text-[12px]', off && 'opacity-50')}>
@@ -111,7 +126,7 @@ export function FieldsFormView({ title, subtitle, fields, values, onChange, subm
           {shown.map((f) => {
             const hint = f.hint?.(values, { t, error: bad.has(f.name) })
             return (
-              <div key={f.name} style={{ gridColumn: f.positionGrid.x, gridRow: f.positionGrid.y }} className="mb-3 min-w-0">
+              <div key={f.name} style={{ gridColumn: alone(f) ? '1 / -1' : f.positionGrid.x, gridRow: f.positionGrid.y }} className="mb-3 min-w-0">
                 {f.label && f.kind !== 'checkbox' && <label className="mb-1 block text-[11px] font-medium text-muted">{t(f.label)}</label>}
                 {control(f)}
                 {hint && <p className={clsx('mt-1 text-[10px] leading-snug', hint.tone ? TONE[hint.tone] : 'text-muted')}>{hint.text}</p>}
