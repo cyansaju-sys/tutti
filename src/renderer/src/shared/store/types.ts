@@ -66,8 +66,10 @@ export interface PanesSlice {
   shellActive: string | null
   shellMax: boolean
   activePane: string | null
-  /** Segundo agente visible al dividir la vista en dos (Ctrl+2); null = un solo agente. */
-  paneSplit: string | null
+  /** Agentes que se ven junto al activo al dividir la vista (Ctrl+2…6, hasta 3 en horizontal y 2 en vertical); vacío = un solo agente. */
+  paneSplit: string[]
+  /** Cuántos paneles se quieren ver a la vez (Ctrl+1…6): si hay menos agentes, los huecos piden elegir uno. */
+  paneWant: number
   /** El rol del plan que lleva cada panel de agente (por id de panel); lo avisa la app. */
   /** Avisos de Tutti que esperan a que cada agente esté libre (o a que dejes de escribir en su panel). */
   paneInbox: Record<string, number>
@@ -81,7 +83,8 @@ export interface PanesSlice {
   addShell: () => Promise<void>
   closeShells: () => void
   closePane: (id: string) => void
-  toggleSplit: (on?: boolean) => void                  // Ctrl+2 divide la vista en dos; Ctrl+1 la vuelve a un solo agente
+  closeSlot: () => boolean                             // Ctrl+W: cierra un hueco vacío de la vista dividida (false si no hay)
+  splitPanes: (n: number) => void                      // Ctrl+2…6 muestra n agentes a la vez (cuadrícula de hasta 3×2); Ctrl+1 vuelve a uno solo
   focusPane: (id: string) => void                      // selecciona el panel y le pasa el teclado (aunque ya fuera el activo)
 }
 
@@ -110,6 +113,8 @@ export interface UiSlice {
   paneFocus: number                      // sube al cerrar un archivo o un panel: la terminal activa recupera el foco del teclado
   modal: Modal
   toasts: Toast[]
+  notices: Toast[]                       // historial de avisos (el panel de la campana)
+  clearNotices: () => void
   maximized: boolean
   agents: AgentInfo[]
   update: UpdateState

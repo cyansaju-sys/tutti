@@ -33,6 +33,7 @@
   --color-git-a: #73c991;
   --color-git-d: #c74e39;
   --color-git-c: #e4676b;
+  --color-git-staged: #7fb0f0;
   --color-ov: #ffffff;              /* velos translúcidos (bg-ov/5…): blanco en oscuro, negro en claro */
   --color-pop: #0f121a;             /* menús, tooltips y diálogos */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -68,7 +69,7 @@
   --color-line: #c8cdd9; --color-accent: #3a5878; --color-accent-bg: #d3deeb; --color-accent-dim: #9bb3ce;
   --color-muted: #5b6277; --color-text: #272c3b;
   --color-ok: #17803f; --color-warn: #8f5f00; --color-danger: #c92c47;
-  --color-git-m: #8f5f00; --color-git-a: #1f8f4e; --color-git-d: #c0422d; --color-git-c: #c92c47;
+  --color-git-m: #8f5f00; --color-git-a: #1f8f4e; --color-git-d: #c0422d; --color-git-c: #c92c47; --color-git-staged: #2f6fc4;
   --color-ov: #000000; --color-pop: #f6f7fa;
   --ed-line: #00000008; --ed-field: #0000000a; --ed-bracket: #9bb3ce44; --ed-match: #9bb3ce6e; --ed-indent: #00000022; --ed-shadow: #0000002e;
   --syn-keyword: #8250df; --syn-type: #0f7f6f; --syn-string: #1a7f37; --syn-number: #b35900; --syn-func: #1f5fd1; --syn-tag: #cf222e; --syn-attr: #8a5a00; --syn-op: #0b7285;

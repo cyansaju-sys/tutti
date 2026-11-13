@@ -273,6 +273,7 @@ function registerIpc(): void {
   ipcMain.on('pty:paste', (_e, id: string, text: string) => pty.pastePrompt(id, String(text).slice(0, 60_000)))
   ipcMain.on('pty:write', (_e, id: string, data: string) => pty.write(id, data))
   ipcMain.on('pty:resize', (_e, id: string, cols: number, rows: number) => pty.resize(id, cols, rows))
+  ipcMain.handle('pty:foreground', (_e, ids: string[]) => pty.foreground(ids))
   ipcMain.on('pty:kill', (_e, id: string) => pty.kill(id))
 
   ipcMain.on('window:minimize', () => win?.minimize())

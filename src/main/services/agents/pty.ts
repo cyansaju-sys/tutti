@@ -110,6 +110,13 @@ export const sessionList = (): Meta[] => [...sessions.values()].map((s) => s.met
 export const agentSessions = (): Meta[] => [...sessions.values()].filter((s) => s.meta.kind === 'agent').map((s) => s.meta)
 export const hasSession = (id: string): boolean => sessions.has(id)
 
+/** Proceso en primer plano de cada sesión (p. ej. «node» dentro de una terminal con zsh). */
+export function foreground(ids: string[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const id of ids) { try { const p = sessions.get(id)?.term.process; if (p) out[id] = p } catch { /* ya terminó */ } }
+  return out
+}
+
 /** Segundos sin salida del proceso: poco = está trabajando. */
 export function idleFor(id: string): number {
   const s = sessions.get(id)

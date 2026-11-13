@@ -40,6 +40,7 @@ async function checkManually(): Promise<void> {
 
 export async function checkForUpdates(): Promise<void> {
   if (state.status === 'downloading' || state.status === 'restarting') return
+  if (!app.isPackaged && !process.env.TUTTI_UPDATE_URL) return          // con `yarn dev` no hay nada que actualizar: no se avisa
   try {
     if (!canAutoUpdate()) { await checkManually(); return }
     set({ status: 'checking' })

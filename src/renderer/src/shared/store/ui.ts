@@ -20,14 +20,16 @@ const guessKind = (m: string): ToastKind => {
 
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
   newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
-  searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], maximized: false, agents: [], update: { status: 'idle' },
+  searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], notices: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {
     const id = toastId++
-    set((s) => ({ toasts: [...s.toasts, { id, kind: kind ?? guessKind(message), message }].slice(-4) }))
+    const item = { id, kind: kind ?? guessKind(message), message }
+    set((s) => ({ toasts: [...s.toasts, item].slice(-4), notices: [item, ...s.notices].slice(0, 50) }))
     const long = (kind ?? guessKind(message)) === 'error'
     setTimeout(() => get().dismissToast(id), long ? 6000 : 3500)
   },
+  clearNotices: () => set({ notices: [] }),
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   setTheme: (pref) => {

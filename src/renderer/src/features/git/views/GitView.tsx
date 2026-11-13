@@ -111,9 +111,9 @@ export function GitView() {
 
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
     <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
-      <button className={`flex min-w-0 flex-1 items-center gap-2 text-left ${isStaged ? 'opacity-65' : ''}`} onClick={() => void (f.code === 'C' ? openDoc(`${project}/${f.path}`) : openDiff(`${project}/${f.path}`, isStaged))} title={t('git.viewChanges')}>
+      <button className={`flex min-w-0 flex-1 items-center gap-2 text-left`} onClick={() => void (f.code === 'C' ? openDoc(`${project}/${f.path}`) : openDiff(`${project}/${f.path}`, isStaged))} title={t('git.viewChanges')}>
         <FileIcon name={basename(f.path)} />
-        <span className="truncate text-[12px]" style={{ color: GIT_COLOR[f.code] }}>{basename(f.path)}</span>
+        <span className="truncate text-[12px]" style={{ color: isStaged ? 'var(--color-git-staged)' : GIT_COLOR[f.code] }}>{basename(f.path)}</span>
         <span className="truncate text-[10px] text-muted">{dirname(f.path) === f.path ? '' : dirname(f.path)}</span>
       </button>
       <button title={t('git.openFile')} onClick={() => void openDoc(`${project}/${f.path}`)} className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100">
@@ -131,7 +131,7 @@ export function GitView() {
       >
         {isStaged ? <MdRemove size={15} /> : <MdAdd size={15} />}
       </button>
-      <span className={`w-3 shrink-0 text-center text-[11px] font-semibold ${isStaged ? 'opacity-65' : ''}`} style={{ color: GIT_COLOR[f.code] }}>{f.code}</span>
+      <span className={`w-3 shrink-0 text-center text-[11px] font-semibold`} style={{ color: isStaged ? 'var(--color-git-staged)' : GIT_COLOR[f.code] }}>{f.code}</span>
     </li>
   )
 

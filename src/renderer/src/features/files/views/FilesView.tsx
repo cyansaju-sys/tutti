@@ -92,10 +92,12 @@ export function FilesView() {
 
   const status = useMemo(() => {
     const map = new Map<string, string>()
+    const staged = new Set<string>()                               // archivos preparados (sin más cambios pendientes)
     const kinds = new Map<string, Set<string>>()                  // por carpeta: qué clases de cambio hay dentro
     const kindOf = (code: string): string => (code === 'M' || code === 'D' || code === 'C' ? code : 'A')       // A, U y R: nuevo
     if (project && git) for (const f of git.files) {
       map.set(toPosix(f.path), f.code)
+      if (f.index && f.index !== '?' && !f.work) staged.add(toPosix(f.path))
       const parts = toPosix(f.path).split('/')
       for (let i = 1; i < parts.length; i++) {
         const dir = parts.slice(0, i).join('/')
@@ -106,7 +108,7 @@ export function FilesView() {
     // color de la carpeta: conflicto, modificada (o mezcla de nuevos y borrados), solo nuevos o solo borrados
     const tone = new Map<string, string>()
     for (const [dir, set] of kinds) tone.set(dir, set.has('C') ? 'C' : set.has('M') || set.size > 1 ? 'M' : [...set][0])
-    return { map, tone }
+    return { map, tone, staged }
   }, [project, git])
 
   const rows = useMemo(() => {
@@ -355,7 +357,7 @@ export function FilesView() {
           const { entry, depth } = row
           const rel = toPosix(relative(project, entry.path))
           const code = status.map.get(rel)
-          const color = code ? (GIT_COLOR[code === '●' ? (status.tone.get(rel) ?? '') : code] ?? 'var(--color-text)') : undefined
+          const color = code ? (status.staged.has(rel) ? 'var(--color-git-staged)' : (GIT_COLOR[code === '●' ? (status.tone.get(rel) ?? '') : code] ?? 'var(--color-text)')) : undefined
           return (
             <Fragment key={entry.path}>
             {renaming === entry.path ? <NameInput isDir={entry.isDir} depth={depth} initial={entry.name} onOk={(v) => void confirmAsk(v)} onCancel={() => setAsk(null)} /> : <button
@@ -379,7 +381,7 @@ export function FilesView() {
                 cursor === entry.path && 'bg-accent-bg ring-1 ring-inset ring-accent/40',
                 selected.has(entry.path) && 'bg-accent/25',
                 dropOn === (entry.isDir ? entry.path : dirname(entry.path)) && dropOn !== project && (entry.isDir ? 'bg-accent/30 ring-1 ring-inset ring-accent' : 'bg-accent/10'),
-                ignored.has(entry.path) && 'opacity-40'
+                ignored.has(entry.path) && 'opacity-60'
               )}
             >
               {entry.isDir ? <MdChevronRight size={14} className={clsx('-mr-0.5 shrink-0 text-muted transition-transform', expanded.has(entry.path) && 'rotate-90')} /> : <span className="-mr-0.5 w-3.5 shrink-0" />}

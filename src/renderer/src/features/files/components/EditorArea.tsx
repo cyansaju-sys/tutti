@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAccountTree, MdClose, MdNewReleases, MdTune } from 'react-icons/md'
 import { VscCode, VscOpenPreview, VscPreview } from 'react-icons/vsc'
 import type { GitBlame, GitMarks } from '@shared/types'
-import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
+import { refreshGit } from '@/features/git/lib/gitSync'
 import { confirmAsk } from '@/shared/lib/confirm'
 import { t, useT } from '@/shared/lib/i18n'
 import { FileIcon } from '@/shared/components/FileIcon'
@@ -58,11 +58,11 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
   const set = useStore((s) => s.set)
   return (
     <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
-      className={clsx('group flex min-w-[120px] max-w-[260px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
-      {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
-      <span className="min-w-0 flex-1 truncate text-[11px]">{d.title}</span>
+      className={clsx('group flex min-w-[110px] max-w-[210px] shrink-0 cursor-pointer h-7 items-center gap-1 rounded-tr-lg border-b border-r border-t-2 border-r-line px-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
+      {d.kind === 'graph' ? <MdAccountTree size={14} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={14} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind) ? <MdTune size={14} className="text-accent" /> : <FileIcon name={d.title} className="size-3" />}
+      <span className="min-w-0 flex-1 truncate text-[10.5px]">{d.title}</span>
       {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
-      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
+      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-3.5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={10} /></button>
     </div>
   )
 }
@@ -77,7 +77,6 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   const focus = useStore((s) => s.focus)
   const reveal = useStore((s) => s.reveal)
   const set = useStore((s) => s.set)
-  const closeDoc = useStore((s) => s.closeDoc)
   const updateDocText = useStore((s) => s.updateDocText)
   const [marks, setMarks] = useState<GitMarks>({})
   const [blame, setBlame] = useState<GitBlame | null>(null)
@@ -167,14 +166,6 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
     window.api.pty.paste(pane.id, selectionMessage(pane.command, rel, sel.startLine, sel.endLine, sel.text))
     useStore.getState().focusPane(pane.id)
   }
-  const close = (d: Doc): void => {
-    if (!isDirty(d)) { closeDoc(d.path); return }
-    void confirmAsk(t('app.unsaved', { title: d.title }), t('app.closeAnyway')).then((yes) => { if (yes) closeDoc(d.path) })
-  }
-  const statusOf = (d: Doc): string => {
-    const rel = project ? toPosix(relative(project, d.diffOf ?? d.path)) : ''
-    return git?.files.find((f) => toPosix(f.path) === rel)?.code ?? ''
-  }
   const visiblePending = pending
   // posición de cada tramo sin decidir en el texto actual: los ya aceptados desplazan las líneas siguientes
   const externalChanges = useMemo<ExternalChange[]>(() => {
@@ -190,36 +181,16 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div className={clsx('flex min-w-0 flex-1 flex-col overflow-hidden bg-surface', embedded ? 'min-h-0' : 'rounded-lg border border-line')} onMouseDown={() => set({ focus: 'editor' })}>
-      {!embedded && <div className="flex shrink-0 items-end overflow-x-auto bg-bar pt-1">
-        {docs.map((d) => {
-          const active = d.path === activePath
-          const code = statusOf(d)
-          return (
-            <div
-              key={d.path} ref={active ? (el) => el?.scrollIntoView({ block: 'nearest', inline: 'nearest' }) : undefined}
-              onClick={() => set({ activeDoc: d.path, focus: 'editor' })}
-              onAuxClick={(e) => { if (e.button === 1) close(d) }}
-              className={clsx(
-                'group flex shrink-0 cursor-pointer items-center gap-1.5 border-t-2 px-3 py-[7px] transition-colors',
-                active ? 'border-accent bg-surface text-text' : 'border-panel bg-panel text-muted hover:bg-raised'
-              )}
-            >
-              {d.kind === 'graph' ? <MdAccountTree size={15} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={15} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind) ? <MdTune size={15} className="text-accent" /> : <FileIcon name={d.title} className="size-4" />}
-              <span className="max-w-[160px] truncate text-[12px]" style={{ color: code ? GIT_COLOR[code] : undefined }}>{d.title}</span>
-              {code && <span className="text-[10px] font-semibold" style={{ color: GIT_COLOR[code] }}>{code}</span>}
-              {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
-              <button onClick={(e) => { e.stopPropagation(); close(d) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
-                <MdClose size={12} />
-              </button>
-            </div>
-          )
-        })}
+      {!embedded && <div className="flex shrink-0 overflow-x-auto overflow-y-hidden bg-bar">
+        {docs.map((d) => <DocTab key={d.path} doc={d} active={d.path === activePath} />)}
+        <div className="min-w-0 flex-1 border-b border-line" />
       </div>}
       {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">
             {crumbs(project, doc.diffOf ?? doc.path).map((c, i, all) => (
               <span key={i} className="flex items-center gap-1">
+                {i === all.length - 1 && <FileIcon name={c} className="size-3 shrink-0" />}
                 <span className={clsx('truncate', i === all.length - 1 && 'font-medium text-text')}>{c}</span>
                 {i < all.length - 1 && <span className="text-line">›</span>}
               </span>

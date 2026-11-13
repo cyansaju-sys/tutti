@@ -2,6 +2,20 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.4.13
+
+### Cambios
+
+- **Vista dividida de hasta 6 agentes:** con Ctrl+1 a Ctrl+6 ves de 1 a 6 agentes a la vez (hasta 3 en horizontal y 2 en vertical). Los que faltan quedan como huecos para elegir agente, y Ctrl+W cierra un hueco. Los agentes que se reparten tareas se suman solos a la cuadrícula.
+- **Notificaciones:** la campana del pie guarda el historial de avisos y abre las novedades. Los avisos emergentes tienen un estilo más sobrio y ya no aparece el de «hay una versión nueva».
+- **Terminales con el proceso en marcha:** la terminal muestra lo que está corriendo (por ejemplo `node`) en lugar de solo el nombre del shell.
+- **Notas entre agentes, opcionales:** la pizarra compartida se activa en Ajustes del editor → Agentes; viene desactivada.
+- **Archivos preparados en azul** en el explorador y en Git.
+
+### Correcciones
+
+- Abrir una terminal con un archivo en el editor ya no te devuelve a la vista del agente.
+
 ## 1.4.12
 
 ### Cambios

@@ -133,12 +133,10 @@ export function App() {
     return () => { offPane(); offAttention(); offToast(); offRoles() }
   }, [])
 
-  // actualizaciones: el estado llega del proceso principal; al haber una release nueva se avisa una vez por versión
+  // actualizaciones: el estado llega del proceso principal (el aviso de una versión nueva no sale como toast)
   useEffect(() => {
-    const announced = new Set<string>()
     const apply = (update: import('@shared/types').UpdateState): void => {
       useStore.setState({ update })
-      if (update.status === 'available' && !announced.has(update.version)) { announced.add(update.version); useStore.getState().toast(t('app.updateAvailable', { v: update.version }), 'info') }
       if (update.status === 'error') useStore.getState().toast(t('app.updateFailed', { message: update.message }), 'error')
     }
     void window.api.update.state().then(apply)
@@ -165,9 +163,10 @@ export function App() {
         else void confirmAsk(t('app.unsaved', { title: doc.title }), t('app.closeAnyway')).then((yes) => { if (yes) useStore.getState().closeDoc(doc.path) })
         return
       }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'W' && st.closeSlot()) { e.preventDefault(); e.stopPropagation(); return }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'P') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'quickOpen' }); return }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'G') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'goLine' }); return }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && (key === '1' || key === '2') && st.panes.length) { e.preventDefault(); e.stopPropagation(); st.toggleSplit(key === '2'); return }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && /^[1-6]$/.test(key) && st.panes.length) { e.preventDefault(); e.stopPropagation(); st.splitPanes(Number(key)); return }
       if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'Q') { e.preventDefault(); e.stopPropagation(); window.api.window.close(); return }
       if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }
       if (!isGlobalShortcut(e)) return

@@ -20,10 +20,10 @@ export function Resizer({ onDrag, direction = 'x' }: { onDrag: (delta: number, d
   return (
     <div
       onPointerDown={down} onPointerMove={move} onPointerUp={up}
-      className={clsx('group relative shrink-0 touch-none', direction === 'x' ? 'w-1 cursor-col-resize' : 'h-1.5 cursor-row-resize')}
+      className={clsx('group relative shrink-0 touch-none', direction === 'x' ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize')}
     >
       <div className={clsx('absolute bg-accent/0 transition-colors group-hover:bg-accent/60 group-active:bg-accent',
-        direction === 'x' ? 'inset-y-0 left-[1px] w-[2px]' : 'inset-x-0 top-[2px] h-[2px]')} />
+        direction === 'x' ? 'inset-y-0 left-[1px] w-[2px]' : 'inset-x-0 top-[1px] h-[2px]')} />
     </div>
   )
 }

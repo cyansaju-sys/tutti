@@ -312,6 +312,7 @@ export interface Api {
     paste(id: string, text: string): void      // escribe en el prompt sin enviarlo
     resize(id: string, cols: number, rows: number): void
     kill(id: string): void
+    foreground(ids: string[]): Promise<Record<string, string>>      // el proceso en primer plano de cada terminal
     onData(cb: (id: string, data: string) => void): () => void
     onExit(cb: (e: PtyExit) => void): () => void
   }
