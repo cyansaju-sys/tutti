@@ -78,6 +78,7 @@ const api: Api = {
     write: (id, d) => ipcRenderer.send('pty:write', id, d), paste: (id, text) => ipcRenderer.send('pty:paste', id, text),
     resize: (id, c, r) => ipcRenderer.send('pty:resize', id, c, r),
     kill: (id) => ipcRenderer.send('pty:kill', id),
+    foreground: (ids) => ipcRenderer.invoke('pty:foreground', ids),
     onData: (cb) => subscribe<[string, string]>('pty:data', cb),
     onExit: (cb) => subscribe<[PtyExit]>('pty:exit', cb)
   },

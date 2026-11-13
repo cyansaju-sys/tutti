@@ -8,6 +8,7 @@
 import { randomBytes } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { getSetting } from '../settings'
 
 export const PROTOCOL = '2025-03-26'
 
@@ -35,9 +36,14 @@ Al acabarla llama a report_done: status "done" si la terminaste, "blocked" si ne
 con certeza que acabaste. Si eres el líder o la tarea te la dio el usuario directamente, no la llames: contéstale a él.
 
 Si mientras trabajas en una tarea delegada te falta información, pregunta con ask_leader en vez de suponer: la respuesta te llega escrita como \
-«[Tutti] Respuesta…». Si te preguntan a ti (aviso «[Tutti] … pregunta»), contesta con answer_agent. Las decisiones que afectan a otros agentes \
-(nombres, contratos de API, formatos, convenciones) déjalas con post_note y lee las de los demás con read_notes antes de decidir algo parecido. \
+«[Tutti] Respuesta…». Si te preguntan a ti (aviso «[Tutti] … pregunta»), contesta con answer_agent. \
 Los avisos «[Tutti]» te llegan escritos cuando estás libre; si trabajas mucho rato seguido, consúltalos con get_updates.`
+
+/** Pizarra compartida (post_note / read_notes): se activa en los ajustes del editor (`"agent_notes"`); apagada por defecto. */
+export const notesEnabled = (): boolean => getSetting('agent_notes') === true
+const NOTES_TOOLS = ['post_note', 'read_notes']
+const NOTES_HINT = ' Las decisiones que afectan a otros agentes (nombres, contratos de API, formatos, convenciones) déjalas con post_note y lee las de los demás con read_notes antes de decidir algo parecido.'
+const instructions = (): string => (notesEnabled() ? INSTRUCTIONS.replace('Los avisos «[Tutti]»', `${NOTES_HINT.trim()} Los avisos «[Tutti]»`) : INSTRUCTIONS)
 
 export const TOOLS = [
   {
@@ -268,10 +274,10 @@ export class Orchestra {
       if (method === 'initialize') {
         result = {
           protocolVersion: (params.protocolVersion as string) || PROTOCOL, capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: 'tutti', version: '0.2' }, instructions: INSTRUCTIONS
+          serverInfo: { name: 'tutti', version: '0.2' }, instructions: instructions()
         }
       } else if (method === 'ping') result = {}
-      else if (method === 'tools/list') result = { tools: TOOLS }
+      else if (method === 'tools/list') result = { tools: notesEnabled() ? TOOLS : TOOLS.filter((x) => !NOTES_TOOLS.includes(x.name)) }
       else if (method === 'tools/call') result = await this.call(String(params.name), toolArgs(params.arguments), caller)
       else return { jsonrpc: '2.0', id, error: { code: -32601, message: `método desconocido: ${method}` } }
       return { jsonrpc: '2.0', id, result }
@@ -310,6 +316,7 @@ export class Orchestra {
       const { ok, info } = this.host.answerAgent(caller, String(args.agent_id ?? '').trim(), answer)
       return text(info, !ok)
     }
+    if (NOTES_TOOLS.includes(name) && !notesEnabled()) return text('La pizarra de notas está desactivada (ajustes del editor).', true)
     if (name === 'post_note') {
       const note = String(args.text ?? '').trim()
       if (!note) return text('Falta `text`.', true)

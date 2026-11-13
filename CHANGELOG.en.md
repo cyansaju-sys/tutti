@@ -2,6 +2,20 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.4.13
+
+### Changes
+
+- **Split view for up to 6 agents:** Ctrl+1 to Ctrl+6 show 1 to 6 agents at once (up to 3 across and 2 down). Missing ones appear as empty slots where you can pick an agent, and Ctrl+W closes a slot. Agents that hand out tasks join the grid on their own.
+- **Notifications:** the bell in the footer keeps the history of notices and opens what's new. Pop-up notices have a more subdued style and the "new version available" one no longer appears.
+- **Terminals show the running process:** the terminal shows what is running (for example `node`) instead of just the shell name.
+- **Notes between agents, optional:** the shared board is turned on in Editor settings → Agents; it is off by default.
+- **Staged files in blue** in the explorer and in Git.
+
+### Fixes
+
+- Opening a terminal while a file is open in the editor no longer switches you back to the agent view.
+
 ## 1.4.12
 
 ### Changes

@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MdSearch } from 'react-icons/md'
 import type { MsgKey } from '@shared/i18n'
 import { useT } from '@/shared/lib/i18n'
@@ -18,9 +18,10 @@ const SETTINGS: Setting[] = [
   { id: 'wordWrap', group: 'text', title: 'ed.wordWrap.t', help: 'ed.wordWrap.h', control: { kind: 'select', value: 'off', options: ['off', 'on'] } },
   { id: 'lineNumbers', group: 'text', title: 'ed.lineNumbers.t', help: 'ed.lineNumbers.h', control: { kind: 'check', value: true } },
   { id: 'formatOnSave', group: 'files', title: 'ed.formatOnSave.t', help: 'ed.formatOnSave.h', control: { kind: 'check', value: false } },
+  { id: 'agentNotes', group: 'agents', title: 'ed.agentNotes.t', help: 'ed.agentNotes.h', control: { kind: 'check', value: false } },
   { id: 'autoSave', group: 'files', title: 'ed.autoSave.t', help: 'ed.autoSave.h', control: { kind: 'select', value: 'off', options: ['off', 'afterDelay', 'onFocusChange'] } }
 ]
-const GROUPS = ['all', 'font', 'text', 'files'] as const
+const GROUPS = ['all', 'font', 'text', 'files', 'agents'] as const
 
 export function EditorSettingsDialog() {
   const t = useT()
@@ -30,6 +31,8 @@ export function EditorSettingsDialog() {
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState<(typeof GROUPS)[number]>('all')
   const [values, setValues] = useState<Record<string, Control['value']>>(() => ({ ...Object.fromEntries(SETTINGS.map((x) => [x.id, x.control.value])), fontFamily: editorFont }))
+  // la pizarra de notas entre agentes vive en los ajustes de la app (la lee el servidor MCP)
+  useEffect(() => { void window.api.settings.get('agent_notes').then((v) => setValues((p) => ({ ...p, agentNotes: v === true }))) }, [])
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
     return SETTINGS.filter((x) => (group === 'all' || x.group === group) && (!q || `${t(x.title as MsgKey)} ${t(x.help as MsgKey)}`.toLowerCase().includes(q)))
@@ -53,7 +56,7 @@ export function EditorSettingsDialog() {
             {shown.length === 0 && <p className="text-[12px] text-muted">{t('editor.none')}</p>}
             {shown.map((x) => {
               const v = values[x.id]
-              const change = (n: Control['value']): void => { setValues((p) => ({ ...p, [x.id]: n })); if (x.id === 'fontFamily') setEditorFont(n as string) }
+              const change = (n: Control['value']): void => { setValues((p) => ({ ...p, [x.id]: n })); if (x.id === 'fontFamily') setEditorFont(n as string); if (x.id === 'agentNotes') void window.api.settings.set('agent_notes', n) }
               return (
                 <div key={x.id} className="flex flex-col gap-1.5">
                   <div className="text-[12px]"><span className="text-muted">{t('ed.prefix')} </span><b className="font-semibold text-text">{t(x.title as MsgKey)}</b></div>

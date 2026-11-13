@@ -19,7 +19,7 @@ export const SECTIONS: Array<{ title: MsgKey; items: Array<[string, MsgKey]> }> 
   ] },
   { title: 'sc.panels', items: [
     ['Ctrl + Shift + N', 'sc.openAgent'], ['Ctrl + Shift + T', 'sc.toggleTerminal'],
-    ['Ctrl + Shift + W', 'sc.closePanel'], ['Ctrl + 2 / Ctrl + 1', 'sc.splitView'], ['key.pageNav', 'sc.nextPanel']
+    ['Ctrl + Shift + W', 'sc.closePanel'], ['Ctrl + 1 … 6', 'sc.splitView'], ['key.pageNav', 'sc.nextPanel']
   ] },
   { title: 'sc.sidebar', items: [
     ['Ctrl + Shift + B', 'sc.toggleSidebar'], ['Ctrl + Shift + E', 'tab.files'], ['Ctrl + Shift + F', 'sc.searchProject'], ['Ctrl + Shift + H', 'sc.replaceProject'], ['Ctrl + Shift + A', 'sc.agents'],

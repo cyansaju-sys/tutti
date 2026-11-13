@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+// las notas entre agentes se activan en los ajustes: aquí están encendidas
+vi.mock('../../../../src/main/services/settings', () => ({ getSetting: (k: string) => (k === 'agent_notes' ? true : undefined), setSetting: () => {} }))
 import { Orchestra, TOOLS, type Host } from '../../../../src/main/services/agents/orchestra'
 
 const calls: unknown[][] = []

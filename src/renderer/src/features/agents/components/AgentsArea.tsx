@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Menu } from '../../../shared/components/Menu'
 import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdSearch, MdTerminal } from 'react-icons/md'
 import { AppIcon } from '@/shared/components/AppIcon'
@@ -26,9 +26,9 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   return (
     <>
       {/* preventDefault: si no, al pulsar la pestaña el navegador quita el foco a la terminal justo después de dárselo */}
-      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[160px] max-w-[300px] shrink-0 cursor-pointer items-center gap-2 rounded-tr-lg border-b border-r border-t-2 border-r-line px-3 py-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar', role?.working && !active && 'border-t-ok bg-ok/10')}>
-        {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={16} /> : <MdTerminal size={14} className="text-accent" />}
-        <span className={clsx('min-w-0 flex-1 truncate text-[11px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[110px] max-w-[210px] shrink-0 cursor-pointer h-7 items-center gap-1 rounded-tr-lg border-b border-r border-t-2 border-r-line px-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar', role?.working && !active && 'border-t-ok bg-ok/10')}>
+        {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={13} /> : <MdTerminal size={13} className="text-accent" />}
+        <span className={clsx('min-w-0 flex-1 truncate text-[10.5px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
         {role && (
           <span title={t(role.working ? 'pane.roleWorking' : 'pane.roleIdle', { role: role.title })}
             className={clsx('flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium', role.working ? 'bg-ok/20 text-ok' : 'bg-ov/[0.07] text-muted')}>
@@ -40,10 +40,10 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
         {pane.parentId && <span title={t('pane.openedBy', { title: parent?.title ?? pane.parentId })} className="shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-accent">{t('pane.subOf', { name: parent?.name ?? pane.parentId })}</span>}
         {canLead && (
           <button title={t('pane.makeLeader')} onClick={(e) => { e.stopPropagation(); void window.api.orchestra.setLeader(pane.id) }}
-            className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-accent"><MdFlag size={13} /></button>
+            className="grid size-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-accent"><MdFlag size={12} /></button>
         )}
-        <button title={t('pane.close')} onClick={(e) => { e.stopPropagation(); closePane(pane.id) }} className="grid size-5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
-          <MdClose size={13} />
+        <button title={t('pane.close')} onClick={(e) => { e.stopPropagation(); closePane(pane.id) }} className="grid size-3.5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
+          <MdClose size={10} />
         </button>
       </div>
     </>
@@ -67,19 +67,32 @@ export function AgentsArea() {
   const activePane = useStore((s) => s.activePane)
   const current = panes.find((p) => p.id === activePane)?.id ?? panes.at(-1)?.id
   const split = useStore((s) => s.paneSplit)
+  const want = useStore((s) => s.paneWant)
   const docs = useStore((s) => s.docs)
   const activeDoc = useStore((s) => s.activeDoc)
   const focus = useStore((s) => s.focus)
   // los archivos se abren como una pestaña más de esta sección: al abrir uno se ve el editor y al elegir un agente, su terminal
   const [view, setView] = useState<'agent' | 'doc'>('agent')
   const [allProjects, setAllProjects] = useState(false)          // la pantalla de inicio muestra los primeros proyectos; «Ver más» enseña el resto
-  useEffect(() => { if (focus === 'editor') setView('doc'); else if (focus === 'pane') setView('agent') }, [focus, activeDoc])
+  // la terminal (shell) vive en su propio panel: enfocarla no debe sacar el editor para mostrar el agente
+  useEffect(() => { if (focus === 'editor') setView('doc'); else if (focus === 'pane' && panes.some((p) => p.id === activePane)) setView('agent') }, [focus, activeDoc, activePane])  // eslint-disable-line react-hooks/exhaustive-deps
   const docView = view === 'doc' && docs.some((d) => d.path === activeDoc)
-  const second = !docView && split && split !== current && panes.some((p) => p.id === split) ? split : null
-  const shown = (id: string): boolean => !docView && (id === current || id === second)
-  const order = (id: string | null | undefined): number => panes.findIndex((p) => p.id === id)
-  const left = second && current ? (order(current) < order(second) ? current : second) : current      // con la vista dividida, el de la lista que va antes queda a la izquierda
-  const right = second ? (left === current ? second : current) : null
+  // los agentes que se ven a la vez (el activo y los de la vista dividida), en el orden de la lista; el editor, cuando se ve, ocupa todo
+  const visible = docView ? [] : panes.filter((p) => p.id === current || split.includes(p.id)).map((p) => p.id)
+  const shown = (id: string): boolean => visible.includes(id)
+  const slots = docView ? 0 : Math.max(want - visible.length, 0)          // huecos libres de la vista dividida: piden elegir un agente
+  const count = Math.max(visible.length + slots, 1)
+  const cols = count <= 3 ? count : count === 4 ? 2 : 3          // hasta 3 en horizontal y 2 en vertical
+  const rows = Math.ceil(count / cols)
+  const multi = count > 1
+  // la última fila reparte todo el ancho entre sus paneles (con 5: 3 arriba y 2 abajo, a la mitad cada uno); por eso las columnas se miden en sextos
+  const units = cols === 3 ? 6 : cols
+  const lastRow = count - cols * (rows - 1)
+  const at = (i: number): { col: string; row: number } => {
+    const row = Math.floor(i / cols), span = units / (row < rows - 1 ? cols : lastRow)
+    return { col: `${(i - row * cols) * span + 1} / span ${span}`, row }
+  }
+  const cell = (id: string): { col: string; row: number } => { const i = visible.indexOf(id); return i < 0 ? { col: '1', row: 0 } : at(i) }
 
   return (
     <div className="min-h-0 min-w-[260px] flex-1 overflow-hidden rounded-lg border border-line bg-surface">
@@ -137,27 +150,47 @@ export function AgentsArea() {
           </div>
         </div>
       ) : (
-        <div className={clsx('grid h-full min-h-0 min-w-0 overflow-hidden', second && 'gap-x-1 bg-bar p-1')} style={{ gridTemplateColumns: second ? '1fr 1fr' : '1fr', gridTemplateRows: 'auto minmax(0, 1fr)' }}>
-          {/* vista dividida: cada mitad es una tarjeta con su pestaña; las pestañas de los agentes ocultos quedan en la izquierda */}
-          <div style={{ gridColumn: 1, gridRow: 1 }} className={clsx('flex min-w-0 overflow-x-auto bg-bar', second ? 'rounded-t-lg border border-b-0 border-line' : '')}>
-            {(second ? panes.filter((p) => p.id === left || !shown(p.id)) : panes).map((p) => <PaneTab key={p.id} pane={p} active={shown(p.id)} />)}
+        <div className={clsx('grid h-full min-h-0 min-w-0 overflow-hidden', multi && 'gap-0.5 bg-bar')}
+          style={{ gridTemplateColumns: `repeat(${units}, minmax(0, 1fr))`, gridTemplateRows: Array.from({ length: rows }, () => 'auto minmax(0, 1fr)').join(' ') }}>
+          {/* vista dividida: cada panel es una tarjeta con su pestaña; las pestañas de los agentes ocultos y las de los archivos quedan en la primera */}
+          <div style={{ gridColumn: at(0).col, gridRow: 1 }} className={clsx('flex min-w-0 overflow-x-auto overflow-y-hidden bg-bar', multi ? 'rounded-t-lg border-x border-t border-line' : '')}>
+            {(multi ? panes.filter((p) => p.id === visible[0] || !shown(p.id)) : panes).map((p) => <PaneTab key={p.id} pane={p} active={shown(p.id)} />)}
             {docs.map((d) => <DocTab key={d.path} doc={d} active={docView && d.path === activeDoc} />)}
             <div className="min-w-0 flex-1 border-b border-line" />
           </div>
-          {second && (
-            <div style={{ gridColumn: 2, gridRow: 1 }} className="flex min-w-0 overflow-x-auto rounded-t-lg border border-b-0 border-line bg-bar">
-              {panes.filter((p) => p.id === right).map((p) => <PaneTab key={p.id} pane={p} active />)}
-            </div>
-          )}
+          {visible.slice(1).map((id) => {
+            const { col, row } = cell(id)
+            return (
+              <div key={id} style={{ gridColumn: col, gridRow: row * 2 + 1 }} className="flex min-w-0 overflow-x-auto overflow-y-hidden rounded-t-lg border-x border-t border-line bg-bar">
+                {panes.filter((p) => p.id === id).map((p) => <PaneTab key={p.id} pane={p} active />)}
+              </div>
+            )
+          })}
+          {Array.from({ length: slots }, (_, k) => {
+            const { col, row } = at(visible.length + k)
+            return (
+              <Fragment key={`slot${k}`}>
+                <div style={{ gridColumn: col, gridRow: row * 2 + 1 }} className="flex h-7 min-w-0 rounded-t-lg border-x border-t border-line bg-bar"><div className="min-w-0 flex-1 border-b border-line" /></div>
+                <div style={{ gridColumn: col, gridRow: row * 2 + 2 }} className="flex min-h-0 min-w-0 flex-col items-center justify-center rounded-b-lg border-x border-b border-line">
+                  <button onClick={() => set({ modal: 'agents' })} className="flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-[12px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
+                    <MdSearch size={15} /> {t('pane.chooseAgent')}
+                  </button>
+                </div>
+              </Fragment>
+            )
+          })}
           {docs.length > 0 && (
-            <div style={{ gridColumn: 1, gridRow: 2 }} className={clsx('flex min-h-0 min-w-0 flex-col overflow-hidden', !docView && 'invisible pointer-events-none')}><EditorArea embedded /></div>
+            <div style={{ gridColumn: '1 / -1', gridRow: 2 }} className={clsx('flex min-h-0 min-w-0 flex-col overflow-hidden', !docView && 'invisible pointer-events-none')}><EditorArea embedded /></div>
           )}
-          {panes.map((p) => (
-            <div key={p.id} style={{ gridColumn: p.id === right ? 2 : 1, gridRow: 2 }} onMouseDown={() => useStore.getState().focusPane(p.id)}
-              className={clsx('flex min-h-0 min-w-0 flex-col overflow-hidden', !shown(p.id) && 'invisible pointer-events-none', second && shown(p.id) && 'rounded-b-lg border border-line')}>
-              <TerminalPane pane={p} active={!docView && p.id === current} />
-            </div>
-          ))}
+          {panes.map((p) => {
+            const { col, row } = cell(p.id)
+            return (
+              <div key={p.id} style={{ gridColumn: col, gridRow: row * 2 + 2 }} onMouseDown={() => useStore.getState().focusPane(p.id)}
+                className={clsx('flex min-h-0 min-w-0 flex-col overflow-hidden', !shown(p.id) && 'invisible pointer-events-none', multi && shown(p.id) && 'rounded-b-lg border-x border-b border-line')}>
+                <TerminalPane pane={p} active={!docView && p.id === current} />
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -181,12 +214,24 @@ export function TerminalSection() {
     setMenu({ kind, anchor: new DOMRect(r.left, r.bottom, 200, 0) })
   }
   const activePane = useStore((s) => s.activePane)
+  // lo que corre en cada terminal (node, vim…): si es solo el shell, se queda su nombre
+  const [running, setRunning] = useState<Record<string, string>>({})
+  useEffect(() => {
+    const ids = shells.map((s) => s.id)
+    let alive = true
+    const poll = (): void => { void window.api.pty.foreground(ids).then((r) => { if (alive) setRunning((prev) => (JSON.stringify(prev) === JSON.stringify(r) ? prev : r)) }) }
+    poll()
+    const i = setInterval(poll, 1500)
+    return () => { alive = false; clearInterval(i) }
+  }, [shells])
+  const label = (p: { id: string; title: string }): string => { const r = running[p.id]?.split(/[\\/]/).pop()?.replace(/\.exe$/i, ''); return r || p.title }
   return (
     <div style={max ? undefined : { height }} className={clsx('flex min-h-[140px] overflow-hidden rounded-lg border border-line bg-surface', max ? 'absolute inset-0 z-10' : 'shrink-0')}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between px-2.5 py-1">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted">{t('term.title')}</span>
+          <span className="text-[11px] font-medium text-muted">{t('term.title')}</span>
           <div className="flex items-center gap-0.5">
+            <span className="flex min-w-0 items-center gap-1.5 mr-1 max-w-[140px] text-[11px] font-medium text-muted"><MdTerminal size={14} className="shrink-0" /><span className="truncate">{(() => { const sh = shells.find((x) => x.id === active) ?? shells[0]; return sh ? label(sh) : t('term.title') })()}</span></span>
             <button title={t('term.new')} onClick={() => void addShell()} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdAdd size={16} /></button>
             <button title={t('term.newOptions')} onClick={open('new')} className="grid h-6 w-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdKeyboardArrowDown size={14} /></button>
             <button title={t('term.moreActions')} onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button>
@@ -211,7 +256,7 @@ export function TerminalSection() {
             <div key={p.id} onClick={() => useStore.getState().focusPane(p.id)}
               className={clsx('group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-colors', p.id === active ? 'bg-accent-bg text-text' : 'text-muted hover:bg-accent-bg')}>
               <MdTerminal size={14} className="shrink-0" />
-              <span className="min-w-0 flex-1 truncate">{p.title}</span>
+              <span className="min-w-0 flex-1 truncate" title={label(p)}>{label(p)}</span>
               <button title={t('term.closeThis')} onClick={(e) => { e.stopPropagation(); closePane(p.id) }}
                 className="grid size-4 shrink-0 place-items-center rounded opacity-0 transition-colors hover:bg-line group-hover:opacity-100"><MdClose size={12} /></button>
             </div>
