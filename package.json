@@ -7,12 +7,12 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev.mjs",
+    "dev": "node scripts/ensure-electron.mjs && node scripts/dev.mjs",
     "build": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.test.json",
     "start": "electron-vite preview",
     "test": "vitest run",
-    "postinstall": "electron-rebuild -f -w node-pty,better-sqlite3",
+    "postinstall": "node scripts/ensure-electron.mjs && electron-rebuild -f -w node-pty,better-sqlite3",
     "dist": "npm run build && electron-builder --linux --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never"
   },
