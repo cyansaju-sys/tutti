@@ -9,6 +9,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - **Chat with Claude inside Tutti:** a panel next to the editor that uses your subscription, with no terminal needed. Live replies, per-tool permissions (with "Always"), questions with options, pasted or dropped images, and the conversation cost. Manual, Edit, Plan, Explorer and Auto modes, with model and effort to pick. It opens with the project, you can drag to widen it, and it remembers if you close it.
 - **Mentions in the chat:** `@` searches files and folders; `#` brings in what your project has (specs, roles, roadmap, docs, hooks, steering, powers, files and git changes with their diff). What is added to the message shows under "Context sent to the AI".
 - **Kiro-style specs instead of OpenSpec:** each spec is a `.tutti/specs/<name>` folder with `requirements.md`, `design.md` and `tasks.md`, and progress comes from its checkboxes.
+- **More harnesses on the way:** more agents are being integrated into the chat, and Tutti will switch between their CLI and its own interface depending on what works best for each one.
 - **AI usage through the SDK:** Claude plan limits and conversation titles come from the SDK.
 
 ### Fixes
