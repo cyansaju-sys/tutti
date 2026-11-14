@@ -5,9 +5,9 @@
  */
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
-import type { McpAgent, McpResult, McpScope, McpServer, McpSpec, SyncScope, SyncState } from '../../../shared/types'
-import { tm } from '../../utils/i18n'
-import { detectAgents } from '../agents/agents'
+import type { McpAgent, McpResult, McpScope, McpServer, McpSpec, SyncScope, SyncState } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
+import { detectAgents } from '@/main/services/agents/agents'
 import { disabledFinder } from './disabled'
 import { writeJson } from './files'
 import { specFromConfig, updateServer } from './manage'

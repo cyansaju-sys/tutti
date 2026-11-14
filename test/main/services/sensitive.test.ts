@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isSensitive } from '../../../src/main/services/sensitive'
+import { isSensitive } from '@/main/services/sensitive'
 
 describe('archivos con secretos', () => {
   it('reconoce .env, claves y credenciales', () => {

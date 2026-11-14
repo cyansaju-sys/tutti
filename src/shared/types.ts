@@ -70,16 +70,12 @@ export interface McpServer {
 }
 /** Un hook de .tutti/hooks (formato de Kiro). `supported`: Tutti sabe ejecutar su trigger; `error`: por qué no es válido. */
 export interface HookInfo { file: string; name: string; description: string; trigger: string; matcher: string; actionType: 'command' | 'agent' | ''; enabled: boolean; supported: boolean; error?: string }
-/** Lo que hay en la carpeta `openspec/` del proyecto (OpenSpec): los cambios en marcha y las specs vigentes. */
-export interface OpenSpecChange { name: string; dir: string; done: number; total: number; hasProposal: boolean; hasDesign: boolean; hasTasks: boolean }
-export interface OpenSpecState {
-  installed: boolean; initialized: boolean; configFile: string; schema: string
-  changes: OpenSpecChange[]; archived: number
-  specs: Array<{ name: string; file: string; requirements: number }>
-}
+/** Las specs del proyecto (`.tutti/specs/<nombre>/` o `.agents/specs`): cada una con sus tres archivos y el avance de sus tareas. */
+export interface SpecInfo { name: string; dir: string; done: number; total: number; hasRequirements: boolean; hasDesign: boolean; hasTasks: boolean }
+export interface SpecsState { dir: string; rel: string; specs: SpecInfo[] }
 /**
- * Un ítem del roadmap. `done`: casilla marcada o su cambio archivado; `active`: su cambio está en marcha (con su avance); `pending`: aún sin
- * spec; `unknown`: una viñeta sin casilla ni cambio, que solo se sabe mirando el código. `dir`: la carpeta de su cambio, si existe.
+ * Un ítem del roadmap. `done`: casilla marcada o todas las tareas de su spec hechas; `active`: su spec está en marcha (con su avance); `pending`: aún sin
+ * spec; `unknown`: una viñeta sin casilla ni cambio, que solo se sabe mirando el código. `dir`: la carpeta de su spec, si existe.
  */
 export interface RoadmapItem { text: string; change: string | null; line: number; status: 'done' | 'active' | 'pending' | 'unknown'; dir: string | null; done: number; total: number }
 export interface RoadmapPhase { title: string; line: number; items: RoadmapItem[] }
@@ -165,7 +161,37 @@ export type UpdateState =
 
 export type Settings = Record<string, unknown>
 
+/** Un modelo de Claude que ofrece el SDK. */
+export type ChatEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+export interface ChatModel { value: string; displayName: string; description: string; efforts?: ChatEffort[] }
+
+/** Lo que se envía al SDK con cada mensaje del chat. */
+export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; images?: ChatImage[] }
+/** Una imagen adjunta al mensaje (base64, sin el prefijo `data:`). */
+export interface ChatImage { mediaType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'; data: string }
+/** Una pregunta que Claude le hace al usuario (la herramienta AskUserQuestion): opciones y si se puede elegir más de una. */
+export interface ChatQuestion { question: string; header: string; multiSelect: boolean; options: Array<{ label: string; description: string }> }
+/** Lo que el SDK va contando mientras responde. */
+export type ChatEvent =
+  | { kind: 'session'; id: string }
+  | { kind: 'text'; text: string }
+  | { kind: 'context'; text: string }                       // lo que la app añadió al mensaje del usuario (menciones expandidas, diffs…)
+  | { kind: 'blockstart' }                                  // empieza un bloque de texto: los `delta` siguientes lo van llenando
+  | { kind: 'delta'; text: string }
+  | { kind: 'tool'; id: string; name: string; input: string; body: string; file?: string }
+  | { kind: 'toolResult'; id: string; text: string; error: boolean }
+  | { kind: 'usage'; cost: number; input: number; output: number; cacheRead: number; cacheWrite: number }
+  | { kind: 'permission'; id: string; tool: string; input: string }
+  | { kind: 'question'; id: string; questions: ChatQuestion[] }
+  | { kind: 'error'; message: string }
+  | { kind: 'done' }
+export interface ChatItem { name: string; description: string; scope: 'local' | 'global'; status?: 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled' }      // status: solo los servidores MCP
+export interface ChatProjectItems { skills: ChatItem[]; hooks: ChatItem[]; mcp: ChatItem[]; roles: ChatItem[]; steering: ChatItem[]; powers: ChatItem[]; specs: ChatItem[]; roadmap: ChatItem[]; docs: ChatItem[]; changes: ChatItem[] }
+export interface ChatCommand { name: string; description: string; hint: string; builtin: boolean }
+
 export interface Api {
+  chat: { models(): Promise<ChatModel[]>; commands(cwd?: string): Promise<ChatCommand[]>; items(project: string | null): Promise<ChatProjectItems>; mcpStatus(project: string | null): Promise<Record<string, NonNullable<ChatItem['status']>>>
+    send(req: ChatSendRequest): Promise<void>; cancel(): Promise<void>; answer(id: string, allow: boolean, always?: boolean): Promise<void>; reply(id: string, answers: Record<string, string> | null): Promise<void>; onEvent(cb: (e: ChatEvent) => void): () => void }
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   theme: { accent(): Promise<string | null>; onAccent(cb: (color: string | null) => void): () => void }          // el color de acento del sistema (#rrggbb)
   dialog: { chooseFolder(start?: string): Promise<string | null> }
@@ -178,12 +204,7 @@ export interface Api {
     create(project: string | null, draft: PowerDraft): Promise<McpResult>      // crea un Power con lo elegido; la carpeta nueva va en `message`
   }
   skills: { import(project: string, source: string): Promise<McpResult> }      // copia una skill (carpeta con SKILL.md) a .tutti/skills; el SKILL.md nuevo va en `message`
-  openspec: {
-    state(project: string): Promise<OpenSpecState>
-    init(project: string): Promise<McpResult>
-    validate(project: string, change?: string): Promise<McpResult>
-    archive(project: string, change: string): Promise<McpResult>
-  }
+  specs: { state(project: string): Promise<SpecsState> }
   roadmap: { state(project: string): Promise<RoadmapState> }
   hooks: {
     list(project: string): Promise<{ hooks: HookInfo[]; trusted: boolean }>

@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFi
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { codexEntries } from '../../../../src/main/services/mcp/mcp'
-import { agyPluginConfig, agyPluginsJson, agyProjectPlugin, codexProjectConfig, declarePluginsDir, dropCodexBridgeCopy, launchedName, LAUNCHER_PATH, mirrorToAgy, mirrorToCodex, pluginEntry, resolveEntry } from '../../../../src/main/services/mcp/mirror'
+import { codexEntries } from '@/main/services/mcp/mcp'
+import { agyPluginConfig, agyPluginsJson, agyProjectPlugin, codexProjectConfig, declarePluginsDir, dropCodexBridgeCopy, launchedName, LAUNCHER_PATH, mirrorToAgy, mirrorToCodex, pluginEntry, resolveEntry } from '@/main/services/mcp/mirror'
 
 const project = (servers: Record<string, unknown>): string => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'tutti-agy-')))

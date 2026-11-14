@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { agentColors, agentInitial, agentLogo, hash } from '../../../../src/renderer/src/features/agents/lib/agentIcon'
+import { agentColors, agentInitial, agentLogo, hash } from '@/renderer/src/features/agents/lib/agentIcon'
 
 describe('colores del icono de un agente', () => {
   it('los agentes conocidos tienen su color, sin importar mayúsculas ni la ruta', () => {

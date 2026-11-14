@@ -1,12 +1,12 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdErrorOutline, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdSync, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
-import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, McpTransport, SyncScope, SyncState } from '@shared/types'
-import { FIELD, Modal } from '@/shared/components/ui'
-import { AGENT_NAMES, shortName, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
-import { useT } from '@/shared/lib/i18n'
-import { useResizeHeight } from '@/shared/lib/useResizeHeight'
-import { useStore } from '@/shared/store'
+import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, McpTransport, SyncScope, SyncState } from '@/shared/types'
+import { FIELD, Modal } from '@/renderer/src/shared/components/ui'
+import { AGENT_NAMES, shortName, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/renderer/src/features/mcp/lib/mcp'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useResizeHeight } from '@/renderer/src/shared/lib/useResizeHeight'
+import { useStore } from '@/renderer/src/shared/store'
 
 /** Iniciales sobre un color propio de cada servidor (el registro no trae iconos). */
 export function Avatar({ name }: { name: string }) {

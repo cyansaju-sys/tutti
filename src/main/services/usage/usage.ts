@@ -1,7 +1,7 @@
 /**
  * Consumo de tokens e historial de los agentes, leído de sus archivos locales.
  *
- * - Claude Code: ~/.claude/projects/<proyecto>/<sesión>.jsonl (cada respuesta trae su `usage`).
+ * - Claude Code: ~/.claude/projects/<proyecto>/<sesión>.jsonl (cada respuesta trae su `usage`); los límites del plan y los títulos los da el SDK.
  * - OpenCode: su base SQLite (tabla session_v2).
  * - Codex: ~/.codex/sessions/AAAA/MM/DD/rollout-*.jsonl (tokens acumulados y límites de su plan en cada aviso).
  * - Antigravity (agy): solo historial, desde conversation_summaries.db (no guarda tokens).
@@ -12,14 +12,15 @@ import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, unlinkSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join, relative, isAbsolute } from 'node:path'
-import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '../../../shared/types'
+import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '@/shared/types'
 import { deleteAgyConversation, readAgyConversations } from './agyDb'
 import { deleteCodexSession, readCodexData } from './codexDb'
 import { readKiroUsage } from './kiroDb'
 import { readOpenCodeSessions } from './opencodeDb'
-import { getSetting, setSetting } from '../settings'
-import { extendedPath } from '../../utils/shellpath'
-import { tm } from '../../utils/i18n'
+import { getSetting, setSetting } from '@/main/services/settings'
+import { extendedPath } from '@/main/utils/shellpath'
+import { tm } from '@/main/utils/i18n'
+import { planLimits, sessionTitles } from '@/harnes/usage'
 
 export const WINDOW_HOURS = 5          // Claude reinicia el límite de sesión en ventanas de 5 horas
 const HOUR = 3_600_000
@@ -28,8 +29,7 @@ interface Tokens { input: number; output: number; cacheWrite: number; cacheRead:
 /** Tokens procesados de verdad; la lectura de caché se cuenta aparte (es barata). */
 const processed = (t: Tokens): number => t.input + t.output + t.cacheWrite
 
-// --- límites de Claude (consulta a Anthropic) ---------------------------------------------------
-const LIMITS_URL = 'https://api.anthropic.com/api/oauth/usage'
+// --- límites de Claude (los da el SDK, con la sesión de Claude Code) ---------------------------------------------------
 const LIMITS_TTL = 60                   // mínimo entre consultas reales (el endpoint limita las peticiones frecuentes)
 const LIMITS_BACKOFF = 120              // espera mínima tras un 429
 const LIMIT_LABELS = (): Array<[string, string]> => [
@@ -48,49 +48,29 @@ function loadGood(): { at: number; limits: LimitInfo[] } | null {
 const saveGood = (at: number, limits: LimitInfo[]): void =>
   setSetting('limits_cache', { at, limits: limits.map((l) => ({ label: l.label, percent: l.percent, resets_at: new Date(l.resetsAt).toISOString() })) })
 
-function claudeCredentials(): { accessToken?: string; expiresAt?: number } | null {
-  try { return (JSON.parse(readFileSync(join(homedir(), '.claude', '.credentials.json'), 'utf8')) as { claudeAiOauth?: object }).claudeAiOauth ?? null } catch { return null }
-}
-
-async function fetchLimits(token: string): Promise<LimitInfo[]> {
-  const res = await fetch(LIMITS_URL, {
-    headers: { Authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20', 'User-Agent': 'tutti', Accept: 'application/json' },
-    signal: AbortSignal.timeout(10_000)
-  })
-  if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status, retryAfter: Number(res.headers.get('retry-after')) || 0 })
-  const data = (await res.json()) as Record<string, { utilization?: number | null; resets_at?: string } | undefined>
-  const out: LimitInfo[] = []
-  for (const [key, label] of LIMIT_LABELS()) {
-    const item = data[key]
-    if (item && item.utilization != null && item.resets_at) out.push({ label, percent: Number(item.utilization), resetsAt: Date.parse(item.resets_at) })
-  }
-  return out
+/** Los límites que da el SDK, con el nombre que se muestra de cada uno. */
+async function fetchLimits(): Promise<LimitInfo[] | null> {
+  const { available, limits } = await planLimits()
+  if (!available) return null
+  const labels = new Map(LIMIT_LABELS())
+  return limits.flatMap((l) => (labels.has(l.key) ? [{ label: labels.get(l.key)!, percent: l.percent, resetsAt: l.resetsAt }] : []))
 }
 
 /**
- * Límites de Claude con el porcentaje y el reinicio reales. Solo consulta a Anthropic si `fetchNow` es true (al entrar en la
- * pestaña); si no, devuelve el último dato guardado. El token solo se envía a api.anthropic.com y nunca se guarda ni se
- * muestra. No se renueva: si caducó basta abrir Claude Code una vez. Ante un 429 se espera y se sigue mostrando el último
- * dato bueno (los límites que ya se reiniciaron se descartan).
+ * Límites de Claude con el porcentaje y el reinicio reales, pedidos al SDK (`/usage`). Solo consulta si `fetchNow` es true (al entrar en la
+ * pestaña); si no, devuelve el último dato guardado. Si falla se espera y se sigue mostrando el último dato bueno (los límites que ya se
+ * reiniciaron se descartan).
  */
 export async function claudeLimits(fetchNow: boolean): Promise<{ limits: LimitInfo[]; error: string; age: number }> {
   const now = Date.now()
   limitsState.good ??= loadGood()
   if (fetchNow && now >= limitsState.nextTry) {
-    const creds = claudeCredentials()
-    if (!creds?.accessToken) Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.login') })
-    else if ((creds.expiresAt ?? 0) < now) Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.expired') })
-    else {
-      try {
-        const limits = await fetchLimits(creds.accessToken)
-        if (limits.length) { limitsState.good = { at: now, limits }; Object.assign(limitsState, { error: '', nextTry: now + LIMITS_TTL * 1000 }); saveGood(now, limits) }
-        else Object.assign(limitsState, { error: tm('m.us.noLimits'), nextTry: now + LIMITS_TTL * 1000 })
-      } catch (e) {
-        const err = e as { status?: number; retryAfter?: number }
-        if (err.status) Object.assign(limitsState, { nextTry: now + Math.max(LIMITS_BACKOFF, (err.retryAfter ?? 0)) * 1000, error: tm('m.us.status', { status: err.status }) })
-        else Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.offline') })
-      }
-    }
+    try {
+      const limits = await fetchLimits()
+      if (limits === null) Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.login') })
+      else if (limits.length) { limitsState.good = { at: now, limits }; Object.assign(limitsState, { error: '', nextTry: now + LIMITS_TTL * 1000 }); saveGood(now, limits) }
+      else Object.assign(limitsState, { error: tm('m.us.noLimits'), nextTry: now + LIMITS_TTL * 1000 })
+    } catch { Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.offline') }) }
   }
   const good = limitsState.good
   if (good) {
@@ -255,6 +235,7 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
   const now = Date.now()
   const out: AgentUsage[] = []
   const all: SessionInfo[] = []
+  const titlesNow = agents.some((a) => a.command === 'claude') ? sessionTitles().catch(() => new Map<string, string>()) : null      // los títulos de las conversaciones, del SDK
   const claudeLimitsNow = agents.some((a) => a.command === 'claude') ? claudeLimits(fetchLimits) : null      // la consulta a Anthropic va mientras se leen los archivos
   for (const agent of agents) {
     let found: ReturnType<typeof claudeSessions> | null = null
@@ -279,6 +260,7 @@ export async function collectUsage(agents: AgentInfo[], project: string | null, 
     }
     const lim = agent.command === 'claude' && claudeLimitsNow ? await claudeLimitsNow : { limits: [], error: '', age: 0 }
     out.push({ ...found.usage, name: agent.name, limits: lim.limits, limitsError: lim.error, limitsAge: lim.age })
+    if (agent.command === 'claude' && titlesNow) { const titles = await titlesNow; for (const x of found.sessions) x.title = titles.get(x.id) ?? x.title }
     all.push(...found.sessions)
   }
   const history = project ? all.filter((s) => inProject(s.cwd, project)).sort((a, b) => b.end - a.end).slice(0, 40) : []

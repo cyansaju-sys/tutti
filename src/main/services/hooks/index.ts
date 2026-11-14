@@ -8,11 +8,11 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync, watch, type FSWatcher } from 'node:fs'
 import { join, sep } from 'node:path'
-import { tuttiDir } from '../context/context'
-import type { HookInfo } from '../../../shared/types'
-import { tm } from '../../utils/i18n'
-import { extendedPath } from '../../utils/shellpath'
-import { getSetting, setSetting } from '../settings'
+import { tuttiDir } from '@/main/services/context/context'
+import type { HookInfo } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
+import { extendedPath } from '@/main/utils/shellpath'
+import { getSetting, setSetting } from '@/main/services/settings'
 
 export const TRIGGERS = ['PostFileSave', 'PreToolUse', 'PostToolUse', 'Stop'] as const
 const SUPPORTED = new Set<string>(['PostFileSave'])

@@ -1,5 +1,5 @@
 import { MdCheckCircle, MdClose, MdErrorOutline, MdInfoOutline } from 'react-icons/md'
-import { useStore } from '@/shared/store'
+import { useStore } from '@/renderer/src/shared/store'
 
 const ICON = {
   ok: <MdCheckCircle size={17} className="text-ok" />,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { layoutRoles, parseRole, splitDeps } from '../../../../src/renderer/src/features/tutti/lib/roleGraph'
+import { layoutRoles, parseRole, splitDeps } from '@/renderer/src/features/tutti/lib/roleGraph'
 
 const role = (id: string, deps: string[] = []) => ({ id, title: id, agent: '', deps })
 

@@ -1,6 +1,6 @@
 /** Gestionar los MCP ya instalados: probar, editar y desactivar/activar. */
-import type { McpAgent, McpProbe, McpResult, McpServer, McpSpec, McpTransport } from '../../../shared/types'
-import { tm } from '../../utils/i18n'
+import type { McpAgent, McpProbe, McpResult, McpServer, McpSpec, McpTransport } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
 import { addDisabled, asServer, findDisabled, keyOf, removeDisabled } from './disabled'
 import { addServer, removeServer, validate, writeSharedServer } from './mcp'
 import { probeSpec } from './probe'

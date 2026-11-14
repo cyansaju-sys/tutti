@@ -1,4 +1,4 @@
-import { agentRef } from '../../agents/lib/agentRef'
+import { agentRef } from '@/renderer/src/features/agents/lib/agentRef'
 
 /** Hasta cuántas líneas se pegan con el código; más largo se manda solo la referencia (el agente lee el archivo). */
 export const MAX_SNIPPET_LINES = 200

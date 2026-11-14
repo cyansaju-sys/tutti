@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MdUnfoldMore } from 'react-icons/md'
-import { Menu } from '@/shared/components/Menu'
+import { Menu } from '@/renderer/src/shared/components/Menu'
 import { FIELD } from './fields'
 
 /** Lista desplegable con el aspecto de la app (el `<select>` del sistema no sigue el tema): un campo que abre un menú con la opción elegida marcada. */

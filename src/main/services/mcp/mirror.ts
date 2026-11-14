@@ -9,7 +9,7 @@
  */
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { which } from '../../utils/shellpath'
+import { which } from '@/main/utils/shellpath'
 import { type Entry, isObject, readJson, readMcpServers, writeAtomic, writeJson } from './files'
 
 /** Lanzador compartido, relativo a la raíz del proyecto. */

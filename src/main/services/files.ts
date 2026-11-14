@@ -1,7 +1,7 @@
 import { cp, mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join, sep } from 'node:path'
-import type { DirEntry, FileData, McpResult } from '../../shared/types'
-import { tm } from '../utils/i18n'
+import type { DirEntry, FileData, McpResult } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
 
 const MAX_BYTES = 1_000_000
 const MAX_EDIT_BYTES = 500_000

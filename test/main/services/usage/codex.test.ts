@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCodexRollout, windowLabel } from '../../../../src/main/services/usage/codexDb'
+import { parseCodexRollout, windowLabel } from '@/main/services/usage/codexDb'
 
 const line = (o: unknown): string => JSON.stringify(o)
 const count = (ts: string, total: { input_tokens: number; cached_input_tokens: number; output_tokens: number }, rl?: unknown): string =>

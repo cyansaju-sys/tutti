@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { Kbd } from '@/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { Kbd } from '@/renderer/src/shared/components/ui'
 import { matches } from './helpers'
 
 /**

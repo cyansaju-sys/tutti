@@ -1,8 +1,8 @@
 import { MdBrightnessAuto, MdDarkMode, MdLightMode } from 'react-icons/md'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { paintTheme, resolveTheme, type ThemePref } from '@/shared/lib/theme'
-import { Modal } from '@/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { paintTheme, resolveTheme, type ThemePref } from '@/renderer/src/shared/lib/theme'
+import { Modal } from '@/renderer/src/shared/components/ui'
 import { Palette } from './Palette'
 import { Chip, Tag } from './parts'
 

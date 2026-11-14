@@ -1,21 +1,21 @@
 import { clsx } from 'clsx'
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { MdAdd, MdChevronRight, MdEdit, MdExplore, MdSmartToy, MdTerminal } from 'react-icons/md'
-import type { MsgKey } from '@shared/i18n'
-import type { AgentsPointerState, DirEntry, HookInfo, OpenSpecState, RoadmapState, SteeringInfo } from '@shared/types'
-import { FIELD_SLIM, Modal } from '@/shared/components/ui'
-import { McpView } from '@/features/mcp/views/McpView'
-import { useAskAgent } from '@/features/tutti/lib/useAskAgent'
-import { OpenSpecBody } from '@/features/tutti/components/OpenSpecBody'
-import { createRoadmap, RoadmapBody } from '@/features/tutti/components/RoadmapBody'
-import { AgentsContext } from '@/features/tutti/components/AgentsContext'
-import { SpecDialog } from '@/features/tutti/components/SpecDialog'
-import { HookChoiceDialog } from '@/features/tutti/components/HookChoiceDialog'
-import { agentsMdPrompt } from '@/features/tutti/lib/agentsMd'
-import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/features/tutti/lib/spec'
-import { FileIcon } from '@/shared/components/FileIcon'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import type { MsgKey } from '@/shared/i18n'
+import type { AgentsPointerState, DirEntry, HookInfo, RoadmapState, SpecsState, SteeringInfo } from '@/shared/types'
+import { FIELD_SLIM, Modal } from '@/renderer/src/shared/components/ui'
+import { McpView } from '@/renderer/src/features/mcp/views/McpView'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
+import { SpecsBody } from '@/renderer/src/features/tutti/components/SpecsBody'
+import { createRoadmap, RoadmapBody } from '@/renderer/src/features/tutti/components/RoadmapBody'
+import { AgentsContext } from '@/renderer/src/features/tutti/components/AgentsContext'
+import { SpecDialog } from '@/renderer/src/features/tutti/components/SpecDialog'
+import { HookChoiceDialog } from '@/renderer/src/features/tutti/components/HookChoiceDialog'
+import { agentsMdPrompt } from '@/renderer/src/features/tutti/lib/agentsMd'
+import { DOC_CATEGORIES, OVERVIEW_FILE, overviewAgentPrompt, overviewTemplate, taskProgress, withEnabled } from '@/renderer/src/features/tutti/lib/spec'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 
 const REFRESH_MS = 5000
 /** El botón que ocupa todo el ancho donde no hay nada todavía. */
@@ -65,7 +65,7 @@ export function TuttiView() {
   const agent = ask.selected
   const lang = useStore((s) => s.lang)
   const [lists, setLists] = useState<Record<Kind, DirEntry[]>>({ hooks: [], steering: [], skills: [], docs: [] })
-  const [os, setOs] = useState<OpenSpecState | null>(null)          // lo que hay en openspec/ (OpenSpec)
+  const [sp, setSp] = useState<SpecsState | null>(null)          // las specs de .tutti/specs
   const [roadmap, setRoadmap] = useState<RoadmapState | null>(null)   // el plan por fases y su avance
   const [addMcp, setAddMcp] = useState(0)
   const [agentsMd, setAgentsMd] = useState<AgentsPointerState | null>(null)          // el AGENTS.md del proyecto y su bloque que apunta a .tutti
@@ -100,8 +100,8 @@ export function TuttiView() {
       info[sp.path] = { files, ...taskProgress(text) }
     }
     setSpecs((prev) => (JSON.stringify(prev) === JSON.stringify(info) ? prev : info))
-    const state = await window.api.openspec.state(project).catch(() => null)
-    setOs((prev) => (JSON.stringify(prev) === JSON.stringify(state) ? prev : state))
+    const state = await window.api.specs.state(project).catch(() => null)
+    setSp((prev) => (JSON.stringify(prev) === JSON.stringify(state) ? prev : state))
     const rm = await window.api.roadmap.state(project).catch(() => null)
     setRoadmap((prev) => (JSON.stringify(prev) === JSON.stringify(rm) ? prev : rm))
     const st = await window.api.context.steering(project).catch(() => [] as SteeringInfo[])
@@ -221,7 +221,7 @@ export function TuttiView() {
       const names = (list: DirEntry[], dirs: boolean): string[] => list.filter((e) => e.isDir === dirs).map((e) => e.name.replace(/\.md$/i, ''))
       const who = await ask.send(agentsMdPrompt(lang, {
         steering: lists.steering.filter((e) => !e.isDir).map((e) => e.name), skills: names(lists.skills, true),
-        docs: lists.docs.length > 0, specs: !!os?.initialized
+        docs: lists.docs.length > 0, specs: (sp?.specs.length ?? 0) > 0
       }))
       toast(who ? t('tutti.agentsFilling', { agent: who }) : t('tutti.agentsNoAgent'), who ? 'ok' : 'info')
     }
@@ -314,8 +314,8 @@ export function TuttiView() {
       <Fold id="roadmap" title={t('tutti.roadmap')} onAdd={roadmap && !roadmap.exists ? () => void createRoadmap(project, lang, openDoc).then((e) => { if (e) toast(e, 'error'); void refresh() }) : undefined} addTip={t('tutti.add.roadmap')}>
         <RoadmapBody state={roadmap} project={project} onChanged={() => void refresh()} />
       </Fold>
-      <Fold id="specs" title={t('tutti.specs')} count={os?.changes.length} onAdd={() => (os?.initialized ? openSpecForm() : toast(t('os.notInit'), 'error'))} addTip={t('tutti.add.specs')}>
-        <OpenSpecBody state={os} project={project} onChanged={() => void refresh()} />
+      <Fold id="specs" title={t('tutti.specs')} count={sp?.specs.length} onAdd={() => openSpecForm()} addTip={t('tutti.add.specs')}>
+        <SpecsBody state={sp} />
       </Fold>
       {HooksSection()}
       {specDialog && <SpecDialog prefill={specDialog} />}

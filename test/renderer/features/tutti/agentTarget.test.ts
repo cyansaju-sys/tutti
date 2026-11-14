@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agentOptions, defaultOption } from '../../../../src/renderer/src/features/tutti/lib/agentTarget'
+import { agentOptions, defaultOption } from '@/renderer/src/features/tutti/lib/agentTarget'
 
 const pane = (id: string, command: string, name: string) => ({ id, kind: 'agent' as const, title: `${name} · p`, name, command, args: [], cwd: '/p' })
 const installed = [{ name: 'Claude Code', command: 'claude', path: '/bin/claude' }, { name: 'Codex', command: 'codex', path: '/bin/codex' }, { name: 'OpenCode', command: 'opencode', path: '/bin/opencode' }]

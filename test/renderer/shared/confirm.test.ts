@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { confirmAsk, useConfirm } from '../../../src/renderer/src/shared/lib/confirm'
+import { confirmAsk, useConfirm } from '@/renderer/src/shared/lib/confirm'
 
 describe('preguntas de sí o no dentro de la app', () => {
   it('queda pendiente hasta que se contesta, y se cierra al hacerlo', async () => {

@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import { confirmAsk } from '@/shared/lib/confirm'
+import { confirmAsk } from '@/renderer/src/shared/lib/confirm'
 import { tr } from './helpers'
 import { isDirty } from './docs'
 import type { ProjectConfig } from './types'

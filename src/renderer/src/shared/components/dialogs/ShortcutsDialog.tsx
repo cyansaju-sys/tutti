@@ -1,8 +1,8 @@
-import type { MsgKey } from '@shared/i18n'
-import { useT } from '@/shared/lib/i18n'
-import { SECTIONS } from '@/shared/lib/shortcuts'
-import { useStore } from '@/shared/store'
-import { Kbd, Modal } from '@/shared/components/ui'
+import type { MsgKey } from '@/shared/i18n'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { SECTIONS } from '@/renderer/src/shared/lib/shortcuts'
+import { useStore } from '@/renderer/src/shared/store'
+import { Kbd, Modal } from '@/renderer/src/shared/components/ui'
 
 export function ShortcutsDialog() {
   const t = useT()

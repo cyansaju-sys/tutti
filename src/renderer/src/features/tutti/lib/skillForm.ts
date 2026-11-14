@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 import { slug, skillTemplate } from './spec'
 
 /** El formulario de una skill: su nombre, cuándo usarla (la descripción, por la que el agente la elige) y, si quieres, las instrucciones. */

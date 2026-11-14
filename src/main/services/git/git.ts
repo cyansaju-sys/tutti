@@ -1,9 +1,9 @@
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, basename, join, resolve } from 'node:path'
-import type { GitBlame, GitBranch, GitCommit, GitMarks, GitOp, GitStatus, GitWorktree, McpResult } from '../../../shared/types'
-import { extendedPath } from '../../utils/shellpath'
-import { tm } from '../../utils/i18n'
+import type { GitBlame, GitBranch, GitCommit, GitMarks, GitOp, GitStatus, GitWorktree, McpResult } from '@/shared/types'
+import { extendedPath } from '@/main/utils/shellpath'
+import { tm } from '@/main/utils/i18n'
 
 interface Result { ok: boolean; out: string }
 

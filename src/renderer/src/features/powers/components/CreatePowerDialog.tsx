@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import type { PowerScope, PowerSources } from '@shared/types'
-import { FIELD_SLIM, Modal } from '@/shared/components/ui'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import type { PowerScope, PowerSources } from '@/shared/types'
+import { FIELD_SLIM, Modal } from '@/renderer/src/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 type Picked = { mcp: Set<string>; steering: Set<string>; skills: Set<string>; hooks: Set<string> }

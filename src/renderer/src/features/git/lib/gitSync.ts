@@ -1,4 +1,4 @@
-import { useStore } from '@/shared/store'
+import { useStore } from '@/renderer/src/shared/store'
 
 /** Vuelve a leer el estado de git del proyecto y lo deja en el store. */
 export async function refreshGit(): Promise<void> {

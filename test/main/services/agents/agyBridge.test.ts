@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('electron', () => ({ app: { getPath: () => tmpdir() } }))
-import { BRIDGE_SOURCE, withBridge } from '../../../../src/main/services/agents/agyBridge'
+import { BRIDGE_SOURCE, withBridge } from '@/main/services/agents/agyBridge'
 
 describe('registro del puente en Antigravity', () => {
   it('añade el servidor «tutti» sin tocar los demás y no reescribe si ya está al día', () => {

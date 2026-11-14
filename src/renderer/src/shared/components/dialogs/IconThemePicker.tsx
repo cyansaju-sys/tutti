@@ -1,7 +1,7 @@
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { ICON_FLAVORS, iconFor, type IconFlavor } from '@/shared/lib/icons'
-import { Modal } from '@/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { ICON_FLAVORS, iconFor, type IconFlavor } from '@/renderer/src/shared/lib/icons'
+import { Modal } from '@/renderer/src/shared/components/ui'
 import { Palette } from './Palette'
 import { Chip, Tag } from './parts'
 

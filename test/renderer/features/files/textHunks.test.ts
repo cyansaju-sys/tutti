@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyHunks, textHunks } from '../../../../src/renderer/src/features/files/lib/textHunks'
+import { applyHunks, textHunks } from '@/renderer/src/features/files/lib/textHunks'
 
 describe('tramos de cambios externos', () => {
   it('separa cambios y aplica solo los aceptados', () => {

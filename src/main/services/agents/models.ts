@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { closeSync, openSync, readdirSync, readSync, statSync, fstatSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { getSetting, setSetting } from '../settings'
+import { getSetting, setSetting } from '@/main/services/settings'
 import { canProbe, probeModels } from './modelProbe'
 
 export type Tier = 'basic' | 'standard' | 'advanced'

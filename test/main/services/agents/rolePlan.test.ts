@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { RoleSummary } from '../../../../src/main/services/context/roles'
-import { blockedByFailure, buildPlan, difficultyOf, finished, launchOrder, plans, ready, rolePrompt } from '../../../../src/main/services/agents/rolePlan'
+import type { RoleSummary } from '@/main/services/context/roles'
+import { blockedByFailure, buildPlan, difficultyOf, finished, launchOrder, plans, ready, rolePrompt } from '@/main/services/agents/rolePlan'
 
 const role = (name: string, depends_on: string[] = [], extra: Partial<RoleSummary> = {}): RoleSummary =>
   ({ name, title: name.toUpperCase(), difficulty: 'medium', depends_on, agent: '', model: '', specialty: '', deliverable: '', description: '', file: '', ...extra })

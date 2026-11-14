@@ -2,7 +2,7 @@ import { chmodSync, lstatSync, mkdtempSync, readdirSync, readFileSync, statSync,
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readJson, readMcpServers, writeAtomic, writeJson } from '../../../../src/main/services/mcp/files'
+import { readJson, readMcpServers, writeAtomic, writeJson } from '@/main/services/mcp/files'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-files-'))
 

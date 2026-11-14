@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 
 /** Cuándo se entrega un steering al agente (los cuatro modos de Kiro). */
 export type Inclusion = 'always' | 'fileMatch' | 'manual' | 'auto'

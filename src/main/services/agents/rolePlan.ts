@@ -3,7 +3,7 @@
  * Un rol empieza cuando todos los roles de los que depende (dentro del plan) terminaron; si alguno falla, los que dependen de él se saltan.
  * Aquí solo vive el estado y la lógica pura; lanzar y vigilar a los agentes lo hace hub.ts.
  */
-import type { RoleSummary } from '../context/roles'
+import type { RoleSummary } from '@/main/services/context/roles'
 import type { Difficulty } from './assign'
 
 export type ItemState = 'waiting' | 'running' | 'done' | 'failed' | 'skipped'

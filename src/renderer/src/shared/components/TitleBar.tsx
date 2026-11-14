@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MdAdd, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import { MdAdd, MdChatBubbleOutline, MdCropSquare, MdClose, MdEdit, MdEditOff, MdFileDownload, MdKeyboard, MdKeyboardArrowDown, MdOpenInNew, MdRefresh, MdRemove, MdTerminal } from 'react-icons/md'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 import { Chip, IconButton } from './ui'
 import { Menu } from './Menu'
 
@@ -48,6 +48,7 @@ export function TitleBar() {
   const toggleShell = useStore((s) => s.toggleShell)
   const addShell = useStore((s) => s.addShell)
   const project = useStore((s) => s.project)
+  const chatOpen = useStore((s) => s.chatOpen)
   const projectName = project?.split(/[\\/]/).filter(Boolean).pop()
 
   const [termMenu, setTermMenu] = useState<DOMRect | null>(null)
@@ -66,7 +67,11 @@ export function TitleBar() {
         />
       </div>
       {/* el nombre del proyecto, centrado en la ventana; no recibe clics: la barra sigue arrastrándose por ahí */}
-      {projectName && <span title={project ?? undefined} className="pointer-events-none absolute left-1/2 top-1/2 max-w-[34%] -translate-x-1/2 -translate-y-1/2 truncate text-[12px] font-medium text-muted">{projectName}</span>}
+      {projectName && (
+        <span title={project ?? undefined} className="pointer-events-none absolute left-1/2 top-1/2 flex max-w-[34%] -translate-x-1/2 -translate-y-1/2 items-center gap-2 text-[12px] font-medium text-muted">
+          <span className="truncate">{projectName}</span><button title={t('chat.title')} onClick={() => set({ chatOpen: !chatOpen })} className={`no-drag pointer-events-auto grid shrink-0 place-items-center rounded transition-colors hover:text-text ${chatOpen ? 'text-accent' : ''}`}><MdChatBubbleOutline size={15} /></button>
+        </span>
+      )}
       <div className="flex items-center gap-0.5">
         <UpdateButton />
         <IconButton title={t('title.newWindow')} onClick={() => window.api.window.openNew()}><MdOpenInNew size={15} /></IconButton>

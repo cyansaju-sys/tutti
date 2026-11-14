@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
-import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/dialogs'
-import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
-import { Footer } from '@/shared/components/Footer'
-import { Sidebar, TABS } from '@/shared/components/Sidebar'
-import { Toasts } from '@/shared/components/Toasts'
-import { TitleBar } from '@/shared/components/TitleBar'
-import { Resizer } from '@/shared/components/ui'
-import { Tooltips } from '@/shared/components/Tooltip'
-import { refreshGit } from '@/features/git/lib/gitSync'
-import { t } from '@/shared/lib/i18n'
-import { isLangPref } from '@shared/i18n'
-import { isGlobalShortcut } from '@/shared/lib/shortcuts'
-import { cacheAccent, isPref, resolveTheme, paintAccent, paintTheme } from '@/shared/lib/theme'
-import { isIconFlavor, loadIconTheme } from '@/shared/lib/icons'
-import { isDirty, useStore } from '@/shared/store'
+import { AgentsArea, TerminalSection } from '@/renderer/src/features/agents/components/AgentsArea'
+import { confirmAsk, useConfirm } from '@/renderer/src/shared/lib/confirm'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/renderer/src/shared/components/dialogs'
+import { EditorArea, saveDoc } from '@/renderer/src/features/files/components/EditorArea'
+import { Footer } from '@/renderer/src/shared/components/Footer'
+import { Sidebar, TABS } from '@/renderer/src/shared/components/Sidebar'
+import { Toasts } from '@/renderer/src/shared/components/Toasts'
+import { TitleBar } from '@/renderer/src/shared/components/TitleBar'
+import { Resizer } from '@/renderer/src/shared/components/ui'
+import { Tooltips } from '@/renderer/src/shared/components/Tooltip'
+import { refreshGit } from '@/renderer/src/features/git/lib/gitSync'
+import { t } from '@/renderer/src/shared/lib/i18n'
+import { isLangPref } from '@/shared/i18n'
+import { isGlobalShortcut } from '@/renderer/src/shared/lib/shortcuts'
+import { cacheAccent, isPref, resolveTheme, paintAccent, paintTheme } from '@/renderer/src/shared/lib/theme'
+import { isIconFlavor, loadIconTheme } from '@/renderer/src/shared/lib/icons'
+import { ChatPanel } from '@/renderer/src/shared/components/ChatPanel'
+import { isDirty, useStore } from '@/renderer/src/shared/store'
 
 /** Arrastra un divisor: parte del ancho que tenía al empezar y suma el desplazamiento. */
 function useDrag(get: () => number, apply: (value: number) => void, min: number, max: number, invert = false, onDone?: (value: number) => void) {
@@ -53,6 +54,10 @@ export function App() {
       if (typeof savedFont === 'string' && savedFont.trim()) useStore.setState({ editorFont: savedFont })
       const savedWidth = await window.api.settings.get('sidebar_width')          // el ancho del sidebar es global: vale para todos los proyectos
       if (typeof savedWidth === 'number' && Number.isFinite(savedWidth)) useStore.setState({ sidebarWidth: Math.max(220, Math.min(520, savedWidth)) })
+      const savedChatOpen = await window.api.settings.get('chat_open')          // el chat se abre con el proyecto; si se cerró, así se queda
+      if (typeof savedChatOpen === 'boolean') useStore.setState({ chatOpen: savedChatOpen })
+      const savedChatWidth = await window.api.settings.get('chat_width')
+      if (typeof savedChatWidth === 'number' && Number.isFinite(savedChatWidth)) useStore.setState({ chatWidth: Math.max(280, Math.min(720, savedChatWidth)) })
       const savedLang = await window.api.settings.get('language')
       if (isLangPref(savedLang) && savedLang !== useStore.getState().langPref) useStore.getState().setLang(savedLang)
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
@@ -127,7 +132,7 @@ export function App() {
       n.onclick = () => { window.focus(); useStore.getState().focusPane(id) }
     })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
-    const applyPanes = ({ leader, inbox, asking, roles }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneInbox: inbox, paneAsking: asking, paneRoles: roles })
+    const applyPanes = ({ leader, inbox, asking, roles }: import('@/shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneInbox: inbox, paneAsking: asking, paneRoles: roles })
     void window.api.orchestra.paneState().then(applyPanes)
     const offRoles = window.api.orchestra.onPaneState(applyPanes)
     return () => { offPane(); offAttention(); offToast(); offRoles() }
@@ -135,7 +140,7 @@ export function App() {
 
   // actualizaciones: el estado llega del proceso principal (el aviso de una versión nueva no sale como toast)
   useEffect(() => {
-    const apply = (update: import('@shared/types').UpdateState): void => {
+    const apply = (update: import('@/shared/types').UpdateState): void => {
       useStore.setState({ update })
       if (update.status === 'error') useStore.getState().toast(t('app.updateFailed', { message: update.message }), 'error')
     }
@@ -193,6 +198,8 @@ export function App() {
   }, [])
 
   const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right', (v) => { void window.api.settings.set('sidebar_width', v) })
+  const dragChat = useDrag(() => useStore.getState().chatWidth, (v) => s.set({ chatWidth: v }), 280, 720, s.sidebarSide !== 'right', (v) => { void window.api.settings.set('chat_width', v) })
+  useEffect(() => { if (ready) void window.api.settings.set('chat_open', s.chatOpen) }, [ready, s.chatOpen])
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
 
@@ -220,6 +227,7 @@ export function App() {
             </>
           )}
         </div>
+        {s.chatOpen && s.project && <><Resizer onDrag={dragChat} /><div className="flex"><ChatPanel /></div></>}
       </div>
       <Footer />
       {s.modal === 'agents' && <AgentPicker />}

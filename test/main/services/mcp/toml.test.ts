@@ -2,8 +2,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { codexEntries } from '../../../../src/main/services/mcp/mcp'
-import { parseToml } from '../../../../src/main/services/mcp/toml'
+import { codexEntries } from '@/main/services/mcp/mcp'
+import { parseToml } from '@/main/services/mcp/toml'
 
 const file = (text: string): string => { const f = join(mkdtempSync(join(tmpdir(), 'tutti-toml-')), 'config.toml'); writeFileSync(f, text); return f }
 

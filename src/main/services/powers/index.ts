@@ -4,16 +4,16 @@
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve, sep } from 'node:path'
-import type { McpAgent, McpResult, McpServer, McpSpec, PowerDraft, PowerInfo, PowerScope, PowerSources } from '../../../shared/types'
-import { tm } from '../../utils/i18n'
-import { configDir, globalSteeringDir, tuttiDir } from '../context/context'
-import { loadSteering, parseSteering } from '../context/steering'
-import { hooksDir } from '../hooks'
-import { isObject } from '../mcp/files'
-import { specFromConfig } from '../mcp/manage'
-import { probeSpec } from '../mcp/probe'
-import { listServers, NAME_RE, validate } from '../mcp/mcp'
-import { MAX_BYTES, MAX_FILES, measure, SKIP } from '../skills'
+import type { McpAgent, McpResult, McpServer, McpSpec, PowerDraft, PowerInfo, PowerScope, PowerSources } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
+import { configDir, globalSteeringDir, tuttiDir } from '@/main/services/context/context'
+import { loadSteering, parseSteering } from '@/main/services/context/steering'
+import { hooksDir } from '@/main/services/hooks'
+import { isObject } from '@/main/services/mcp/files'
+import { specFromConfig } from '@/main/services/mcp/manage'
+import { probeSpec } from '@/main/services/mcp/probe'
+import { listServers, NAME_RE, validate } from '@/main/services/mcp/mcp'
+import { MAX_BYTES, MAX_FILES, measure, SKIP } from '@/main/services/skills'
 
 export const globalPowersDir = (): string => join(configDir(), 'powers')
 const powersDir = (project: string | null, scope: PowerScope): string | null => (scope === 'global' ? globalPowersDir() : project ? join(tuttiDir(project), 'powers') : null)

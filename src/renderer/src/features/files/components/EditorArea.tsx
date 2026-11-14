@@ -2,28 +2,29 @@ import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAccountTree, MdClose, MdNewReleases, MdTune } from 'react-icons/md'
 import { VscCode, VscOpenPreview, VscPreview } from 'react-icons/vsc'
-import type { GitBlame, GitMarks } from '@shared/types'
-import { refreshGit } from '@/features/git/lib/gitSync'
-import { confirmAsk } from '@/shared/lib/confirm'
-import { t, useT } from '@/shared/lib/i18n'
-import { FileIcon } from '@/shared/components/FileIcon'
-import { languageName } from '@/features/files/lib/languages'
-import { crumbs, relative, toPosix } from '@/shared/lib/paths'
-import { selectionMessage, selectionRef } from '@/features/files/lib/selectionRef'
-import { findConflicts, resolveConflict, type Choice } from '@/features/files/lib/conflicts'
-import { applyHunks, textHunks, type TextHunk } from '@/features/files/lib/textHunks'
-import { isDirty, useStore, type Doc } from '@/shared/store'
+import type { GitBlame, GitMarks } from '@/shared/types'
+import { refreshGit } from '@/renderer/src/features/git/lib/gitSync'
+import { confirmAsk } from '@/renderer/src/shared/lib/confirm'
+import { t, useT } from '@/renderer/src/shared/lib/i18n'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
+import { languageName } from '@/renderer/src/features/files/lib/languages'
+import { crumbs, relative, toPosix } from '@/renderer/src/shared/lib/paths'
+import { selectionMessage, selectionRef } from '@/renderer/src/features/files/lib/selectionRef'
+import { findConflicts, resolveConflict, type Choice } from '@/renderer/src/features/files/lib/conflicts'
+import { applyHunks, textHunks, type TextHunk } from '@/renderer/src/features/files/lib/textHunks'
+import { isDirty, useStore, type Doc } from '@/renderer/src/shared/store'
+import { useChat } from '@/renderer/src/shared/store/chat'
 import { CodeEditor, type ExternalChange } from './CodeEditor'
 import { DiffView } from './DiffView'
 import { ImageViewer } from './ImageViewer'
 import { Markdown, splitFrontMatter } from './Markdown'
-import { GitGraph } from '../../git/components/GitGraph'
+import { GitGraph } from '@/renderer/src/features/git/components/GitGraph'
 import { NewsView } from './NewsView'
-import { HookFormView } from '../../tutti/components/HookFormView'
-import { RoleGraphView } from '../../tutti/components/RoleGraphView'
-import { RoleFormView } from '../../tutti/components/RoleFormView'
-import { SkillFormView } from '../../tutti/components/SkillFormView'
-import { SteeringFormView } from '../../tutti/components/SteeringFormView'
+import { HookFormView } from '@/renderer/src/features/tutti/components/HookFormView'
+import { RoleGraphView } from '@/renderer/src/features/tutti/components/RoleGraphView'
+import { RoleFormView } from '@/renderer/src/features/tutti/components/RoleFormView'
+import { SkillFormView } from '@/renderer/src/features/tutti/components/SkillFormView'
+import { SteeringFormView } from '@/renderer/src/features/tutti/components/SteeringFormView'
 
 export async function saveDoc(doc: Doc): Promise<void> {
   const { toast, markSaved } = useStore.getState()
@@ -90,7 +91,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   // los .md se pueden ver como Markdown; los de la carpeta .tutti se abren así por defecto
   const isMd = !!doc && doc.kind === 'text' && /\.(md|markdown)$/i.test(doc.path)
   const side = isMd && !!sides[doc!.path]
-  const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|openspec)[\\/]/.test(doc!.path))
+  const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|\.agents)[\\/]/.test(doc!.path))
   const pending = doc ? pendings[doc.path] ?? null : null
   const conflicts = useMemo(() => (doc?.kind === 'text' && !doc.readOnly ? findConflicts(doc.text) : []), [doc?.kind, doc?.readOnly, doc?.text])
   const resolve = (index: number, choice: Choice): void => {
@@ -269,6 +270,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)} onResolve={resolve}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
           onSend={(sel) => sendSelection(doc.path, sel)}
+          onSelect={(sel) => useChat.getState().setSelection(sel ? { path: doc.path, ...sel } : null)}
         />
         </div>
       )}

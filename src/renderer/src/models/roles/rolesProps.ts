@@ -1,5 +1,5 @@
-import type { FormField } from '@/features/tutti/lib/formFields'
-import { slug } from '@/features/tutti/lib/spec'
+import type { FormField } from '@/renderer/src/features/tutti/lib/formFields'
+import { slug } from '@/renderer/src/features/tutti/lib/spec'
 
 /** Los modelos de Claude que se pueden pedir para un rol (el id es el que entiende el agente). */
 export const MODELS = [

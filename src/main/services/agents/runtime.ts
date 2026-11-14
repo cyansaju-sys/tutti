@@ -1,6 +1,6 @@
 /** Lo que comparten las piezas del reparto de tareas: la ventana (para avisar a la interfaz), los proyectos conocidos y textos cortos. */
 import type { BrowserWindow } from 'electron'
-import { getSetting } from '../settings'
+import { getSetting } from '@/main/services/settings'
 import * as pty from './pty'
 
 let getWindow: () => BrowserWindow | null = () => null

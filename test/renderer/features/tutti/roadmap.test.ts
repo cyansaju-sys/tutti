@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { RoadmapItem, RoadmapState } from '../../../../src/shared/types'
-import { phaseProgress, resumePrompt, roadmapSummary, roadmapTemplate } from '../../../../src/renderer/src/features/tutti/lib/roadmap'
+import type { RoadmapItem, RoadmapState } from '@/shared/types'
+import { phaseProgress, resumePrompt, roadmapSummary, roadmapTemplate } from '@/renderer/src/features/tutti/lib/roadmap'
 
 const item = (patch: Partial<RoadmapItem>): RoadmapItem => ({ text: 'x', change: null, line: 1, status: 'pending', dir: null, done: 0, total: 0, ...patch })
 const STATE: RoadmapState = {

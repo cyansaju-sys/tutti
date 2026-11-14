@@ -1,5 +1,5 @@
 /** Entorno con el que se arranca un agente en una terminal. */
-import { extendedPath } from '../../utils/shellpath'
+import { extendedPath } from '@/main/utils/shellpath'
 
 /** Variables de una sesión de Claude Code que no deben heredar los agentes que se abren desde Tutti. */
 const SESSION_VARS = [

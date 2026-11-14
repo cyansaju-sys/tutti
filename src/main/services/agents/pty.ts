@@ -5,8 +5,8 @@ import type { WebContents } from 'electron'
 import type { IPty } from 'node-pty'
 import * as pty from 'node-pty'
 import { Terminal as Headless } from '@xterm/headless'
-import type { PtyOptions } from '../../../shared/types'
-import { which } from '../../utils/shellpath'
+import type { PtyOptions } from '@/shared/types'
+import { which } from '@/main/utils/shellpath'
 import { childEnv } from './env'
 
 export interface Meta { id: string; kind: 'agent' | 'shell'; name: string; command: string; cwd: string; parentId?: string }
@@ -15,7 +15,7 @@ interface Session { term: IPty; killed: boolean; meta: Meta; screen: Headless; l
 /** Cómo arrancar un agente con el reparto de tareas conectado; lo registra el módulo del servidor MCP. */
 export type { Launch } from './launch'
 import type { Launch } from './launch'
-import { tm } from '../../utils/i18n'
+import { tm } from '@/main/utils/i18n'
 type LaunchHook = (opts: PtyOptions) => Launch
 let launchHook: LaunchHook | null = null
 export const setLaunchHook = (hook: LaunchHook): void => { launchHook = hook }

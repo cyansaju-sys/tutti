@@ -6,15 +6,15 @@ import { Compartment, EditorState, StateEffect, StateField, type Range } from '@
 import { Decoration, drawSelection, EditorView, gutter, GutterMarker, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers, ViewPlugin, WidgetType, type ViewUpdate } from '@codemirror/view'
 import { tags as t } from '@lezer/highlight'
 import { useEffect, useRef, useState } from 'react'
-import { t as translate, useT } from '@/shared/lib/i18n'
-import { findConflicts } from '@/features/files/lib/conflicts'
-import { ago } from '@/shared/lib/format'
-import { useStore } from '@/shared/store'
-import { DEFAULT_EDITOR_FONT } from '@/shared/store/ui'
-import { Menu } from '../../../shared/components/Menu'
-import type { GitBlame, GitMarks } from '@shared/types'
-import { languageFor } from '@/features/files/lib/languages'
-import { findPanel, openFind } from '../../search/components/searchPanel'
+import { t as translate, useT } from '@/renderer/src/shared/lib/i18n'
+import { findConflicts } from '@/renderer/src/features/files/lib/conflicts'
+import { ago } from '@/renderer/src/shared/lib/format'
+import { useStore } from '@/renderer/src/shared/store'
+import { DEFAULT_EDITOR_FONT } from '@/renderer/src/shared/store/ui'
+import { Menu } from '@/renderer/src/shared/components/Menu'
+import type { GitBlame, GitMarks } from '@/shared/types'
+import { languageFor } from '@/renderer/src/features/files/lib/languages'
+import { findPanel, openFind } from '@/renderer/src/features/search/components/searchPanel'
 
 /** Mismos colores de sintaxis que la versión anterior. */
 const highlight = HighlightStyle.define([
@@ -315,6 +315,7 @@ interface Props {
   onSave: () => void
   onResolve?: (index: number, choice: 'current' | 'incoming' | 'both') => void
   focusToken: number
+  onSelect?: (sel: { startLine: number; endLine: number; text: string } | null) => void      // la selección cambia (null = sin selección)
   onSend?: (sel: { startLine: number; endLine: number; text: string }) => void      // «enviar al agente»: la selección, o la línea del cursor si no hay
   reveal?: { path: string; line: number; col: number; length: number; token: number } | null
 }
@@ -322,7 +323,7 @@ interface Props {
 const NO_CHANGES: ExternalChange[] = []
 
 /** Editor de código: guarda el estado de cada archivo (deshacer, cursor) al cambiar de pestaña. */
-export function CodeEditor({ path, text, readOnly, marks, blame = null, changes = NO_CHANGES, onChange, onSave, onResolve, focusToken, reveal, onSend }: Props) {
+export function CodeEditor({ path, text, readOnly, marks, blame = null, changes = NO_CHANGES, onChange, onSave, onResolve, focusToken, reveal, onSend, onSelect }: Props) {
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
   const host = useRef<HTMLDivElement>(null)
@@ -333,8 +334,8 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
   const ro = useRef(new Compartment())
   const font = useStore((s) => s.editorFont)
   useEffect(() => { document.documentElement.style.setProperty('--ed-font', font.trim() || DEFAULT_EDITOR_FONT) }, [font])
-  const handlers = useRef({ onChange, onSave, onSend, onResolve })
-  handlers.current = { onChange, onSave, onSend, onResolve }
+  const handlers = useRef({ onChange, onSave, onSend, onResolve, onSelect })
+  handlers.current = { onChange, onSave, onSend, onResolve, onSelect }
 
   /** La selección con sus líneas (1..n); sin selección, la línea del cursor. */
   const selection = (v: EditorView): { startLine: number; endLine: number; text: string; empty: boolean } => {
@@ -389,6 +390,14 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
       }),
       EditorView.updateListener.of((u) => {
         if (u.docChanged) handlers.current.onChange(u.state.doc.toString())
+        if (u.selectionSet || u.docChanged) {
+          const { from, to } = u.state.selection.main
+          if (from === to) handlers.current.onSelect?.(null)
+          else {
+            const a = u.state.doc.lineAt(from), b = u.state.doc.lineAt(to === u.state.doc.lineAt(to).from ? to - 1 : to)
+            handlers.current.onSelect?.({ startLine: a.number, endLine: b.number, text: u.state.sliceDoc(from, to) })
+          }
+        }
       })
     ]
   })

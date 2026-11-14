@@ -1,5 +1,5 @@
-import { iconFor } from '@/shared/lib/icons'
-import { useStore } from '@/shared/store'
+import { iconFor } from '@/renderer/src/shared/lib/icons'
+import { useStore } from '@/renderer/src/shared/store'
 
 /**
  * El ícono de un archivo o carpeta, del juego «Catppuccin Icons». `project` pinta la carpeta de un proyecto y `open` una carpeta desplegada.

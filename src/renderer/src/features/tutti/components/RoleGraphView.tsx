@@ -1,9 +1,9 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdFitScreen, MdRefresh, MdRemove, MdRestartAlt } from 'react-icons/md'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { layoutRoles, NODE_H, NODE_W, parseRole, type PlacedNode, type RoleNode } from '../lib/roleGraph'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { layoutRoles, NODE_H, NODE_W, parseRole, type PlacedNode, type RoleNode } from '@/renderer/src/features/tutti/lib/roleGraph'
 
 const REFRESH_MS = 5000
 type Pos = { x: number; y: number }

@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 
 /** Lo que ya hay en `.tutti/` y que el AGENTS.md debe referenciar en vez de copiar. */
 export interface TuttiContents { steering: string[]; skills: string[]; docs: boolean; specs: boolean }
@@ -11,7 +11,7 @@ export function agentsMdPrompt(lang: Lang, have: TuttiContents): string {
   const found = [
     have.steering.length ? `.tutti/steering/ (${have.steering.join(', ')})` : '',
     have.docs ? '.tutti/docs/' : '',
-    have.specs ? 'openspec/' : '',
+    have.specs ? '.tutti/specs/' : '',
     have.skills.length ? `.tutti/skills/ (${have.skills.join(', ')})` : ''
   ].filter(Boolean).join(', ')
   return lang === 'en'

@@ -2,11 +2,11 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import type { McpResult } from '../../../shared/types'
-import { detectAgents } from '../agents/agents'
-import { ask } from '../git/commitMessage'
-import { tm } from '../../utils/i18n'
-import { extendedPath } from '../../utils/shellpath'
+import type { McpResult } from '@/shared/types'
+import { detectAgents } from '@/main/services/agents/agents'
+import { ask } from '@/main/services/git/commitMessage'
+import { tm } from '@/main/utils/i18n'
+import { extendedPath } from '@/main/utils/shellpath'
 
 const SKIP = new Set(['node_modules', 'dist', 'out', 'build', 'target', 'release', 'coverage', '__pycache__', 'venv', 'vendor'])
 const MANIFESTS = ['pyproject.toml', 'Cargo.toml', 'go.mod', 'pom.xml', 'composer.json', 'Gemfile']

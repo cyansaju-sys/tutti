@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { languageFor, languageName } from '../../../../src/renderer/src/features/files/lib/languages'
+import { languageFor, languageName } from '@/renderer/src/features/files/lib/languages'
 
 describe('lenguajes del editor', () => {
   it('reconoce las extensiones adicionales', () => {

@@ -1,14 +1,14 @@
 import { clsx } from 'clsx'
 import { useMemo, useState } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { steeringProps } from '@/models/steering/steeringProps'
-import { slug } from '../lib/spec'
-import { useAskAgent } from '../lib/useAskAgent'
-import { useFormValues } from '../lib/useFormValues'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { steeringProps } from '@/renderer/src/models/steering/steeringProps'
+import { slug } from '@/renderer/src/features/tutti/lib/spec'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
+import { useFormValues } from '@/renderer/src/features/tutti/lib/useFormValues'
 import { AgentSelect } from './AgentSelect'
 import { FieldsFormView } from './FieldsFormView'
-import { buildSteeringFile, FOUNDATION, foundationFiles, foundationPrompt, steeringFormError, type SteeringForm } from '../lib/steeringForm'
+import { buildSteeringFile, FOUNDATION, foundationFiles, foundationPrompt, steeringFormError, type SteeringForm } from '@/renderer/src/features/tutti/lib/steeringForm'
 
 /**
  * Crear un steering como una pestaña del editor, con los modos de Kiro (siempre, por archivos, manual, automático), o crear de golpe los tres

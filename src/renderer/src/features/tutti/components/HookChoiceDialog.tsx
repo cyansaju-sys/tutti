@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
 import { MdChevronRight, MdEditNote, MdSmartToy } from 'react-icons/md'
-import { FIELD, Modal } from '@/shared/components/ui'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { hookAgentPrompt } from '../lib/hookEdit'
-import { useAskAgent } from '../lib/useAskAgent'
+import { FIELD, Modal } from '@/renderer/src/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { hookAgentPrompt } from '@/renderer/src/features/tutti/lib/hookEdit'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
 import { AgentSelect } from './AgentSelect'
 
 /**

@@ -1,6 +1,6 @@
 /** Buscar y reemplazar dentro del archivo: un cuadro flotante arriba a la derecha, como el de VS Code, sobre el motor de CodeMirror. */
 import { closeSearchPanel, findNext, findPrevious, getSearchQuery, openSearchPanel, replaceAll, replaceNext, search, SearchQuery, setSearchQuery } from '@codemirror/search'
-import { t } from '@/shared/lib/i18n'
+import { t } from '@/renderer/src/shared/lib/i18n'
 import { EditorState, StateEffect, type Extension } from '@codemirror/state'
 import { EditorView, runScopeHandlers, type Panel, type ViewUpdate } from '@codemirror/view'
 

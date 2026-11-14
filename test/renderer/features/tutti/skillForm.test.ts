@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildSkillFile, EMPTY_SKILL_FORM, skillAgentPrompt, skillFormError } from '../../../../src/renderer/src/features/tutti/lib/skillForm'
+import { buildSkillFile, EMPTY_SKILL_FORM, skillAgentPrompt, skillFormError } from '@/renderer/src/features/tutti/lib/skillForm'
 
 const base = { ...EMPTY_SKILL_FORM, name: 'Revisar PR', description: 'Revisa un pull request. Úsala al revisar cambios.' }
 

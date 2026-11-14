@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const store: Record<string, unknown> = {}
-vi.mock('../../../../src/main/services/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
+vi.mock('@/main/services/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
 
-import { setTrusted, startHooks, stopHooks, type HookResult } from '../../../../src/main/services/hooks'
+import { setTrusted, startHooks, stopHooks, type HookResult } from '@/main/services/hooks'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 afterEach(() => stopHooks())

@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
 import { MdAdd, MdCheckCircle, MdClose, MdDeleteSweep, MdErrorOutline, MdOpenInNew, MdPauseCircle } from 'react-icons/md'
-import type { TaskInfo } from '@shared/types'
-import { AgentIcon } from '@/features/agents/components/AgentIcon'
-import { fmtDelta } from '@/shared/lib/format'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import type { TaskInfo } from '@/shared/types'
+import { AgentIcon } from '@/renderer/src/features/agents/components/AgentIcon'
+import { fmtDelta } from '@/renderer/src/shared/lib/format'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 
 /** Duración con segundos mientras es corta (fmtDelta solo llega a minutos). */
 const span = (ms: number): string => (ms < 60_000 ? `${Math.max(0, Math.floor(ms / 1000))} s` : fmtDelta(ms))

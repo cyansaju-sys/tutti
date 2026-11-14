@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
-import type { MsgKey } from '@shared/i18n'
-import type { T } from '@/shared/lib/i18n'
+import type { MsgKey } from '@/shared/i18n'
+import type { T } from '@/renderer/src/shared/lib/i18n'
 
 export type Values = Record<string, string>
 

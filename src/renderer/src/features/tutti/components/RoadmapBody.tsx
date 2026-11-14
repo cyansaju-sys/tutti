@@ -1,14 +1,14 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
 import { MdAdd, MdAutoAwesome, MdCheckCircle, MdChevronRight, MdHelpOutline, MdNoteAdd, MdPlayArrow, MdRadioButtonUnchecked, MdRoute, MdTimelapse } from 'react-icons/md'
-import type { MsgKey } from '@shared/i18n'
-import type { RoadmapItem, RoadmapState } from '@shared/types'
-import { useT } from '@/shared/lib/i18n'
-import { FileIcon } from '@/shared/components/FileIcon'
-import { useStore } from '@/shared/store'
-import { applyPrompt } from '../lib/openspec'
-import { draftRoadmapPrompt, phaseProgress, resumePrompt, roadmapTemplate } from '../lib/roadmap'
-import { useAskAgent } from '../lib/useAskAgent'
+import type { MsgKey } from '@/shared/i18n'
+import type { RoadmapItem, RoadmapState } from '@/shared/types'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
+import { useStore } from '@/renderer/src/shared/store'
+import { applyPrompt } from '@/renderer/src/features/tutti/lib/specs'
+import { draftRoadmapPrompt, phaseProgress, resumePrompt, roadmapTemplate } from '@/renderer/src/features/tutti/lib/roadmap'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
 
 const BUTTON = 'flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent'
 const ICON_BUTTON = 'grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30'
@@ -31,7 +31,7 @@ export async function createRoadmap(project: string, lang: Parameters<typeof roa
 
 /**
  * El contenido de la sección Roadmap: las fases con su avance (la actual abierta), cada ítem con su estado según su casilla y su cambio de
- * OpenSpec, y el botón «¿Dónde nos quedamos?», que le pide al agente verificar el estado y proponer lo siguiente.
+ * specs, y el botón «¿Dónde nos quedamos?», que le pide al agente verificar el estado y proponer lo siguiente.
  */
 export function RoadmapBody({ state, project, onChanged }: { state: RoadmapState | null; project: string; onChanged: () => void }) {
   const t = useT()
@@ -122,7 +122,7 @@ export function RoadmapBody({ state, project, onChanged }: { state: RoadmapState
                           <button title={t('rm.newSpec')} onClick={() => openSpecForm({ name: it.change ?? it.text, description: it.change && it.text !== it.change ? it.text : '' })} className={clsx(ICON_BUTTON, 'mr-1')}><MdNoteAdd size={13} /></button>
                         )}
                         {it.status === 'active' && it.change && (
-                          <button disabled={!ask.selected} title={ask.selected ? t('os.apply') : t('sa.noAgent')} onClick={() => void ask.send(applyPrompt(lang, it.change!))} className={clsx(ICON_BUTTON, 'mr-1')}><MdPlayArrow size={14} /></button>
+                          <button disabled={!ask.selected} title={ask.selected ? t('sp.apply') : t('sa.noAgent')} onClick={() => void ask.send(applyPrompt(lang, state.rel.replace(/[^/]*$/, '') + 'specs', it.change!))} className={clsx(ICON_BUTTON, 'mr-1')}><MdPlayArrow size={14} /></button>
                         )}
                       </li>
                     )

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { isOurLauncher, launcherFor, writeLauncher } from '../../../src/main/services/cli'
+import { isOurLauncher, launcherFor, writeLauncher } from '@/main/services/cli'
 
 const TEMPLATE = readFileSync(join(__dirname, '../../../resources/bin/tutti'), 'utf8')
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-cli-'))
