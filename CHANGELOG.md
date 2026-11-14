@@ -17,6 +17,8 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 - Los Powers que encajan con lo que pides se ofrecen solos, sin pasar por el servidor MCP. Solo funciona en el chat integrado.
 
 
+## 1.4.13
+
 ### Cambios
 
 - **Vista dividida de hasta 6 agentes:** con Ctrl+1 a Ctrl+6 ves de 1 a 6 agentes a la vez (hasta 3 en horizontal y 2 en vertical). Los que faltan quedan como huecos para elegir agente, y Ctrl+W cierra un hueco. Los agentes que se reparten tareas se suman solos a la cuadrícula.
