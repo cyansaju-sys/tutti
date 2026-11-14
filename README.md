@@ -58,6 +58,9 @@ Detecta más de 20 agentes y **añade el tuyo**. Tema claro y oscuro, **español
 </tr>
 </table>
 
+> [!NOTE]
+> **Tutti no incluye IA gratis de Claude.** Es un orquestador: usa los agentes que ya tengas instalados y con tu propia cuenta o clave (Claude Code, Codex, etc.), y el consumo corre por tu cuenta.
+
 <br />
 
 ## Instalar
