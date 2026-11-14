@@ -13,6 +13,7 @@ import { selectionMessage, selectionRef } from '@/renderer/src/features/files/li
 import { findConflicts, resolveConflict, type Choice } from '@/renderer/src/features/files/lib/conflicts'
 import { applyHunks, textHunks, type TextHunk } from '@/renderer/src/features/files/lib/textHunks'
 import { isDirty, useStore, type Doc } from '@/renderer/src/shared/store'
+import { useChat } from '@/renderer/src/shared/store/chat'
 import { CodeEditor, type ExternalChange } from './CodeEditor'
 import { DiffView } from './DiffView'
 import { ImageViewer } from './ImageViewer'
@@ -269,6 +270,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
           onChange={(text) => updateDocText(doc.path, text)} onSave={() => void saveDoc(useStore.getState().docs.find((d) => d.path === doc.path)!)} onResolve={resolve}
           focusToken={focus === 'editor' ? 1 : 0} reveal={reveal}
           onSend={(sel) => sendSelection(doc.path, sel)}
+          onSelect={(sel) => useChat.getState().setSelection(sel ? { path: doc.path, ...sel } : null)}
         />
         </div>
       )}

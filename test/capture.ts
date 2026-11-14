@@ -171,13 +171,10 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     const put = (file: string, text: string): void => { mkdirSync(dirname(join(dir, file)), { recursive: true }); writeFileSync(join(dir, file), text, 'utf8') }
     put('package.json', '{ "name": "tienda-web", "version": "0.4.0" }\n'); put('src/index.ts', 'export {}\n')
     put('.tutti/README.md', '# Tutti\n')
-    put('openspec/config.yaml', 'schema: spec-driven\n')
-    put('openspec/specs/pedidos/spec.md', '# pedidos Specification\n\n## Requirements\n\n### Requirement: Listar pedidos\nEl sistema DEBERÁ mostrar los pedidos del cliente.\n\n#### Scenario: Cliente con pedidos\n- **WHEN** el cliente abre «Mis pedidos»\n- **THEN** ve la lista, del más reciente al más antiguo\n')
-    put('openspec/changes/carrito-de-compra/proposal.md', '## Why\n\nQue el cliente pueda reunir productos y pagarlos en un solo paso.\n\n## What Changes\n\n- Un carrito con total y existencias.\n\n## Capabilities\n\n### New Capabilities\n\n- `carrito`: reunir productos y pagar\n')
-    put('openspec/changes/carrito-de-compra/design.md', '## Context\n\n## Decisions\n')
-    put('openspec/changes/carrito-de-compra/specs/carrito/spec.md', '## ADDED Requirements\n\n### Requirement: Añadir productos\nEl sistema DEBERÁ sumar el producto al carrito y mostrar el total.\n\n#### Scenario: Añadir\n- **WHEN** el cliente pulsa «Añadir»\n- **THEN** el carrito suma el producto\n')
-    put('openspec/changes/carrito-de-compra/tasks.md', '## 1. Carrito\n\n- [x] 1.1 Tipos y estado\n- [x] 1.2 Botón «Añadir»\n\n## 2. Total y existencias\n\n- [x] 2.1 Calcular el total\n- [ ] 2.2 Ocultar sin existencias\n- [ ] 2.3 Pruebas\n')
-    put('openspec/changes/pagos/proposal.md', '## Why\n\nCobrar con tarjeta.\n'); put('openspec/changes/pagos/tasks.md', '## 1. Pagos\n\n- [ ] 1.1 Elegir pasarela\n- [ ] 1.2 Confirmación\n')
+    put('.tutti/specs/carrito-de-compra/requirements.md', '# Requisitos\n\n## Requisito 1\n\n**Historia de usuario:** Como cliente, quiero reunir productos en un carrito, para pagarlos en un solo paso.\n\n- CUANDO el cliente pulsa «Añadir» ENTONCES el sistema DEBERÁ sumar el producto y mostrar el total.\n')
+    put('.tutti/specs/carrito-de-compra/design.md', '# Diseño\n\n## Visión general\n')
+    put('.tutti/specs/carrito-de-compra/tasks.md', '## 1. Carrito\n\n- [x] 1.1 Tipos y estado\n- [x] 1.2 Botón «Añadir»\n\n## 2. Total y existencias\n\n- [x] 2.1 Calcular el total\n- [ ] 2.2 Ocultar sin existencias\n- [ ] 2.3 Pruebas\n')
+    put('.tutti/specs/pagos/requirements.md', '# Requisitos\n\nCobrar con tarjeta.\n'); put('.tutti/specs/pagos/tasks.md', '## 1. Pagos\n\n- [ ] 1.1 Elegir pasarela\n- [ ] 1.2 Confirmación\n')
     put('.tutti/docs/how-to/desplegar.md', '# Cómo desplegar\n\n1. Ejecuta `npm run build`.\n2. Sube la carpeta `dist`.\n'); put('.tutti/docs/explanation/arquitectura.md', '# Arquitectura\n')
     put('.tutti/docs/reference/api.md', '# API\n')
     put('.tutti/steering/contexto.md', '# Tienda web\n\nTienda en línea con React y una API REST.\n'); put('.tutti/steering/estilo.md', '---\ninclusion: always\n---\n\n# Estilo\n\nTypeScript estricto, sin punto y coma.\n')
@@ -194,7 +191,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await sleep(1800)
     await run(`[...document.querySelectorAll('button')].filter((b) => /^(carrito-de-compra|Guías prácticas|How-to guides)/.test(b.textContent.trim())).forEach((b) => b.click())`)         // abre la spec y una categoría de la documentación
     await snap('24-tutti', 1000)
-    await run(`${store}.openDoc(${JSON.stringify(join(dir, 'openspec/changes/carrito-de-compra/tasks.md'))})`)
+    await run(`${store}.openDoc(${JSON.stringify(join(dir, '.tutti/specs/carrito-de-compra/tasks.md'))})`)
     await run(`${store}.set({ tab: 'tutti' })`)
     await snap('25-md-vista', 1200)
     await run(`document.querySelector('button[title="${process.env.TUTTI_CAPTURE_LANG === 'en' ? 'New hook' : 'Nuevo hook'}"]')?.click()`)         // el «+» de Hooks: el diálogo con las dos opciones

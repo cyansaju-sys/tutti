@@ -207,7 +207,7 @@ describe('AGENTS.md apuntando a .tutti', () => {
     expect(agents()).toContain('.tutti/steering/')
     expect(agents()).toContain('product.md')
     expect(agents()).toContain('revisar')
-    expect(agents()).not.toContain('openspec')                                   // solo lo que existe
+    expect(agents()).not.toContain('specs/')                                   // solo lo que existe
     expect(agentsPointerState(project)).toMatchObject({ exists: true, hasBlock: true, upToDate: true, ownContent: false })
   })
   it('un AGENTS.md que solo es el bloque no cuenta como contexto: el contexto va a .tutti', () => {
@@ -228,11 +228,11 @@ describe('AGENTS.md apuntando a .tutti', () => {
   it('actualizar reemplaza el bloque sin duplicarlo y detecta que está desactualizado', () => {
     writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n')
     writeAgentsPointer(project)
-    mkdirSync(join(project, 'openspec'))
+    mkdirSync(join(project, '.tutti', 'specs', 'a'), { recursive: true })
     expect(agentsPointerState(project).upToDate).toBe(false)
     writeAgentsPointer(project)
     expect(agents().match(/tutti:start/g)).toHaveLength(1)
-    expect(agents()).toContain('openspec')
+    expect(agents()).toContain('specs')
     expect(agentsPointerState(project).upToDate).toBe(true)
   })
   it('apunta al roadmap, sea el de .tutti o el ROADMAP.md de la raíz', () => {

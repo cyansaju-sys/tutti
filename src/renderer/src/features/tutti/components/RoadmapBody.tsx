@@ -31,7 +31,7 @@ export async function createRoadmap(project: string, lang: Parameters<typeof roa
 
 /**
  * El contenido de la sección Roadmap: las fases con su avance (la actual abierta), cada ítem con su estado según su casilla y su cambio de
- * OpenSpec, y el botón «¿Dónde nos quedamos?», que le pide al agente verificar el estado y proponer lo siguiente.
+ * specs, y el botón «¿Dónde nos quedamos?», que le pide al agente verificar el estado y proponer lo siguiente.
  */
 export function RoadmapBody({ state, project, onChanged }: { state: RoadmapState | null; project: string; onChanged: () => void }) {
   const t = useT()
@@ -122,7 +122,7 @@ export function RoadmapBody({ state, project, onChanged }: { state: RoadmapState
                           <button title={t('rm.newSpec')} onClick={() => openSpecForm({ name: it.change ?? it.text, description: it.change && it.text !== it.change ? it.text : '' })} className={clsx(ICON_BUTTON, 'mr-1')}><MdNoteAdd size={13} /></button>
                         )}
                         {it.status === 'active' && it.change && (
-                          <button disabled={!ask.selected} title={ask.selected ? t('sp.apply') : t('sa.noAgent')} onClick={() => void ask.send(applyPrompt(lang, state.rel.replace(/[^/]*$/, '').replace(/\/$/, '') ? '' : '', it.change!))} className={clsx(ICON_BUTTON, 'mr-1')}><MdPlayArrow size={14} /></button>
+                          <button disabled={!ask.selected} title={ask.selected ? t('sp.apply') : t('sa.noAgent')} onClick={() => void ask.send(applyPrompt(lang, state.rel.replace(/[^/]*$/, '') + 'specs', it.change!))} className={clsx(ICON_BUTTON, 'mr-1')}><MdPlayArrow size={14} /></button>
                         )}
                       </li>
                     )

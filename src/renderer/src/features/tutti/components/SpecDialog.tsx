@@ -6,17 +6,16 @@ import { useStore } from '@/renderer/src/shared/store'
 import type { SpecPrefill } from '@/renderer/src/shared/store/types'
 import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
 import { AgentSelect } from './AgentSelect'
-import { changeName, proposePrompt } from '@/renderer/src/features/tutti/lib/openspec'
+import { planPrompt, specName } from '@/renderer/src/features/tutti/lib/specs'
 
 /**
- * Proponer un cambio de OpenSpec: se escribe qué se quiere y se le envía al agente, que crea la carpeta en openspec/changes con la propuesta,
- * las specs, el diseño y las tareas (y no escribe código hasta que lo pidas). `prefill` trae lo que ya sabe el roadmap.
+ * Crear una spec: se escribe qué se quiere y se le envía al agente, que crea la carpeta en .tutti/specs con requirements.md,
+ * design.md y tasks.md (y no escribe código hasta que lo pidas). `prefill` trae lo que ya sabe el roadmap.
  */
 export function SpecDialog({ prefill }: { prefill: SpecPrefill }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const project = useStore((s) => s.project)
-  const toast = useStore((s) => s.toast)
   const setStore = useStore((s) => s.set)
   const [text, setText] = useState(prefill.description)
   const ask = useAskAgent()
@@ -33,10 +32,9 @@ export function SpecDialog({ prefill }: { prefill: SpecPrefill }) {
 
   const submit = async (): Promise<void> => {
     if (!text.trim() || !agent || !project) return
-    const state = await window.api.openspec.state(project)
-    if (!state.initialized) { toast(t('os.notInit'), 'error'); return }
-    const name = changeName(text, prefill.name) || 'change'
-    await ask.send(proposePrompt(lang, name, text))
+    const state = await window.api.specs.state(project)
+    const name = specName(text, prefill.name) || 'spec'
+    await ask.send(planPrompt(lang, state.rel, name, text))
     close()
   }
 

@@ -166,7 +166,9 @@ export type ChatEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 export interface ChatModel { value: string; displayName: string; description: string; efforts?: ChatEffort[] }
 
 /** Lo que se envía al SDK con cada mensaje del chat. */
-export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null }
+export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; images?: ChatImage[] }
+/** Una imagen adjunta al mensaje (base64, sin el prefijo `data:`). */
+export interface ChatImage { mediaType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'; data: string }
 /** Lo que el SDK va contando mientras responde. */
 export type ChatEvent =
   | { kind: 'session'; id: string }

@@ -35,7 +35,8 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
 
   // con permisos por herramienta el SDK pide una entrada en streaming: se entrega el mensaje y se mantiene abierta hasta el resultado
   const prompt = (async function* (): AsyncGenerator<SDKUserMessage> {
-    yield { type: 'user', message: { role: 'user', content: req.text }, parent_tool_use_id: null }
+    const images = (req.images ?? []).map((i) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: i.mediaType, data: i.data } }))
+    yield { type: 'user', message: { role: 'user', content: images.length ? [...images, { type: 'text' as const, text: req.text || ' ' }] : req.text }, parent_tool_use_id: null }
     await finished
   })()
 

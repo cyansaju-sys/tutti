@@ -9,7 +9,7 @@ describe('petición para rellenar AGENTS.md', () => {
     expect(p).toContain('ENCIMA')
     expect(p).toContain('.tutti/steering/ (product.md, tech.md)')
     expect(p).toContain('.tutti/skills/ (revisar)')
-    expect(p).toContain('openspec/')
+    expect(p).toContain('.tutti/specs/')
     expect(p).toContain('NO lo copies')
   })
   it('sin nada en .tutti no habla de copiar', () => {

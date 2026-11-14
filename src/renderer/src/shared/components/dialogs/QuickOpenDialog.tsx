@@ -5,6 +5,7 @@ import { loadRecentFiles } from '@/renderer/src/shared/store/recentFiles'
 import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
 import { basename, relative, toPosix } from '@/renderer/src/shared/lib/paths'
 import { Modal } from '@/renderer/src/shared/components/ui'
+import { listProjectFiles } from '@/renderer/src/shared/lib/projectFiles'
 import { Palette } from './Palette'
 
 export function QuickOpenDialog() {
@@ -19,17 +20,7 @@ export function QuickOpenDialog() {
   useEffect(() => {
     if (!project) return
     let cancelled = false
-    const visit = async (dir: string, seen: Set<string>): Promise<string[]> => {
-      if (seen.has(dir)) return []
-      seen.add(dir)
-      const listed = await window.api.fs.list(dir)
-      const hidden = new Set(await window.api.git.ignored(project, listed.map((e) => e.path)))   // lo del .gitignore no se lista ni se recorre
-      const entries = listed.filter((e) => !hidden.has(e.path) && !(e.isDir && e.name === '.git'))
-      const out: string[] = []
-      for (const entry of entries) entry.isDir ? out.push(...await visit(entry.path, seen)) : out.push(entry.path)
-      return out
-    }
-    void visit(project, new Set()).then((paths) => { if (!cancelled) setFiles(paths) })
+    void listProjectFiles(project).then((paths) => { if (!cancelled) setFiles(paths) })
     return () => { cancelled = true }
   }, [project])
   if (!project) return <Modal onClose={() => set({ modal: null })} width={560}><p className="px-4 py-5 text-[12px] text-muted">{t('dlg.openProjectFirst')}</p></Modal>

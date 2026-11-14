@@ -1,3 +1,4 @@
+import { useListNav } from '@/renderer/src/shared/lib/useListNav'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { MdCheck } from 'react-icons/md'
@@ -25,14 +26,16 @@ export function ModelPicker({ anchor, models, model, effort, onModel, onEffort, 
     return () => { window.removeEventListener('pointerdown', down, true); window.removeEventListener('keydown', key, true) }
   }, [onClose])
 
+  useListNav(box, model)
+
   return createPortal(
     <div ref={box} style={{ left: anchor.left, width: anchor.width, bottom: window.innerHeight - anchor.top + 4, maxHeight: Math.min(300, Math.max(160, anchor.top - 14)) }}
       className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
       <div className="shrink-0 px-3 pb-1 pt-2 text-[11px] text-muted">{t('chat.selectModel')}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
         {models ? models.map((m) => (
-          <button key={m.value} onClick={() => { onModel(m.value); onClose() }}
-            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent-bg ${m.value === model ? 'bg-accent-bg' : ''}`}>
+          <button key={m.value} data-row onClick={() => { onModel(m.value); onClose() }}
+            className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent-bg data-[active=true]:bg-accent-bg ${m.value === model ? 'bg-accent-bg' : ''}`}>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[12px] text-text">{m.displayName}</span>
               <span className="block truncate text-[10.5px] text-muted">{m.description}</span>

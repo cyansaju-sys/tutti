@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { MdCheck, MdCode, MdOutlineBolt, MdOutlineChecklist, MdOutlineExplore, MdPanTool } from 'react-icons/md'
 import type { ReactNode } from 'react'
 import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useListNav } from '@/renderer/src/shared/lib/useListNav'
 
 /** Los modos de permisos del SDK: pedir aprobación, editar solo, planear primero, o aprobar lo seguro. */
 export type ChatMode = 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'
@@ -27,6 +28,8 @@ export function ModePicker({ anchor, mode, onMode, onClose }: { anchor: DOMRect;
     return () => { window.removeEventListener('pointerdown', down, true); window.removeEventListener('keydown', key, true) }
   }, [onClose])
 
+  useListNav(box, mode)
+
   return createPortal(
     <div ref={box} style={{ left: anchor.left, width: anchor.width, bottom: window.innerHeight - anchor.top + 4 }}
       className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
@@ -36,8 +39,8 @@ export function ModePicker({ anchor, mode, onMode, onClose }: { anchor: DOMRect;
       </div>
       <div className="px-1 pb-1">
         {MODES.map((m) => (
-          <button key={m.id} onClick={() => { onMode(m.id); onClose() }}
-            className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent-bg ${m.id === mode ? 'bg-accent-bg' : ''}`}>
+          <button key={m.id} data-row onClick={() => { onMode(m.id); onClose() }}
+            className={`flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent-bg data-[active=true]:bg-accent-bg ${m.id === mode ? 'bg-accent-bg' : ''}`}>
             <span className="shrink-0 text-muted">{m.icon}</span>
             <span className="min-w-0 flex-1">
               <span className="block text-[12px] text-text">{t(`chat.mode.${m.id}` as never)}</span>

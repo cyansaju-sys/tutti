@@ -1,7 +1,9 @@
 import { create } from 'zustand'
-import type { ChatEffort, ChatEvent, ChatSendRequest } from '@/shared/types'
+import type { ChatEffort, ChatImage, ChatEvent, ChatSendRequest } from '@/shared/types'
 
-export interface ChatMessage { id: number; role: 'user' | 'assistant' | 'tool' | 'error'; text: string; detail?: string }
+export interface ChatMessage { id: number; role: 'user' | 'assistant' | 'tool' | 'error'; text: string; detail?: string; images?: string[] }      // images: data URLs para mostrarlas
+/** Lo que está seleccionado en el editor: el chat lo ofrece como contexto. */
+export interface EditorSelection { path: string; startLine: number; endLine: number; text: string }
 export interface ChatPermission { id: string; tool: string; input: string }
 
 interface ChatState {
@@ -10,7 +12,9 @@ interface ChatState {
   session: string | null
   project: string | null              // el proyecto de la conversación: al cambiar de proyecto empieza una nueva
   permissions: ChatPermission[]
-  send: (text: string, opts: { project: string | null; model: string; effort: ChatEffort; mode: ChatSendRequest['mode'] }) => void
+  selection: EditorSelection | null
+  setSelection: (selection: EditorSelection | null) => void
+  send: (text: string, opts: { project: string | null; model: string; effort: ChatEffort; mode: ChatSendRequest['mode']; shown?: string; images?: ChatImage[] }) => void      // `shown`: lo que se ve en la conversación si no es todo el texto
   cancel: () => void
   answer: (id: string, allow: boolean) => void
   clear: () => void
@@ -21,13 +25,14 @@ const add = (messages: ChatMessage[], m: Omit<ChatMessage, 'id'>): ChatMessage[]
 
 /** La conversación del chat: vive fuera del panel para no perderse al cerrarlo. */
 export const useChat = create<ChatState>((set, get) => ({
-  messages: [], running: false, session: null, project: null, permissions: [],
+  messages: [], running: false, session: null, project: null, permissions: [], selection: null,
+  setSelection: (selection) => set({ selection }),
   send: (text, opts) => {
     const s = get()
-    if (s.running || !text.trim()) return
+    if (s.running || (!text.trim() && !opts.images?.length)) return
     const fresh = s.project !== opts.project          // otro proyecto: otra conversación
-    set({ messages: add(fresh ? [] : s.messages, { role: 'user', text }), running: true, project: opts.project, session: fresh ? null : s.session, permissions: [] })
-    void window.api.chat.send({ text, project: opts.project, model: opts.model, effort: opts.effort, mode: opts.mode, session: fresh ? null : s.session })
+    set({ messages: add(fresh ? [] : s.messages, { role: 'user', text: opts.shown ?? text, images: opts.images?.map((i) => `data:${i.mediaType};base64,${i.data}`) }), running: true, project: opts.project, session: fresh ? null : s.session, permissions: [] })
+    void window.api.chat.send({ text, project: opts.project, model: opts.model, effort: opts.effort, mode: opts.mode, images: opts.images, session: fresh ? null : s.session })
   },
   cancel: () => { void window.api.chat.cancel() },
   answer: (id, allow) => { set((s) => ({ permissions: s.permissions.filter((p) => p.id !== id) })); void window.api.chat.answer(id, allow) },
