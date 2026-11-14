@@ -1,15 +1,15 @@
 /**
  * El roadmap del proyecto: el plan por fases, un nivel por encima de las specs. Es Markdown normal:
  *   ## Fase 1 — Datos         cada «##» es una fase
- *   - [x] `init-db` — …       cada elemento de lista (de primer nivel) es un ítem; el `nombre` del principio lo vincula a un cambio de OpenSpec
+ *   - [x] `init-db` — …       cada elemento de lista (de primer nivel) es un ítem; el `nombre` del principio lo vincula a una spec
  *   - Pagos con Stripe        sin casilla ni nombre también vale (su estado solo lo sabe quien mire el código)
- * El estado de cada ítem sale de su casilla y de `openspec/changes/` (en marcha, con su avance) o `changes/archive/` (terminado).
+ * El estado de cada ítem sale de su casilla y de `specs/` (en marcha, con el avance de sus tareas; terminada si están todas hechas).
  */
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type { RoadmapItem, RoadmapPhase, RoadmapState } from '@/shared/types'
 import { tuttiDirName } from './context/context'
-import { openspecDir, taskCounts } from './openspec'
+import { specsDir, taskCounts } from './specs'
 
 /** Dónde se busca, en orden: el de `.tutti` y, si no, el que ya tenga el proyecto en la raíz. */
 const candidates = (project: string): string[] => [`${tuttiDirName(project)}/roadmap.md`, 'ROADMAP.md', 'roadmap.md']
@@ -44,23 +44,6 @@ export function parseRoadmap(text: string): Array<{ title: string; line: number;
   return phases
 }
 
-/** Marca «- [x]» los ítems que empiezan con el cambio `change` (se llama al archivarlo). Devuelve si cambió el archivo. */
-export function markRoadmapDone(project: string, change: string): boolean {
-  const file = roadmapFile(project)
-  if (!existsSync(file)) return false
-  const text = read(file)
-  const lines = text.split('\n')
-  const lead = (body: string): string | null => /^`([^`]+)`/.exec(body)?.[1] ?? null
-  let fence = false
-  const next = lines.map((line) => {
-    if (/^\s*(```|~~~)/.test(line)) fence = !fence
-    const m = fence ? null : /^( ?(?:[-*+]|\d+[.)])\s+)\[ \](\s+[^\n]*)$/.exec(line)          // con CRLF, el \r se queda al final de m[2]
-    return m && lead(m[2].trimStart()) === change ? `${m[1]}[x]${m[2]}` : line
-  }).join('\n')
-  if (next === text) return false
-  try { writeFileSync(file, next, 'utf8'); return true } catch { return false }
-}
-
 const dirs = (path: string): string[] => {
   try { return readdirSync(path, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name) } catch { return [] }
 }
@@ -69,21 +52,21 @@ const read = (path: string): string => { try { return readFileSync(path, 'utf8')
 export function roadmapState(project: string): RoadmapState {
   const file = roadmapFile(project)
   const exists = existsSync(file)
-  const changes = join(openspecDir(project), 'changes')
-  const active = new Set(dirs(changes).filter((n) => n !== 'archive'))
-  const archived = new Map(dirs(join(changes, 'archive')).map((n) => [n.replace(/^\d{4}-\d{2}-\d{2}-/, ''), join(changes, 'archive', n)]))
+  const root = specsDir(project)
+  const active = new Set(dirs(root))
 
   const phases: RoadmapPhase[] = parseRoadmap(exists ? read(file) : '').map((p) => ({
     title: p.title, line: p.line,
     items: p.items.map((it): RoadmapItem => {
-      // el nombre del principio manda; si no hay, cualquier `nombre` del texto que sea un cambio de verdad
-      const change = it.change ?? it.mentions.find((m) => active.has(m) || archived.has(m)) ?? null
+      // el nombre del principio manda; si no hay, cualquier `nombre` del texto que sea una spec de verdad
+      const change = it.change ?? it.mentions.find((m) => active.has(m)) ?? null
       const base = { text: it.text, change, line: it.line, dir: null, done: 0, total: 0 }
       if (change && active.has(change)) {
-        const dir = join(changes, change)
-        return { ...base, dir, ...taskCounts(read(join(dir, 'tasks.md'))), status: it.checked ? 'done' : 'active' }
+        const dir = join(root, change)
+        const counts = taskCounts(read(join(dir, 'tasks.md')))
+        return { ...base, dir, ...counts, status: it.checked || (counts.total > 0 && counts.done === counts.total) ? 'done' : 'active' }
       }
-      if (it.checked || (change && archived.has(change))) return { ...base, dir: change ? archived.get(change) ?? null : null, status: 'done' }
+      if (it.checked) return { ...base, status: 'done' }
       return { ...base, status: it.checked === false || change ? 'pending' : 'unknown' }
     })
   }))

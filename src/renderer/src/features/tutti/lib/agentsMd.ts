@@ -11,7 +11,7 @@ export function agentsMdPrompt(lang: Lang, have: TuttiContents): string {
   const found = [
     have.steering.length ? `.tutti/steering/ (${have.steering.join(', ')})` : '',
     have.docs ? '.tutti/docs/' : '',
-    have.specs ? 'openspec/' : '',
+    have.specs ? '.tutti/specs/' : '',
     have.skills.length ? `.tutti/skills/ (${have.skills.join(', ')})` : ''
   ].filter(Boolean).join(', ')
   return lang === 'en'

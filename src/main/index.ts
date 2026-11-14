@@ -9,8 +9,8 @@ import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from './s
 import { ensureGlobalContext, contextSources, ensureGlobalSteeringDir, ensureProjectDir, globalSteeringDir, tuttiDir, openProjectContext, setWorkingFiles } from './services/context/context'
 import { generateContext } from './services/context/contextGen'
 import { suggestCommit } from './services/git/commitMessage'
-import { archiveOpenspec, initOpenspec, openspecState, validateOpenspec } from './services/openspec'
-import { markRoadmapDone, roadmapState } from './services/roadmap'
+import { specsState } from './services/specs'
+import { roadmapState } from './services/roadmap'
 import { copyEntry, createEntry, listDir, moveEntry, mtime, renameEntry, readFileData, writeFileData } from './services/files'
 import * as git from './services/git/git'
 import * as pty from './services/agents/pty'
@@ -18,13 +18,14 @@ import { loadSteering } from './services/context/steering'
 import { createPower, installPower, listPowers, powerSources, removePower } from './services/powers'
 import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
+import { answerPermission, cancelChat, sendChat } from '@/harnes/chat'
 import { listCommands } from '@/harnes/commands'
 import { listModels } from '@/harnes/models'
 import { projectItems } from '@/harnes/project'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
+import type { ChatSendRequest, GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -137,6 +138,9 @@ function registerIpc(): void {
   ipcMain.handle('theme:accent', () => systemAccent())
   try { (systemPreferences as unknown as NodeJS.EventEmitter).on('accent-color-changed', () => void systemAccent().then((c) => win?.webContents.send('theme:accent', c))) } catch { /* sin aviso de cambios: se vuelve a leer al enfocar la ventana */ }
   ipcMain.handle('chat:models', () => listModels())
+  ipcMain.handle('chat:send', (e, req: ChatSendRequest) => sendChat(e.sender, req))
+  ipcMain.handle('chat:cancel', (e) => cancelChat(e.sender))
+  ipcMain.handle('chat:answer', (e, id: string, allow: boolean) => answerPermission(e.sender, id, allow))
   ipcMain.handle('chat:items', (_e, project: string | null) => projectItems(project))
   ipcMain.handle('chat:commands', (_e, cwd?: string) => listCommands(cwd))
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
@@ -156,14 +160,7 @@ function registerIpc(): void {
       pty.sendPrompt(leader.id, prompt); return true
     }
   }
-  ipcMain.handle('openspec:state', (_e, project: string) => openspecState(project))
-  ipcMain.handle('openspec:init', (_e, project: string) => initOpenspec(project))
-  ipcMain.handle('openspec:validate', (_e, project: string, change?: string) => validateOpenspec(project, change))
-  ipcMain.handle('openspec:archive', async (_e, project: string, change: string) => {
-    const res = await archiveOpenspec(project, change)
-    if (res.ok) markRoadmapDone(project, change)          // el ítem del roadmap que lo nombra queda hecho
-    return res
-  })
+  ipcMain.handle('specs:state', (_e, project: string) => specsState(project))
   ipcMain.handle('roadmap:state', (_e, project: string) => roadmapState(project))
   ipcMain.handle('hooks:list', (_e, project: string) => ({ hooks: loadHooks(project), trusted: isTrusted(project) }))
   ipcMain.handle('hooks:trust', (_e, project: string, on: boolean) => { setTrusted(project, on); if (on) startHooks(project, hooksHost); else stopHooks() })

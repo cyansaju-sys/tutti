@@ -90,7 +90,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   // los .md se pueden ver como Markdown; los de la carpeta .tutti se abren así por defecto
   const isMd = !!doc && doc.kind === 'text' && /\.(md|markdown)$/i.test(doc.path)
   const side = isMd && !!sides[doc!.path]
-  const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|openspec)[\\/]/.test(doc!.path))
+  const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|\.agents)[\\/]/.test(doc!.path))
   const pending = doc ? pendings[doc.path] ?? null : null
   const conflicts = useMemo(() => (doc?.kind === 'text' && !doc.readOnly ? findConflicts(doc.text) : []), [doc?.kind, doc?.readOnly, doc?.text])
   const resolve = (index: number, choice: Choice): void => {

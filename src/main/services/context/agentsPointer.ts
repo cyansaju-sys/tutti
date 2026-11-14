@@ -34,7 +34,7 @@ export function agentsBlock(project: string): string {
     tm('m.ctx.agentsLead'), '',
     ...(steering.length ? [tm('m.ctx.agentsSteering', { files: some(steering) })] : []),
     ...(existsSync(roadmapFile(project)) ? [tm('m.ctx.agentsRoadmap', { file: relative(project, roadmapFile(project)).split('\\').join('/') })] : []),
-    ...(isDir(join(project, 'openspec')) ? [tm('m.ctx.agentsSpecs')] : []),
+    ...(ls(join(tutti, 'specs')).length ? [tm('m.ctx.agentsSpecs')] : []),
     ...(ls(join(tutti, 'docs')).length ? [tm('m.ctx.agentsDocs')] : []),
     ...(skills.length ? [tm('m.ctx.agentsSkills', { names: some(skills) })] : []),
     tm('m.ctx.agentsReadme')

@@ -6,7 +6,7 @@ import type { RoadmapItem, RoadmapState } from '@/shared/types'
 import { useT } from '@/renderer/src/shared/lib/i18n'
 import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
 import { useStore } from '@/renderer/src/shared/store'
-import { applyPrompt } from '@/renderer/src/features/tutti/lib/openspec'
+import { applyPrompt } from '@/renderer/src/features/tutti/lib/specs'
 import { draftRoadmapPrompt, phaseProgress, resumePrompt, roadmapTemplate } from '@/renderer/src/features/tutti/lib/roadmap'
 import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
 
@@ -122,7 +122,7 @@ export function RoadmapBody({ state, project, onChanged }: { state: RoadmapState
                           <button title={t('rm.newSpec')} onClick={() => openSpecForm({ name: it.change ?? it.text, description: it.change && it.text !== it.change ? it.text : '' })} className={clsx(ICON_BUTTON, 'mr-1')}><MdNoteAdd size={13} /></button>
                         )}
                         {it.status === 'active' && it.change && (
-                          <button disabled={!ask.selected} title={ask.selected ? t('os.apply') : t('sa.noAgent')} onClick={() => void ask.send(applyPrompt(lang, it.change!))} className={clsx(ICON_BUTTON, 'mr-1')}><MdPlayArrow size={14} /></button>
+                          <button disabled={!ask.selected} title={ask.selected ? t('sp.apply') : t('sa.noAgent')} onClick={() => void ask.send(applyPrompt(lang, state.rel.replace(/[^/]*$/, '').replace(/\/$/, '') ? '' : '', it.change!))} className={clsx(ICON_BUTTON, 'mr-1')}><MdPlayArrow size={14} /></button>
                         )}
                       </li>
                     )

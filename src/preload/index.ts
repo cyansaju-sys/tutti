@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Api, OpenPane, PaneState, PtyExit, UpdateState } from '@/shared/types'
+import type { Api, ChatEvent, OpenPane, PaneState, PtyExit, UpdateState } from '@/shared/types'
 
 const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => void): (() => void) => {
   const handler = (_e: unknown, ...args: unknown[]): void => cb(...(args as T))
@@ -8,7 +8,8 @@ const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => voi
 }
 
 const api: Api = {
-  chat: { models: () => ipcRenderer.invoke('chat:models'), commands: (cwd) => ipcRenderer.invoke('chat:commands', cwd), items: (project) => ipcRenderer.invoke('chat:items', project) },
+  chat: { models: () => ipcRenderer.invoke('chat:models'), commands: (cwd) => ipcRenderer.invoke('chat:commands', cwd), items: (project) => ipcRenderer.invoke('chat:items', project),
+    send: (req) => ipcRenderer.invoke('chat:send', req), cancel: () => ipcRenderer.invoke('chat:cancel'), answer: (id, allow) => ipcRenderer.invoke('chat:answer', id, allow), onEvent: (cb) => subscribe<[ChatEvent]>('chat:event', cb) },
   settings: { get: (k) => ipcRenderer.invoke('settings:get', k), set: (k, v) => ipcRenderer.invoke('settings:set', k, v) },
   theme: { accent: () => ipcRenderer.invoke('theme:accent'), onAccent: (cb) => subscribe<[string | null]>('theme:accent', cb) },
   dialog: { chooseFolder: (start) => ipcRenderer.invoke('dialog:chooseFolder', start) },
@@ -28,10 +29,7 @@ const api: Api = {
   ai: { cancel: (kind) => ipcRenderer.invoke('ai:cancel', kind) },
   powers: { list: (project) => ipcRenderer.invoke('powers:list', project), install: (project, source, scope) => ipcRenderer.invoke('powers:install', project, source, scope), remove: (project, name, scope) => ipcRenderer.invoke('powers:remove', project, name, scope), sources: (project) => ipcRenderer.invoke('powers:sources', project), create: (project, draft) => ipcRenderer.invoke('powers:create', project, draft) },
   skills: { import: (project, source) => ipcRenderer.invoke('skills:import', project, source) },
-  openspec: {
-    state: (p) => ipcRenderer.invoke('openspec:state', p), init: (p) => ipcRenderer.invoke('openspec:init', p),
-    validate: (p, c) => ipcRenderer.invoke('openspec:validate', p, c), archive: (p, c) => ipcRenderer.invoke('openspec:archive', p, c)
-  },
+  specs: { state: (p) => ipcRenderer.invoke('specs:state', p) },
   roadmap: { state: (p) => ipcRenderer.invoke('roadmap:state', p) },
   hooks: {
     list: (project) => ipcRenderer.invoke('hooks:list', project), trust: (project, on) => ipcRenderer.invoke('hooks:trust', project, on), watch: (project) => ipcRenderer.invoke('hooks:watch', project),
