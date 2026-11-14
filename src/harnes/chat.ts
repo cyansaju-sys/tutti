@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tuttiDir } from '@/main/services/context/context'
 import { expandMentions } from './mentions'
+import { claudeExecutable } from './probe'
 import { getSetting, setSetting } from '@/main/services/settings'
 
 interface Run { abort: AbortController; pending: Map<string, (allow: boolean, always?: boolean) => void>; questions: Map<string, (answers: Record<string, string> | null) => void> }
@@ -92,6 +93,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
       append: req.project ? `El terminal ya está en la carpeta del proyecto (${req.project}) y ahí se queda entre comandos. No empieces los comandos con «cd» ni con rutas absolutas del proyecto: usa rutas relativas. Haz «cd» solo si de verdad necesitas otra carpeta.` : undefined
     },
     abortController: run.abort,
+    pathToClaudeCodeExecutable: claudeExecutable(),
     permissionMode: mode.permissionMode,
     disallowedTools: mode.disallowedTools,
     model: req.model && req.model !== 'default' ? req.model : undefined,
