@@ -6,11 +6,14 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 
 ### Cambios
 
-- **Conversaciones del chat en pestañas:** cada conversación abierta sale como una pestaña en la cabecera del chat, con su botón para cerrarla, y el **+** abre una nueva. Mientras Claude responde no se puede cambiar de pestaña.
-- **Retomar una conversación de Claude:** al pulsar una del historial se pregunta si abrirla en el chat de Tutti (con lo que se dijo) o en la terminal.
-- **Lo que pides desde la pestaña Tutti va al chat:** rellenar el AGENTS.md, crear hooks, specs o skills, aplicar una spec… se envían al chat, con el modelo, esfuerzo y modo que tengas elegidos, y el chat se abre si estaba cerrado.
-- **El chat lee el AGENTS.md del proyecto** y ya conoce el formato de los hooks y de las specs, así que esas peticiones son más cortas.
-- **La pestaña Tutti pide menos al disco:** hooks, steering, skills, docs y specs se leen al abrir, al terminar el chat y al volver a la ventana, no cada 5 segundos. El AGENTS.md y el roadmap se siguen actualizando solos.
+- **Conversaciones del chat en pestañas:** cada conversación abierta sale como una pestaña en la cabecera del chat, con su X para cerrarla, y el **+** abre una nueva. Mientras Claude responde no se puede cambiar de pestaña.
+- **Retomar conversaciones de Claude:** al pulsar una del historial se pregunta si abrirla en el chat de Tutti (con lo que se dijo) o en la terminal.
+- **Lo que pides desde Tutti va al chat:** rellenar el AGENTS.md, crear hooks, specs o skills y aplicar una spec se envían al chat, con el modelo, esfuerzo y modo que tengas elegidos. El chat se abre si estaba cerrado.
+- **El chat conoce tu proyecto:** lee su AGENTS.md y ya sabe el formato de los hooks y de las specs, así que esas peticiones son más cortas.
+
+### Correcciones
+
+- La pestaña Tutti ya no relee del disco hooks, steering, skills, docs y specs cada 5 segundos: los lee al abrir, al terminar el chat y al volver a la ventana. El AGENTS.md y el roadmap se siguen actualizando solos.
 
 ## 1.5.1
 
