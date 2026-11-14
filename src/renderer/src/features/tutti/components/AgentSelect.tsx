@@ -10,6 +10,7 @@ export function AgentSelect({ options, value, onChange, className }: { options: 
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
   if (!value) return null
+  if (options.length <= 1) return <span className={clsx('flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-[12px]', className)}><span className="font-medium">{value.name}</span></span>      // solo el chat: nada que elegir
   return (
     <>
       <button type="button" onClick={(e) => setMenu(e.currentTarget.getBoundingClientRect())} aria-haspopup="menu" aria-expanded={!!menu} title={t('as.title')}

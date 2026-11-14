@@ -33,10 +33,9 @@ describe('editar un hook con el formulario', () => {
     expect(JSON.parse(replaceHook(file, 0, form)!).hooks[0].action).toEqual({ type: 'agent', prompt: 'Revisa esto' })
   })
 
-  it('el mensaje al agente explica el formato y pide guardarlo apagado', () => {
+  it('el mensaje al agente indica dónde guardarlo y pide dejarlo apagado', () => {
     const prompt = hookAgentPrompt('es', 'Al guardar un .ts, ejecuta las pruebas')
     expect(prompt).toContain('.tutti/hooks/')
-    expect(prompt).toContain('PostFileSave')
     expect(prompt).toContain('Al guardar un .ts, ejecuta las pruebas')
     expect(prompt).toContain('"enabled": false')
     expect(hookAgentPrompt('en', 'x')).toContain('until I approve it')

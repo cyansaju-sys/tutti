@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tuttiDir } from '@/main/services/context/context'
 import { expandMentions } from './mentions'
+import { TUTTI_FORMATS } from './formats'
 import { claudeExecutable } from './probe'
 import { getSetting, setSetting } from '@/main/services/settings'
 
@@ -62,6 +63,14 @@ export function projectSettings(project: string | null): { settings: Record<stri
   } catch (e) { return { settings: null, error: `${file}: ${e instanceof Error ? e.message : String(e)}` } }
 }
 
+/** El AGENTS.md del proyecto (el estándar que leen otros agentes): Claude Code solo conoce CLAUDE.md, así que se le pasa en el prompt. Vacío si no existe o no se lee. */
+function agentsMd(project: string): string {
+  try {
+    const text = readFileSync(join(project, 'AGENTS.md'), 'utf8').trim()
+    return text ? `Instrucciones del proyecto (AGENTS.md):\n\n${text}\n\n` : ''
+  } catch { return '' }
+}
+
 const send = (target: WebContents, event: ChatEvent): void => { if (!target.isDestroyed()) target.send('chat:event', event) }
 
 /** Envía un mensaje al SDK y va avisando de lo que pasa; termina cuando Claude acaba la respuesta. */
@@ -90,7 +99,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     settingSources: req.project ? ['user', 'project', 'local'] : ['user'],
     systemPrompt: {
       type: 'preset', preset: 'claude_code',
-      append: req.project ? `El terminal ya está en la carpeta del proyecto (${req.project}) y ahí se queda entre comandos. No empieces los comandos con «cd» ni con rutas absolutas del proyecto: usa rutas relativas. Haz «cd» solo si de verdad necesitas otra carpeta.` : undefined
+      append: req.project ? `${agentsMd(req.project)}${TUTTI_FORMATS}\n\nEl terminal ya está en la carpeta del proyecto (${req.project}) y ahí se queda entre comandos. No empieces los comandos con «cd» ni con rutas absolutas del proyecto: usa rutas relativas. Haz «cd» solo si de verdad necesitas otra carpeta.` : undefined
     },
     abortController: run.abort,
     pathToClaudeCodeExecutable: claudeExecutable(),

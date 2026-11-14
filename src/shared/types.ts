@@ -187,10 +187,12 @@ export type ChatEvent =
   | { kind: 'done' }
 export interface ChatItem { name: string; description: string; scope: 'local' | 'global'; status?: 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled' }      // status: solo los servidores MCP
 export interface ChatProjectItems { skills: ChatItem[]; hooks: ChatItem[]; mcp: ChatItem[]; roles: ChatItem[]; steering: ChatItem[]; powers: ChatItem[]; specs: ChatItem[]; roadmap: ChatItem[]; docs: ChatItem[]; changes: ChatItem[] }
+/** Un mensaje de una conversación guardada de Claude. */
+export interface ChatHistoryMessage { role: 'user' | 'assistant'; text: string }
 export interface ChatCommand { name: string; description: string; hint: string; builtin: boolean }
 
 export interface Api {
-  chat: { models(): Promise<ChatModel[]>; commands(cwd?: string): Promise<ChatCommand[]>; items(project: string | null): Promise<ChatProjectItems>; mcpStatus(project: string | null): Promise<Record<string, NonNullable<ChatItem['status']>>>
+  chat: { models(): Promise<ChatModel[]>; history(id: string, dir?: string): Promise<ChatHistoryMessage[]>; commands(cwd?: string): Promise<ChatCommand[]>; items(project: string | null): Promise<ChatProjectItems>; mcpStatus(project: string | null): Promise<Record<string, NonNullable<ChatItem['status']>>>
     send(req: ChatSendRequest): Promise<void>; cancel(): Promise<void>; answer(id: string, allow: boolean, always?: boolean): Promise<void>; reply(id: string, answers: Record<string, string> | null): Promise<void>; onEvent(cb: (e: ChatEvent) => void): () => void }
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   theme: { accent(): Promise<string | null>; onAccent(cb: (color: string | null) => void): () => void }          // el color de acento del sistema (#rrggbb)

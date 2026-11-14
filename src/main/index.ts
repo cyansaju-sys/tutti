@@ -21,6 +21,7 @@ import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './servi
 import { answerPermission, cancelChat, sendChat, answerQuestion } from '@/harnes/chat'
 import { listCommands, mcpStatus } from '@/harnes/commands'
 import { listModels } from '@/harnes/models'
+import { sessionHistory } from '@/harnes/history'
 import { projectItems, changesOf } from '@/harnes/project'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
@@ -138,6 +139,7 @@ function registerIpc(): void {
   ipcMain.handle('theme:accent', () => systemAccent())
   try { (systemPreferences as unknown as NodeJS.EventEmitter).on('accent-color-changed', () => void systemAccent().then((c) => win?.webContents.send('theme:accent', c))) } catch { /* sin aviso de cambios: se vuelve a leer al enfocar la ventana */ }
   ipcMain.handle('chat:models', () => listModels())
+  ipcMain.handle('chat:history', (_e, id: string, dir?: string) => sessionHistory(id, dir))
   ipcMain.handle('chat:send', (e, req: ChatSendRequest) => sendChat(e.sender, req))
   ipcMain.handle('chat:cancel', (e) => cancelChat(e.sender))
   ipcMain.handle('chat:reply', (e, id: string, answers: Record<string, string> | null) => answerQuestion(e.sender, id, answers))
