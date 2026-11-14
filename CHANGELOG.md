@@ -13,7 +13,7 @@ Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la
 
 ### Correcciones
 
-- Los Powers que encajan con lo que pides se ofrecen solos, sin pasar por el servidor MCP.
+- Los Powers que encajan con lo que pides se ofrecen solos, sin pasar por el servidor MCP. Solo funciona en el chat integrado.
 
 
 ### Cambios

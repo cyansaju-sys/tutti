@@ -13,7 +13,7 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 
 ### Fixes
 
-- Powers that match what you ask for are offered on their own, without going through the MCP server.
+- Powers that match what you ask for are offered on their own, without going through the MCP server. This only works in the built-in chat.
 
 
 ### Changes
