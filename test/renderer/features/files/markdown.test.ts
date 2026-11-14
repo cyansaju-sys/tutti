@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseBlocks, splitFrontMatter } from '../../../../src/renderer/src/features/files/components/Markdown'
+import { parseBlocks, splitFrontMatter } from '@/renderer/src/features/files/components/Markdown'
 
 describe('Markdown', () => {
   it('títulos, párrafos, listas, citas, código y separadores', () => {

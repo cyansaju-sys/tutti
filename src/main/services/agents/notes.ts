@@ -4,7 +4,7 @@
  */
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { ensureProjectDir, tuttiDir } from '../context/context'
+import { ensureProjectDir, tuttiDir } from '@/main/services/context/context'
 
 export const notesFile = (project: string): string => join(tuttiDir(project), 'notes.md')
 

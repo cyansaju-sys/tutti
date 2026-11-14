@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { loadRecentFiles } from '@/shared/store/recentFiles'
-import { FileIcon } from '@/shared/components/FileIcon'
-import { basename, relative, toPosix } from '@/shared/lib/paths'
-import { Modal } from '@/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { loadRecentFiles } from '@/renderer/src/shared/store/recentFiles'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
+import { basename, relative, toPosix } from '@/renderer/src/shared/lib/paths'
+import { Modal } from '@/renderer/src/shared/components/ui'
 import { Palette } from './Palette'
 
 export function QuickOpenDialog() {

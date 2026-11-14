@@ -4,8 +4,8 @@
  * cabeceras se guardan cifrados con el llavero del sistema (safeStorage) si lo hay.
  */
 import { safeStorage } from 'electron'
-import type { McpAgent, McpScope, McpServer, McpSpec } from '../../../shared/types'
-import { getSetting, setSetting } from '../settings'
+import type { McpAgent, McpScope, McpServer, McpSpec } from '@/shared/types'
+import { getSetting, setSetting } from '@/main/services/settings'
 
 /** `locked`: sus secretos no se pudieron descifrar (otro equipo u otro llavero); no se activa sin ellos. */
 export interface DisabledEntry { agent: McpAgent; scope: McpScope; name: string; project: string | null; spec: McpSpec; locked?: boolean }

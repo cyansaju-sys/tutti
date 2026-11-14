@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { importSkill } from '../../../../src/main/services/skills'
+import { importSkill } from '@/main/services/skills'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-skill-'))
 

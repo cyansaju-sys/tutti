@@ -1,5 +1,5 @@
-import type { MsgKey } from '@shared/i18n'
-import type { McpScope, McpServer, McpSpec, McpTransport } from '@shared/types'
+import type { MsgKey } from '@/shared/i18n'
+import type { McpScope, McpServer, McpSpec, McpTransport } from '@/shared/types'
 
 export const SCOPE_KEYS: Record<McpScope, MsgKey> = { global: 'mcp.scope.global', project: 'mcp.scope.project', shared: 'mcp.scope.shared' }
 export const AGENT_NAMES: Record<string, string> = { claude: 'Claude Code', opencode: 'OpenCode', gemini: 'Gemini CLI', codex: 'Codex', agy: 'Antigravity', qwen: 'Qwen Code', cursor: 'Cursor Agent' }

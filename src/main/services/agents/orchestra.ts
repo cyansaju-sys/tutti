@@ -8,7 +8,7 @@
 import { randomBytes } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { getSetting } from '../settings'
+import { getSetting } from '@/main/services/settings'
 
 export const PROTOCOL = '2025-03-26'
 

@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 import { MdAdd } from 'react-icons/md'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { AgentIcon } from '@/features/agents/components/AgentIcon'
-import { Modal } from '@/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { AgentIcon } from '@/renderer/src/features/agents/components/AgentIcon'
+import { Modal } from '@/renderer/src/shared/components/ui'
 import { Palette } from './Palette'
 import { Chip, Tag } from './parts'
 

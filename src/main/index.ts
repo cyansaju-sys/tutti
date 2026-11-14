@@ -18,10 +18,13 @@ import { loadSteering } from './services/context/steering'
 import { createPower, installPower, listPowers, powerSources, removePower } from './services/powers'
 import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
+import { listCommands } from '@/harnes/commands'
+import { listModels } from '@/harnes/models'
+import { projectItems } from '@/harnes/project'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '../shared/types'
+import type { GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -133,6 +136,9 @@ async function systemAccent(): Promise<string | null> {
 function registerIpc(): void {
   ipcMain.handle('theme:accent', () => systemAccent())
   try { (systemPreferences as unknown as NodeJS.EventEmitter).on('accent-color-changed', () => void systemAccent().then((c) => win?.webContents.send('theme:accent', c))) } catch { /* sin aviso de cambios: se vuelve a leer al enfocar la ventana */ }
+  ipcMain.handle('chat:models', () => listModels())
+  ipcMain.handle('chat:items', (_e, project: string | null) => projectItems(project))
+  ipcMain.handle('chat:commands', (_e, cwd?: string) => listCommands(cwd))
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: unknown) => setSetting(key, value))
   ipcMain.handle('dialog:chooseFolder', async (_e, start?: string) => {

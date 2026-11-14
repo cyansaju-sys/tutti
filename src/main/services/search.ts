@@ -2,8 +2,8 @@
 import { execFile } from 'node:child_process'
 import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
-import type { ReplaceResult, SearchFile, SearchOptions, SearchResult } from '../../shared/types'
-import { tm } from '../utils/i18n'
+import type { ReplaceResult, SearchFile, SearchOptions, SearchResult } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
 
 const MAX_FILES = 500
 const MAX_MATCHES = 5000

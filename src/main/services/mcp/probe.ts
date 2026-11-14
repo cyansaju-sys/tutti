@@ -4,9 +4,9 @@
  * si es un SSE o el servidor no acepta el POST, el transporte SSE antiguo.
  */
 import { spawn } from 'node:child_process'
-import type { McpProbe, McpSpec } from '../../../shared/types'
-import { tm } from '../../utils/i18n'
-import { extendedPath } from '../../utils/shellpath'
+import type { McpProbe, McpSpec } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
+import { extendedPath } from '@/main/utils/shellpath'
 
 type Tool = { name: string; description: string }
 /** La versión que se pide; el servidor contesta con la suya si no la conoce, y esa es la que se usa después. */

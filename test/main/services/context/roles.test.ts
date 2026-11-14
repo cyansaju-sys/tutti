@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseRole } from '../../../../src/main/services/context/roles'
+import { parseRole } from '@/main/services/context/roles'
 
 describe('parseRole', () => {
   it('lee la cabecera y las secciones', () => {

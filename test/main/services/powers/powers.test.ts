@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { createPower, installPower, listPowers, mcpEntry, parsePower, powerGuide, powerSummaries, removePower } from '../../../../src/main/services/powers'
+import { createPower, installPower, listPowers, mcpEntry, parsePower, powerGuide, powerSummaries, removePower } from '@/main/services/powers'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-power-'))
 function power(base: string, name: string, extra: Record<string, string> = {}): string {

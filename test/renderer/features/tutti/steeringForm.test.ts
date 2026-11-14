@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildSteeringFile, EMPTY_STEERING_FORM, foundationFiles, foundationPrompt, patternList, steeringFormError } from '../../../../src/renderer/src/features/tutti/lib/steeringForm'
-import { parseSteering } from '../../../../src/main/services/context/steering'
+import { buildSteeringFile, EMPTY_STEERING_FORM, foundationFiles, foundationPrompt, patternList, steeringFormError } from '@/renderer/src/features/tutti/lib/steeringForm'
+import { parseSteering } from '@/main/services/context/steering'
 
 describe('formulario de steering (modos de Kiro)', () => {
   it('pide un nombre, patrones para fileMatch y descripción para auto', () => {

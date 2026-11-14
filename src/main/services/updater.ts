@@ -10,9 +10,9 @@
  */
 import { app, shell, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import type { UpdateState } from '../../shared/types'
-import { isNewer } from '../utils/version'
-import { tm } from '../utils/i18n'
+import type { UpdateState } from '@/shared/types'
+import { isNewer } from '@/main/utils/version'
+import { tm } from '@/main/utils/i18n'
 
 const REPO = 'cyansaju-sys/tutti'
 const FIRST_CHECK_MS = 8_000

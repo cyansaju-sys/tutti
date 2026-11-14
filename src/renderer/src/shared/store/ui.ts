@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
-import { cacheLangPref, cachedLangPref, resolveLangPref } from '@/shared/lib/langPref'
-import { cacheAccent, cacheTheme, cachedAccent, cachedTheme, paintAccent, paintTheme, resolveTheme } from '@/shared/lib/theme'
+import { cacheLangPref, cachedLangPref, resolveLangPref } from '@/renderer/src/shared/lib/langPref'
+import { cacheAccent, cacheTheme, cachedAccent, cachedTheme, paintAccent, paintTheme, resolveTheme } from '@/renderer/src/shared/lib/theme'
 import { tr } from './helpers'
 import type { ToastKind } from './types'
 import type { State, UiSlice } from './types'
@@ -19,7 +19,7 @@ const guessKind = (m: string): ToastKind => {
 
 
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
-  newsSince: null, tab: 'files', sidebarOpen: true, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
+  newsSince: null, tab: 'files', sidebarOpen: true, chatOpen: false, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], notices: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {

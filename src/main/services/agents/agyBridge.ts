@@ -7,8 +7,8 @@
 import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { tm } from '../../utils/i18n'
-import { agyGlobalConfig } from '../mcp/mcp'
+import { tm } from '@/main/utils/i18n'
+import { agyGlobalConfig } from '@/main/services/mcp/mcp'
 
 /** Puente stdio -> HTTP: cada línea JSON-RPC que llega por stdin se envía al servidor de tareas y la respuesta sale por stdout. */
 export const BRIDGE_SOURCE = `// Generado por Tutti: puente entre Antigravity (stdio) y el servidor de reparto de tareas (HTTP).

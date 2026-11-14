@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useStore } from '@/shared/store'
+import { useStore } from '@/renderer/src/shared/store'
 import { agentOptions, defaultOption, type AgentOption } from './agentTarget'
 
 /**

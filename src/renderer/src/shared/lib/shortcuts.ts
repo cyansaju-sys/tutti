@@ -1,4 +1,4 @@
-import type { MsgKey } from '@shared/i18n'
+import type { MsgKey } from '@/shared/i18n'
 
 /** Atajos globales: llevan Ctrl+Shift para no chocar con las teclas que usan los agentes y las shells. */
 export const GLOBAL_KEYS = new Set(['N', 'T', 'W', 'B', 'L', 'E', 'A', 'G', 'X', 'U', 'K', 'J', 'F', 'H'])

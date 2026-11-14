@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 import type { HookForm } from './spec'
 import { EMPTY_HOOK_FORM } from './spec'
 

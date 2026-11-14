@@ -1,14 +1,14 @@
 import { clsx } from 'clsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdOpenInNew, MdRemove } from 'react-icons/md'
-import type { GitFile } from '@shared/types'
-import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
-import { FileIcon } from '@/shared/components/FileIcon'
-import { basename, dirname } from '@/shared/lib/paths'
-import { AgentIcon } from '@/features/agents/components/AgentIcon'
-import { useT } from '@/shared/lib/i18n'
-import { Modal } from '@/shared/components/ui'
-import { useStore } from '@/shared/store'
+import type { GitFile } from '@/shared/types'
+import { GIT_COLOR, refreshGit } from '@/renderer/src/features/git/lib/gitSync'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
+import { basename, dirname } from '@/renderer/src/shared/lib/paths'
+import { AgentIcon } from '@/renderer/src/features/agents/components/AgentIcon'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { Modal } from '@/renderer/src/shared/components/ui'
+import { useStore } from '@/renderer/src/shared/store'
 
 export function GitView() {
   const t = useT()

@@ -165,7 +165,16 @@ export type UpdateState =
 
 export type Settings = Record<string, unknown>
 
+/** Un modelo de Claude que ofrece el SDK. */
+export type ChatEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+export interface ChatModel { value: string; displayName: string; description: string; efforts?: ChatEffort[] }
+
+export interface ChatItem { name: string; description: string }
+export interface ChatProjectItems { skills: ChatItem[]; hooks: ChatItem[]; mcp: ChatItem[] }
+export interface ChatCommand { name: string; description: string; hint: string; builtin: boolean }
+
 export interface Api {
+  chat: { models(): Promise<ChatModel[]>; commands(cwd?: string): Promise<ChatCommand[]>; items(project: string | null): Promise<ChatProjectItems> }
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   theme: { accent(): Promise<string | null>; onAccent(cb: (color: string | null) => void): () => void }          // el color de acento del sistema (#rrggbb)
   dialog: { chooseFolder(start?: string): Promise<string | null> }

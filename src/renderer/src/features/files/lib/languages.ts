@@ -1,4 +1,4 @@
-import { t } from '../../../shared/lib/i18n'
+import { t } from '@/renderer/src/shared/lib/i18n'
 import type { Extension } from '@codemirror/state'
 import { StreamLanguage } from '@codemirror/language'
 import { css } from '@codemirror/lang-css'

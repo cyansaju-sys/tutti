@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createEntry, moveEntry, renameEntry, validName } from '../../../src/main/services/files'
+import { createEntry, moveEntry, renameEntry, validName } from '@/main/services/files'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-files-'))
 

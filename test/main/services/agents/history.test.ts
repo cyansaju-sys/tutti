@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { historyPenalty, pickAgent, type Candidate } from '../../../../src/main/services/agents/assign'
-import { addOutcome, historyKey } from '../../../../src/main/services/agents/history'
+import { historyPenalty, pickAgent, type Candidate } from '@/main/services/agents/assign'
+import { addOutcome, historyKey } from '@/main/services/agents/history'
 
 describe('historial de agentes', () => {
   it('anota aciertos y fallos por agente, modelo y dificultad sin tocar el original', () => {

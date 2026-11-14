@@ -7,7 +7,7 @@
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import type { RoadmapItem, RoadmapPhase, RoadmapState } from '../../shared/types'
+import type { RoadmapItem, RoadmapPhase, RoadmapState } from '@/shared/types'
 import { tuttiDirName } from './context/context'
 import { openspecDir, taskCounts } from './openspec'
 

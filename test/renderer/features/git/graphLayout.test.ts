@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { GitCommit } from '@shared/types'
-import { layoutGraph } from '../../../../src/renderer/src/features/git/lib/graphLayout'
+import type { GitCommit } from '@/shared/types'
+import { layoutGraph } from '@/renderer/src/features/git/lib/graphLayout'
 
 const c = (hash: string, ...parents: string[]): GitCommit => ({ hash, parents, author: 'a', time: 0, refs: [], subject: hash })
 

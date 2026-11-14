@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { projectRoot } from '../../../../src/main/services/context/projectRoot'
+import { projectRoot } from '@/main/services/context/projectRoot'
 
 describe('proyecto al que pertenece una carpeta', () => {
   it('una subcarpeta resuelve al proyecto conocido', () => {

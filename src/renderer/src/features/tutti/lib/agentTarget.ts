@@ -1,5 +1,5 @@
-import type { AgentInfo } from '@shared/types'
-import type { Pane } from '@/shared/store'
+import type { AgentInfo } from '@/shared/types'
+import type { Pane } from '@/renderer/src/shared/store'
 
 /** Un agente al que se le puede pedir algo: uno que ya está abierto en un panel, o uno instalado que Tutti abrirá con la petición como tarea. */
 export interface AgentOption { key: string; name: string; command: string; paneId?: string }

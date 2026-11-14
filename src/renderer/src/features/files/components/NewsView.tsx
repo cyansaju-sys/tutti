@@ -1,8 +1,8 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
-import { newSince, parseChangelog } from '@/shared/lib/changelog'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import { newSince, parseChangelog } from '@/renderer/src/shared/lib/changelog'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 import changelogText from '../../../../../../CHANGELOG.md?raw'
 import changelogEn from '../../../../../../CHANGELOG.en.md?raw'
 

@@ -1,7 +1,7 @@
 import { useRef, type KeyboardEvent } from 'react'
-import { useConfirm } from '@/shared/lib/confirm'
-import { useT } from '@/shared/lib/i18n'
-import { Modal } from '@/shared/components/ui'
+import { useConfirm } from '@/renderer/src/shared/lib/confirm'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { Modal } from '@/renderer/src/shared/components/ui'
 
 /** La pregunta de sí o no de `confirmAsk`. Se enfoca «Cancelar»: lo que se pregunta descarta algo, y Enter o Espacio por descuido no deben confirmarlo. ← → pasan de un botón a otro. */
 export function ConfirmDialog() {

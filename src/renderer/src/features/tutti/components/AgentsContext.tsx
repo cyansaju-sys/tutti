@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useEffect, useState } from 'react'
 import { MdAutoAwesome, MdChevronRight } from 'react-icons/md'
-import type { ContextSource } from '@shared/types'
-import type { MsgKey } from '@shared/i18n'
-import { confirmAsk } from '@/shared/lib/confirm'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import type { ContextSource } from '@/shared/types'
+import type { MsgKey } from '@/shared/i18n'
+import { confirmAsk } from '@/renderer/src/shared/lib/confirm'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 
 const BIG_TOKENS = 3000        // a partir de aquí se avisa: cada agente lo lee entero al empezar
 const tokensOf = (chars: number): number => Math.ceil(chars / 4)

@@ -1,13 +1,13 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { MdAltRoute, MdCallMerge, MdCallSplit, MdContentCopy, MdLabelOutline, MdLocalOffer, MdRestartAlt, MdSubdirectoryArrowRight, MdUndo, MdOutlineNotes, MdCheckCircleOutline, MdClose } from 'react-icons/md'
-import type { GitChangedFile, GitCommit, GitOp } from '@shared/types'
-import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
-import { layoutGraph, type GraphRow } from '@/features/git/lib/graphLayout'
-import { t, useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { Menu, type MenuItem } from '../../../shared/components/Menu'
-import { FIELD, Modal } from '../../../shared/components/ui'
+import type { GitChangedFile, GitCommit, GitOp } from '@/shared/types'
+import { GIT_COLOR, refreshGit } from '@/renderer/src/features/git/lib/gitSync'
+import { layoutGraph, type GraphRow } from '@/renderer/src/features/git/lib/graphLayout'
+import { t, useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { Menu, type MenuItem } from '@/renderer/src/shared/components/Menu'
+import { FIELD, Modal } from '@/renderer/src/shared/components/ui'
 
 const COLORS = ['#9bb3ce', '#7ee0a1', '#e2c08d', '#ff8a9b', '#c792ea', '#4cc9b0', '#f0a674', '#82aaff']
 const STEP = 16, HEIGHT = 28, LIMIT = 400

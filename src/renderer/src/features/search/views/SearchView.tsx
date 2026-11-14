@@ -1,13 +1,13 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { MdChevronRight, MdExpandMore, MdFindReplace, MdMoreHoriz, MdUnfoldLess } from 'react-icons/md'
-import type { SearchFile, SearchResult } from '@shared/types'
-import { confirmAsk } from '@/shared/lib/confirm'
-import { useT } from '@/shared/lib/i18n'
-import { FileIcon } from '@/shared/components/FileIcon'
-import { basename } from '@/shared/lib/paths'
-import { FIELD_SLIM } from '@/shared/components/ui'
-import { useStore } from '@/shared/store'
+import type { SearchFile, SearchResult } from '@/shared/types'
+import { confirmAsk } from '@/renderer/src/shared/lib/confirm'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
+import { basename } from '@/renderer/src/shared/lib/paths'
+import { FIELD_SLIM } from '@/renderer/src/shared/components/ui'
+import { useStore } from '@/renderer/src/shared/store'
 
 const dirOf = (rel: string): string => rel.split('/').slice(0, -1).join('/')
 

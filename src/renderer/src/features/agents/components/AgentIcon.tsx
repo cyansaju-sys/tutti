@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { agentColors, agentInitial, agentLogo } from '@/features/agents/lib/agentIcon'
+import { agentColors, agentInitial, agentLogo } from '@/renderer/src/features/agents/lib/agentIcon'
 
 const base = import.meta.env.BASE_URL
 

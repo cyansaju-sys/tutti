@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from '../../../../src/main/services/context/agentsPointer'
-import { ensureGlobalContext, globalContextFile, legacyContextFile, contextSources, ensureGlobalSteeringDir, ensureProjectDir, setWorkingFiles, openProjectContext, projectContextFile, readContext, tuttiDir } from '../../../../src/main/services/context/context'
+import { agentsPointerState, removeAgentsPointer, writeAgentsPointer } from '@/main/services/context/agentsPointer'
+import { ensureGlobalContext, globalContextFile, legacyContextFile, contextSources, ensureGlobalSteeringDir, ensureProjectDir, setWorkingFiles, openProjectContext, projectContextFile, readContext, tuttiDir } from '@/main/services/context/context'
 
 let base = ''
 let project = ''

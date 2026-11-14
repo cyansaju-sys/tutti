@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 import { slug } from './spec'
 
 /** El nombre de la carpeta de un cambio: el indicado (si viene del roadmap) o las primeras palabras de lo que se pide. */

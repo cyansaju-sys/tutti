@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { resolveLang, translate } from '../../src/shared/i18n'
-import en from '../../src/shared/locales/en.json'
-import es from '../../src/shared/locales/es.json'
+import { resolveLang, translate } from '@/shared/i18n'
+import en from '@/shared/locales/en.json'
+import es from '@/shared/locales/es.json'
 
 const placeholders = (text: string): string[] => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 

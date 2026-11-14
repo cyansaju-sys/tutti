@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { FIELD, Modal } from '@/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { FIELD, Modal } from '@/renderer/src/shared/components/ui'
 
 export function GoLineDialog() {
   const t = useT()

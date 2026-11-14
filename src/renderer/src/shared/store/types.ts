@@ -1,7 +1,7 @@
-import type { AgentInfo, FileData, GitStatus, UpdateState } from '@shared/types'
-import type { Lang, LangPref } from '@shared/i18n'
-import type { ThemeMode, ThemePref } from '@/shared/lib/theme'
-import type { IconFlavor } from '@/shared/lib/icons'
+import type { AgentInfo, FileData, GitStatus, UpdateState } from '@/shared/types'
+import type { Lang, LangPref } from '@/shared/i18n'
+import type { ThemeMode, ThemePref } from '@/renderer/src/shared/lib/theme'
+import type { IconFlavor } from '@/renderer/src/shared/lib/icons'
 
 export type SidebarTab = 'files' | 'search' | 'agents' | 'git' | 'ai' | 'tutti' | 'powers'
 export type ToastKind = 'ok' | 'error' | 'info'
@@ -93,6 +93,7 @@ export interface UiSlice {
   newsSince: string | null
   tab: SidebarTab
   sidebarOpen: boolean
+  chatOpen: boolean                                     // panel de chat, al lado opuesto de la barra lateral
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
   editorFont: string                                    // font-family del editor de código, tal como lo escribe el usuario
   sidebarWidth: number

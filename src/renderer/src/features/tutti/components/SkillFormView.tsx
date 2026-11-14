@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { skillsProps } from '@/models/skills/skillsProps'
-import { slug } from '../lib/spec'
-import { useAskAgent } from '../lib/useAskAgent'
-import { useFormValues } from '../lib/useFormValues'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { skillsProps } from '@/renderer/src/models/skills/skillsProps'
+import { slug } from '@/renderer/src/features/tutti/lib/spec'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
+import { useFormValues } from '@/renderer/src/features/tutti/lib/useFormValues'
 import { AgentSelect } from './AgentSelect'
 import { FieldsFormView } from './FieldsFormView'
-import { buildSkillFile, skillAgentPrompt, skillFormError, type SkillForm } from '../lib/skillForm'
+import { buildSkillFile, skillAgentPrompt, skillFormError, type SkillForm } from '@/renderer/src/features/tutti/lib/skillForm'
 
 /** Crear una skill como una pestaña del editor: nombre, cuándo usarla y las instrucciones (o pedirle al agente que las redacte). */
 export function SkillFormView() {

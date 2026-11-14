@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { applySync, cleanOpencodeFile, launchServers, resolveSync, standardizeProject, syncState } from '../../../../src/main/services/mcp/sync'
+import { applySync, cleanOpencodeFile, launchServers, resolveSync, standardizeProject, syncState } from '@/main/services/mcp/sync'
 
 /** Solo Claude y Cursor "instalados": Cursor se escribe en un archivo, así que no hace falta ninguna CLI. */
 const installed = (a: string): boolean => a === 'claude' || a === 'cursor'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hookAgentPrompt, hookEditPath, parseHookEditPath, readHookForm, replaceHook } from '../../../../src/renderer/src/features/tutti/lib/hookEdit'
+import { hookAgentPrompt, hookEditPath, parseHookEditPath, readHookForm, replaceHook } from '@/renderer/src/features/tutti/lib/hookEdit'
 
 const file = JSON.stringify({ version: 'v1', hooks: [
   { name: 'Lint', trigger: 'PostFileSave', matcher: '\\.ts$', action: { type: 'command', command: 'npx eslint --fix', }, timeout: 120, enabled: false, confirm: { question: '¿?' } },

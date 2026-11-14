@@ -4,10 +4,10 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { addDisabled, asServer, findDisabled, listDisabled, removeDisabled, useDisabledStorage, useDisabledVault } from '../../../../src/main/services/mcp/disabled'
-import { enableServer, specFromConfig, transportOf, updateServer } from '../../../../src/main/services/mcp/manage'
-import { listServers } from '../../../../src/main/services/mcp/mcp'
-import { probeSpec } from '../../../../src/main/services/mcp/probe'
+import { addDisabled, asServer, findDisabled, listDisabled, removeDisabled, useDisabledStorage, useDisabledVault } from '@/main/services/mcp/disabled'
+import { enableServer, specFromConfig, transportOf, updateServer } from '@/main/services/mcp/manage'
+import { listServers } from '@/main/services/mcp/mcp'
+import { probeSpec } from '@/main/services/mcp/probe'
 
 const TOOLS = [{ name: 'buscar', description: 'Busca cosas\nmás texto' }, { name: 'leer', description: 'Lee' }]
 const reply = (msg: { id?: number; method?: string }): unknown =>

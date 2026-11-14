@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import { basename } from '@/shared/lib/paths'
+import { basename } from '@/renderer/src/shared/lib/paths'
 import { tr } from './helpers'
 import type { Doc } from './types'
 import type { State, DocsSlice } from './types'

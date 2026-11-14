@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
 import { MdExpandMore } from 'react-icons/md'
-import { Menu } from '@/shared/components/Menu'
-import { FIELD } from '@/shared/components/ui'
-import { useT } from '@/shared/lib/i18n'
-import { splitDeps } from '../lib/roleGraph'
-import type { FieldOption, FormField, Values } from '../lib/formFields'
+import { Menu } from '@/renderer/src/shared/components/Menu'
+import { FIELD } from '@/renderer/src/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { splitDeps } from '@/renderer/src/features/tutti/lib/roleGraph'
+import type { FieldOption, FormField, Values } from '@/renderer/src/features/tutti/lib/formFields'
 
 interface Props {
   title: string

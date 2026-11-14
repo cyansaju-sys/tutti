@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 const store: Record<string, unknown> = {}
-vi.mock('../../../../src/main/services/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
+vi.mock('@/main/services/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
 
-import { createGuard, isTrusted, loadHooks, matches, parseHookFile, setTrusted } from '../../../../src/main/services/hooks'
+import { createGuard, isTrusted, loadHooks, matches, parseHookFile, setTrusted } from '@/main/services/hooks'
 
 const lint = { version: 'v1', hooks: [{ name: 'Lint on save', trigger: 'PostFileSave', matcher: '\\.(ts|tsx)$', action: { type: 'command', command: 'npx eslint --fix' } }] }
 

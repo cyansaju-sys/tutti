@@ -1,5 +1,5 @@
 /** Reparto de los commits en «carriles» para dibujar el grafo de git (cada rama o línea de historia ocupa un carril). */
-import type { GitCommit } from '@shared/types'
+import type { GitCommit } from '@/shared/types'
 
 export interface Edge { lane: number; color: number }
 export interface GraphRow {

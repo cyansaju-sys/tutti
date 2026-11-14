@@ -1,5 +1,5 @@
 /** Idioma elegido: copia local para pintarlo bien desde el primer momento (sin depender del store). */
-import { isLangPref, resolveLang, type Lang, type LangPref } from '@shared/i18n'
+import { isLangPref, resolveLang, type Lang, type LangPref } from '@/shared/i18n'
 
 const KEY = 'tutti-lang'
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agentsMdPrompt } from '../../../../src/renderer/src/features/tutti/lib/agentsMd'
+import { agentsMdPrompt } from '@/renderer/src/features/tutti/lib/agentsMd'
 
 describe('petición para rellenar AGENTS.md', () => {
   const have = { steering: ['product.md', 'tech.md'], skills: ['revisar'], docs: true, specs: true }

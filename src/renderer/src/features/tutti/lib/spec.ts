@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 
 /** Categorías de la documentación (Diátaxis): tutoriales, guías prácticas, referencia y explicación. Se muestran siempre; su carpeta se crea al añadir el primer documento. */
 export const DOC_CATEGORIES = ['tutorials', 'how-to', 'reference', 'explanation'] as const

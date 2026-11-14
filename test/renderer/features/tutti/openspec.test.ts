@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyPrompt, changeName, proposePrompt } from '../../../../src/renderer/src/features/tutti/lib/openspec'
+import { applyPrompt, changeName, proposePrompt } from '@/renderer/src/features/tutti/lib/openspec'
 
 describe('cambios de OpenSpec', () => {
   it('el nombre de la carpeta sale de lo pedido, o del indicado', () => {

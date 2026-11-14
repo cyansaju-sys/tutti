@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diffRows, hasChanges } from '../../../../src/renderer/src/features/files/lib/lineDiff'
+import { diffRows, hasChanges } from '@/renderer/src/features/files/lib/lineDiff'
 
 const kinds = (a: string, b: string, ctx = 0): string[] => diffRows(a, b, ctx).map((r) => r.kind).filter((k) => k !== 'fold')
 

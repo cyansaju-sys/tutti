@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { markRoadmapDone, parseRoadmap, roadmapFile, roadmapState } from '../../../src/main/services/roadmap'
+import { markRoadmapDone, parseRoadmap, roadmapFile, roadmapState } from '@/main/services/roadmap'
 
 let project = ''
 beforeEach(() => { project = mkdtempSync(join(tmpdir(), 'tutti-rm-')) })

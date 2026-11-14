@@ -2,7 +2,7 @@
  * Registro de tareas delegadas (lo que muestra el panel «Tareas»): a quién se le pasó cada una, cómo va y cómo acabó.
  * Lo que decide si una tarea terminó vive aquí.
  */
-import type { TaskInfo } from '../../../shared/types'
+import type { TaskInfo } from '@/shared/types'
 import { isDifficulty } from './assign'
 import { recordOutcome } from './history'
 import { notify } from './inbox'
@@ -11,8 +11,8 @@ import { currentModel } from './models'
 import type { TaskReport } from './orchestra'
 import * as pty from './pty'
 import { BUSY_SECONDS, label, oneLine, toast } from './runtime'
-import { tm } from '../../utils/i18n'
-import { getSetting } from '../settings'
+import { tm } from '@/main/utils/i18n'
+import { getSetting } from '@/main/services/settings'
 
 export interface TaskRecord extends Omit<TaskInfo, 'status' | 'model' | 'summary' | 'files'> {
   model: string | null; command: string; cwd: string; notified?: boolean

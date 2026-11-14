@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import type { FormField } from '@/features/tutti/lib/formFields'
-import { EMPTY_SKILL_FORM } from '@/features/tutti/lib/skillForm'
-import { slug } from '@/features/tutti/lib/spec'
+import type { FormField } from '@/renderer/src/features/tutti/lib/formFields'
+import { EMPTY_SKILL_FORM } from '@/renderer/src/features/tutti/lib/skillForm'
+import { slug } from '@/renderer/src/features/tutti/lib/spec'
 
 /** Los campos del formulario de una skill. `hasAgent`: hay un agente para redactarla; `agentSelect`: el selector del agente (se ve con la casilla marcada). */
 export const skillsProps = ({ hasAgent, agentSelect }: { hasAgent: boolean; agentSelect: ReactNode }): FormField[] => [

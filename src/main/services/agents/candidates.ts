@@ -6,8 +6,8 @@ import { currentLeader } from './leader'
 import { currentModel, tier } from './models'
 import * as pty from './pty'
 import { busy } from './runtime'
-import { claudeLimits } from '../usage/usage'
-import { readCodexData } from '../usage/codexDb'
+import { claudeLimits } from '@/main/services/usage/usage'
+import { readCodexData } from '@/main/services/usage/codexDb'
 
 /** Porcentaje usado del límite más ajustado de un agente (Claude y Codex; usa lo último que se sabe, sin pedir nada). */
 export async function quotaOf(command: string): Promise<number | undefined> {

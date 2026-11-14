@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { tier } from '../../../../src/main/services/agents/models'
+import { tier } from '@/main/services/agents/models'
 
 describe('nivel del modelo', () => {
   it.each([

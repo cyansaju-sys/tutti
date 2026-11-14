@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe as suite, expect, it } from 'vitest'
-import { addServer, buildAddArgv, codexEntries, describe, launchArgv, listServers, opencodeEntries, removeFromOpencodeFile, removeServer, samePath, validate } from '../../../../src/main/services/mcp/mcp'
+import { addServer, buildAddArgv, codexEntries, describe, launchArgv, listServers, opencodeEntries, removeFromOpencodeFile, removeServer, samePath, validate } from '@/main/services/mcp/mcp'
 
 const dir = (): string => mkdtempSync(join(tmpdir(), 'tutti-mcp-'))
 

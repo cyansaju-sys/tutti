@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { Api, OpenPane, PaneState, PtyExit, UpdateState } from '../shared/types'
+import type { Api, OpenPane, PaneState, PtyExit, UpdateState } from '@/shared/types'
 
 const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => void): (() => void) => {
   const handler = (_e: unknown, ...args: unknown[]): void => cb(...(args as T))
@@ -8,6 +8,7 @@ const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => voi
 }
 
 const api: Api = {
+  chat: { models: () => ipcRenderer.invoke('chat:models'), commands: (cwd) => ipcRenderer.invoke('chat:commands', cwd), items: (project) => ipcRenderer.invoke('chat:items', project) },
   settings: { get: (k) => ipcRenderer.invoke('settings:get', k), set: (k, v) => ipcRenderer.invoke('settings:set', k, v) },
   theme: { accent: () => ipcRenderer.invoke('theme:accent'), onAccent: (cb) => subscribe<[string | null]>('theme:accent', cb) },
   dialog: { chooseFolder: (start) => ipcRenderer.invoke('dialog:chooseFolder', start) },

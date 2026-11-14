@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { capableFor, pickAgent, type Candidate } from '../../../../src/main/services/agents/assign'
+import { capableFor, pickAgent, type Candidate } from '@/main/services/agents/assign'
 
 const c = (patch: Partial<Candidate>): Candidate => ({ name: 'X', command: 'x', tier: 'standard', busy: false, ...patch })
 

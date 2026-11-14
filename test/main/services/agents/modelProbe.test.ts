@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { BLOCKING, canProbe, claudeId, modelIds, parseModelList, plainId } from '../../../../src/main/services/agents/modelProbe'
-import { availableModels } from '../../../../src/main/services/agents/models'
+import { BLOCKING, canProbe, claudeId, modelIds, parseModelList, plainId } from '@/main/services/agents/modelProbe'
+import { availableModels } from '@/main/services/agents/models'
 
 // pantallas reales de Claude Code 2.1 y Codex 0.162 tras escribir /model
 const CLAUDE = `

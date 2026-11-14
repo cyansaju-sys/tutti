@@ -1,6 +1,6 @@
 /** Traducción en la interfaz: `useT()` en componentes (se repinta al cambiar de idioma) y `t()` fuera de ellos. */
-import { translate, type MsgKey, type Vars } from '@shared/i18n'
-import { useStore } from '@/shared/store'
+import { translate, type MsgKey, type Vars } from '@/shared/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 
 export type T = (key: MsgKey, vars?: Vars) => string
 export function useT(): T {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareVersions, newSince, parseChangelog } from '../../../src/renderer/src/shared/lib/changelog'
+import { compareVersions, newSince, parseChangelog } from '@/renderer/src/shared/lib/changelog'
 
 const text = `# Novedades\n\n## 1.1.0\n\n- **Uno:** algo\n- Dos\n\n## 1.0.4\n- Tres\n\n## v1.0.3\n* Cuatro\n`
 

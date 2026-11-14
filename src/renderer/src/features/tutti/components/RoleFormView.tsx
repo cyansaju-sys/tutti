@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { basename } from '@/shared/lib/paths'
-import { rolesProps } from '@/models/roles/rolesProps'
-import { slug } from '../lib/spec'
-import { useAskAgent } from '../lib/useAskAgent'
-import { useFormValues } from '../lib/useFormValues'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { basename } from '@/renderer/src/shared/lib/paths'
+import { rolesProps } from '@/renderer/src/models/roles/rolesProps'
+import { slug } from '@/renderer/src/features/tutti/lib/spec'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
+import { useFormValues } from '@/renderer/src/features/tutti/lib/useFormValues'
 import { FieldsFormView } from './FieldsFormView'
 
 /** El archivo del rol: cabecera con name, difficulty, depends-on, agent y model, y el resto (especialidad, entregable, descripción) como secciones de Markdown. Los campos vacíos también se escriben. */

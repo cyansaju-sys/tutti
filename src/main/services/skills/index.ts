@@ -1,9 +1,9 @@
 /** Importar una skill que ya tienes en otra carpeta (una con su SKILL.md) a .tutti/skills del proyecto, sin pisar nada. */
 import { cpSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
-import { tuttiDir } from '../context/context'
-import type { McpResult } from '../../../shared/types'
-import { tm } from '../../utils/i18n'
+import { tuttiDir } from '@/main/services/context/context'
+import type { McpResult } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
 
 export const MAX_FILES = 200
 export const MAX_BYTES = 5 * 1024 * 1024

@@ -1,8 +1,8 @@
 import { clsx } from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { MdAccountTree, MdCallSplit, MdCheckCircle, MdErrorOutline, MdInfoOutline, MdNewReleases, MdNotificationsNone, MdPlaylistRemove } from 'react-icons/md'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
 import { Chip } from './ui'
 
 const ICON = {

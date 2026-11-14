@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
-import { confirmAsk, useConfirm } from '@/shared/lib/confirm'
-import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/shared/components/dialogs'
-import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
-import { Footer } from '@/shared/components/Footer'
-import { Sidebar, TABS } from '@/shared/components/Sidebar'
-import { Toasts } from '@/shared/components/Toasts'
-import { TitleBar } from '@/shared/components/TitleBar'
-import { Resizer } from '@/shared/components/ui'
-import { Tooltips } from '@/shared/components/Tooltip'
-import { refreshGit } from '@/features/git/lib/gitSync'
-import { t } from '@/shared/lib/i18n'
-import { isLangPref } from '@shared/i18n'
-import { isGlobalShortcut } from '@/shared/lib/shortcuts'
-import { cacheAccent, isPref, resolveTheme, paintAccent, paintTheme } from '@/shared/lib/theme'
-import { isIconFlavor, loadIconTheme } from '@/shared/lib/icons'
-import { isDirty, useStore } from '@/shared/store'
+import { AgentsArea, TerminalSection } from '@/renderer/src/features/agents/components/AgentsArea'
+import { confirmAsk, useConfirm } from '@/renderer/src/shared/lib/confirm'
+import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/renderer/src/shared/components/dialogs'
+import { EditorArea, saveDoc } from '@/renderer/src/features/files/components/EditorArea'
+import { Footer } from '@/renderer/src/shared/components/Footer'
+import { Sidebar, TABS } from '@/renderer/src/shared/components/Sidebar'
+import { Toasts } from '@/renderer/src/shared/components/Toasts'
+import { TitleBar } from '@/renderer/src/shared/components/TitleBar'
+import { Resizer } from '@/renderer/src/shared/components/ui'
+import { Tooltips } from '@/renderer/src/shared/components/Tooltip'
+import { refreshGit } from '@/renderer/src/features/git/lib/gitSync'
+import { t } from '@/renderer/src/shared/lib/i18n'
+import { isLangPref } from '@/shared/i18n'
+import { isGlobalShortcut } from '@/renderer/src/shared/lib/shortcuts'
+import { cacheAccent, isPref, resolveTheme, paintAccent, paintTheme } from '@/renderer/src/shared/lib/theme'
+import { isIconFlavor, loadIconTheme } from '@/renderer/src/shared/lib/icons'
+import { ChatPanel } from '@/renderer/src/shared/components/ChatPanel'
+import { isDirty, useStore } from '@/renderer/src/shared/store'
 
 /** Arrastra un divisor: parte del ancho que tenía al empezar y suma el desplazamiento. */
 function useDrag(get: () => number, apply: (value: number) => void, min: number, max: number, invert = false, onDone?: (value: number) => void) {
@@ -127,7 +128,7 @@ export function App() {
       n.onclick = () => { window.focus(); useStore.getState().focusPane(id) }
     })
     const offToast = window.api.orchestra.onToast((message, kind) => useStore.getState().toast(message, kind))
-    const applyPanes = ({ leader, inbox, asking, roles }: import('@shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneInbox: inbox, paneAsking: asking, paneRoles: roles })
+    const applyPanes = ({ leader, inbox, asking, roles }: import('@/shared/types').PaneState): void => useStore.setState({ paneLeader: leader, paneInbox: inbox, paneAsking: asking, paneRoles: roles })
     void window.api.orchestra.paneState().then(applyPanes)
     const offRoles = window.api.orchestra.onPaneState(applyPanes)
     return () => { offPane(); offAttention(); offToast(); offRoles() }
@@ -135,7 +136,7 @@ export function App() {
 
   // actualizaciones: el estado llega del proceso principal (el aviso de una versión nueva no sale como toast)
   useEffect(() => {
-    const apply = (update: import('@shared/types').UpdateState): void => {
+    const apply = (update: import('@/shared/types').UpdateState): void => {
       useStore.setState({ update })
       if (update.status === 'error') useStore.getState().toast(t('app.updateFailed', { message: update.message }), 'error')
     }
@@ -220,6 +221,7 @@ export function App() {
             </>
           )}
         </div>
+        {s.chatOpen && <div className={s.sidebarSide === 'right' ? 'mr-1 flex' : 'ml-1 flex'}><ChatPanel /></div>}
       </div>
       <Footer />
       {s.modal === 'agents' && <AgentPicker />}

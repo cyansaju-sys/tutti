@@ -1,10 +1,10 @@
 import { useEffect, useMemo } from 'react'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { hooksProps } from '@/models/hooks/hooksProps'
-import { buildHookFile, hookFormError, slug, type HookForm } from '../lib/spec'
-import { parseHookEditPath, readHookForm, replaceHook } from '../lib/hookEdit'
-import { useFormValues } from '../lib/useFormValues'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { hooksProps } from '@/renderer/src/models/hooks/hooksProps'
+import { buildHookFile, hookFormError, slug, type HookForm } from '@/renderer/src/features/tutti/lib/spec'
+import { parseHookEditPath, readHookForm, replaceHook } from '@/renderer/src/features/tutti/lib/hookEdit'
+import { useFormValues } from '@/renderer/src/features/tutti/lib/useFormValues'
 import { FieldsFormView } from './FieldsFormView'
 
 /**

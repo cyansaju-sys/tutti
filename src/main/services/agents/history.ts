@@ -3,7 +3,7 @@
  * El reparto lo usa para evitar a quien suele fallar en una dificultad. Se guarda en los ajustes (`agent_history`), no por proyecto.
  */
 import type { Difficulty } from './assign'
-import { getSetting, setSetting } from '../settings'
+import { getSetting, setSetting } from '@/main/services/settings'
 
 export interface Outcomes { ok: number; fail: number }
 export type TrackRecord = Partial<Record<Difficulty, Outcomes>>

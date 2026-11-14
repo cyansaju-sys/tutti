@@ -1,5 +1,5 @@
 /** Cómo arrancar cada agente conectado al reparto de tareas (argumentos y variables de entorno). */
-import type { McpSpec } from '../../../shared/types'
+import type { McpSpec } from '@/shared/types'
 
 export interface McpEntry { type: 'http'; url: string; headers: Record<string, string> }
 /** Contexto para los agentes: el texto (global y del proyecto juntos) y los archivos donde vive cada parte. */

@@ -1,4 +1,4 @@
-import type { Lang } from '@shared/i18n'
+import type { Lang } from '@/shared/i18n'
 
 /** Lo que ya hay en `.tutti/` y que el AGENTS.md debe referenciar en vez de copiar. */
 export interface TuttiContents { steering: string[]; skills: string[]; docs: boolean; specs: boolean }

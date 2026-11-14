@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLaunch, parseMajor, type McpEntry } from '../../../../src/main/services/agents/launch'
+import { buildLaunch, parseMajor, type McpEntry } from '@/main/services/agents/launch'
 
 const entry: McpEntry = { type: 'http', url: 'http://127.0.0.1:5000/mcp/a2', headers: { Authorization: 'Bearer t' } }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { overviewAgentPrompt, overviewTemplate, skillTemplate, buildHookFile, EMPTY_HOOK_FORM, hookFormError, slug, taskProgress, withEnabled } from '../../../../src/renderer/src/features/tutti/lib/spec'
+import { overviewAgentPrompt, overviewTemplate, skillTemplate, buildHookFile, EMPTY_HOOK_FORM, hookFormError, slug, taskProgress, withEnabled } from '@/renderer/src/features/tutti/lib/spec'
 
 describe('specs de .tutti', () => {
   it('el nombre se vuelve una carpeta segura', () => {

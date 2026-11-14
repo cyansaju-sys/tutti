@@ -4,9 +4,9 @@
  */
 import { app, type WebContents } from 'electron'
 import { join } from 'node:path'
-import { newId } from '../services/agents/hub'
-import * as pty from '../services/agents/pty'
-import { orchestraConfig } from '../services/agents/hub'
+import { newId } from '@/main/services/agents/hub'
+import * as pty from '@/main/services/agents/pty'
+import { orchestraConfig } from '@/main/services/agents/hub'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 const sender = { send: () => undefined, isDestroyed: () => false } as unknown as WebContents
@@ -32,7 +32,7 @@ async function realAgent(command: string): Promise<void> {
 
 /** TUTTI_SELFTEST=mcp: añade, lista y quita servidores con las CLIs reales de Claude y OpenCode (úsala con HOME y XDG_* temporales). */
 async function mcpRoundTrip(): Promise<void> {
-  const mcp = await import('../services/mcp/mcp')
+  const mcp = await import('@/main/services/mcp/mcp')
   const { mkdirSync } = await import('node:fs')
   const project = join(process.env.HOME!, 'proyecto')
   mkdirSync(project, { recursive: true })

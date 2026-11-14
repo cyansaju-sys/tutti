@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { appendNote, formatNote, notesFile, readNotes } from '../../../../src/main/services/agents/notes'
+import { appendNote, formatNote, notesFile, readNotes } from '@/main/services/agents/notes'
 
 const dirs: string[] = []
 const project = (): string => { const d = mkdtempSync(join(tmpdir(), 'tutti-notes-')); dirs.push(d); return d }

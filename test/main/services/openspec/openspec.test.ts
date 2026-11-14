@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { openspecState, requirementCount, schemaOf, taskCounts } from '../../../../src/main/services/openspec'
+import { openspecState, requirementCount, schemaOf, taskCounts } from '@/main/services/openspec'
 
 let project = ''
 beforeEach(() => { project = mkdtempSync(join(tmpdir(), 'tutti-os-')) })

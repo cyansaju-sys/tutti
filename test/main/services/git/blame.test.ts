@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { blame } from '../../../../src/main/services/git/git'
+import { blame } from '@/main/services/git/git'
 
 it('blame de un archivo versionado', async () => {
   const b = await blame(`${process.cwd()}/CONTRIBUTING.md`)

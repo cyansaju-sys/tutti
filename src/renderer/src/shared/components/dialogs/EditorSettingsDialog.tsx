@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { MdSearch } from 'react-icons/md'
-import type { MsgKey } from '@shared/i18n'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { DEFAULT_EDITOR_FONT } from '@/shared/store/ui'
-import { FIELD, Modal, Select } from '@/shared/components/ui'
+import type { MsgKey } from '@/shared/i18n'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { DEFAULT_EDITOR_FONT } from '@/renderer/src/shared/store/ui'
+import { FIELD, Modal, Select } from '@/renderer/src/shared/components/ui'
 
 type Control = { kind: 'number'; value: string } | { kind: 'check'; value: boolean } | { kind: 'select'; value: string; options: string[] } | { kind: 'text'; value: string }
 interface Setting { id: string; group: string; title: string; help: string; control: Control }

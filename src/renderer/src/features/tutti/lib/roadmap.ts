@@ -1,5 +1,5 @@
-import type { Lang } from '@shared/i18n'
-import type { RoadmapItem, RoadmapState } from '@shared/types'
+import type { Lang } from '@/shared/i18n'
+import type { RoadmapItem, RoadmapState } from '@/shared/types'
 
 /** Hechos y total de una fase (lo que no se sabe cuenta como no hecho). */
 export const phaseProgress = (items: RoadmapItem[]): { done: number; total: number } =>

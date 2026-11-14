@@ -9,9 +9,9 @@
 import { execFile } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { McpResult, OpenSpecState } from '../../shared/types'
-import { tm } from '../utils/i18n'
-import { extendedPath, which } from '../utils/shellpath'
+import type { McpResult, OpenSpecState } from '@/shared/types'
+import { tm } from '@/main/utils/i18n'
+import { extendedPath, which } from '@/main/utils/shellpath'
 
 const DIR = 'openspec'
 export const openspecDir = (project: string): string => join(project, DIR)

@@ -1,6 +1,6 @@
-import type { FormField } from '@/features/tutti/lib/formFields'
-import { slug } from '@/features/tutti/lib/spec'
-import { EMPTY_STEERING_FORM, INCLUSIONS } from '@/features/tutti/lib/steeringForm'
+import type { FormField } from '@/renderer/src/features/tutti/lib/formFields'
+import { slug } from '@/renderer/src/features/tutti/lib/spec'
+import { EMPTY_STEERING_FORM, INCLUSIONS } from '@/renderer/src/features/tutti/lib/steeringForm'
 
 /** Los campos del formulario de un steering: nombre, ámbito (proyecto o global), cuándo se entrega y, según eso, los patrones o la descripción. */
 export const steeringProps = (): FormField[] => [

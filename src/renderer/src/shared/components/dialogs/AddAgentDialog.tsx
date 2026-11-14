@@ -1,11 +1,11 @@
 import { clsx } from 'clsx'
 import { useEffect, useMemo, useState } from 'react'
 import { MdTerminal } from 'react-icons/md'
-import type { AgentCandidate } from '@shared/types'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import { AgentIcon } from '@/features/agents/components/AgentIcon'
-import { FIELD, Modal } from '@/shared/components/ui'
+import type { AgentCandidate } from '@/shared/types'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import { AgentIcon } from '@/renderer/src/features/agents/components/AgentIcon'
+import { FIELD, Modal } from '@/renderer/src/shared/components/ui'
 import { matches } from './helpers'
 
 /** Añadir un agente que la app no conoce: se escribe su comando o se elige uno de los ejecutables instalados. */

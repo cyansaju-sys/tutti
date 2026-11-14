@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { MdSend } from 'react-icons/md'
-import { FIELD, Modal } from '@/shared/components/ui'
-import { useT } from '@/shared/lib/i18n'
-import { useStore } from '@/shared/store'
-import type { SpecPrefill } from '@/shared/store/types'
-import { useAskAgent } from '../lib/useAskAgent'
+import { FIELD, Modal } from '@/renderer/src/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import { useStore } from '@/renderer/src/shared/store'
+import type { SpecPrefill } from '@/renderer/src/shared/store/types'
+import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
 import { AgentSelect } from './AgentSelect'
-import { changeName, proposePrompt } from '../lib/openspec'
+import { changeName, proposePrompt } from '@/renderer/src/features/tutti/lib/openspec'
 
 /**
  * Proponer un cambio de OpenSpec: se escribe qué se quiere y se le envía al agente, que crea la carpeta en openspec/changes con la propuesta,

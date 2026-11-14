@@ -1,7 +1,7 @@
-import { useT } from '@/shared/lib/i18n'
+import { useT } from '@/renderer/src/shared/lib/i18n'
 import { clsx } from 'clsx'
 import { useMemo } from 'react'
-import { diffRows, hasChanges, type Row, type Side } from '@/features/files/lib/lineDiff'
+import { diffRows, hasChanges, type Row, type Side } from '@/renderer/src/features/files/lib/lineDiff'
 
 const TINT = { del: 'bg-danger/[0.14]', add: 'bg-ok/[0.13]' }
 

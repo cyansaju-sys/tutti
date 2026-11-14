@@ -1,15 +1,15 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useState } from 'react'
-import { Menu } from '../../../shared/components/Menu'
+import { Menu } from '@/renderer/src/shared/components/Menu'
 import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdSearch, MdTerminal } from 'react-icons/md'
-import { AppIcon } from '@/shared/components/AppIcon'
-import { FileIcon } from '@/shared/components/FileIcon'
+import { AppIcon } from '@/renderer/src/shared/components/AppIcon'
+import { FileIcon } from '@/renderer/src/shared/components/FileIcon'
 import { AgentIcon } from './AgentIcon'
-import { useStore, type Pane } from '@/shared/store'
-import { Kbd } from '../../../shared/components/ui'
-import { useT } from '@/shared/lib/i18n'
+import { useStore, type Pane } from '@/renderer/src/shared/store'
+import { Kbd } from '@/renderer/src/shared/components/ui'
+import { useT } from '@/renderer/src/shared/lib/i18n'
 import { TerminalPane } from './TerminalPane'
-import { EditorArea, DocTab } from '../../files/components/EditorArea'
+import { EditorArea, DocTab } from '@/renderer/src/features/files/components/EditorArea'
 
 /** Pestaña de un agente en la barra superior: solo se ve el cuerpo del activo (los demás siguen vivos, ocultos). */
 const SHOWN_PROJECTS = 5

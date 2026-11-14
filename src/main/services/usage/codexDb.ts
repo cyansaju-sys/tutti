@@ -6,8 +6,8 @@
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, join } from 'node:path'
-import { tm } from '../../utils/i18n'
-import type { LimitInfo, SessionInfo } from '../../../shared/types'
+import { tm } from '@/main/utils/i18n'
+import type { LimitInfo, SessionInfo } from '@/shared/types'
 
 const root = (): string => process.env.CODEX_HOME || join(homedir(), '.codex')
 const HOUR = 3_600_000

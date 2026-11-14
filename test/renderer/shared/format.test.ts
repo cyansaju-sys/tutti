@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { useStore } from '../../../src/renderer/src/shared/store'
-import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '../../../src/renderer/src/shared/lib/format'
+import { useStore } from '@/renderer/src/shared/store'
+import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '@/renderer/src/shared/lib/format'
 
 describe('formato', () => {
   it('tokens', () => { expect(fmtTokens(950)).toBe('950'); expect(fmtTokens(12_345)).toBe('12.3 k'); expect(fmtTokens(2_500_000)).toBe('2.5 M') })

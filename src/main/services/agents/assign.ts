@@ -1,6 +1,6 @@
 /** Reparto de tareas según la capacidad: qué agente conviene a una dificultad dada. Funciones puras, sin tocar la app. */
 import type { Tier } from './models'
-import { tm } from '../../utils/i18n'
+import { tm } from '@/main/utils/i18n'
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 

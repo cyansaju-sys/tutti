@@ -1,5 +1,5 @@
-import type { FormField } from '@/features/tutti/lib/formFields'
-import { EMPTY_HOOK_FORM, HOOK_TRIGGERS } from '@/features/tutti/lib/spec'
+import type { FormField } from '@/renderer/src/features/tutti/lib/formFields'
+import { EMPTY_HOOK_FORM, HOOK_TRIGGERS } from '@/renderer/src/features/tutti/lib/spec'
 
 /** Los campos del formulario de un hook (nombre, evento, filtro de archivos y qué hacer: un comando o pedirle algo al agente). */
 export const hooksProps = (): FormField[] => [

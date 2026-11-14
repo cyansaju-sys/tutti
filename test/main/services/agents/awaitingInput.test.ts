@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { awaitingInput } from '../../../../src/main/services/agents/launch'
+import { awaitingInput } from '@/main/services/agents/launch'
 
 describe('awaitingInput', () => {
   it('reconoce las peticiones de permiso de los agentes', () => {
@@ -19,7 +19,7 @@ describe('awaitingInput', () => {
 
 describe('typedSomething', () => {
   it('lo que la terminal manda sola no cuenta como teclear', async () => {
-    const { typedSomething } = await import('../../../../src/main/services/agents/pty')
+    const { typedSomething } = await import('@/main/services/agents/pty')
     expect(typedSomething('\x1b[I')).toBe(false)                       // entra el foco
     expect(typedSomething('\x1b[O')).toBe(false)                       // sale el foco
     expect(typedSomething('\x1b[<35;12;7M')).toBe(false)               // ratón SGR
@@ -29,7 +29,7 @@ describe('typedSomething', () => {
     expect(typedSomething('\x1b]11;rgb:0000/0000/0000\x1b\\')).toBe(false)          // color de fondo
   })
   it('texto, Enter y borrar sí cuentan', async () => {
-    const { typedSomething } = await import('../../../../src/main/services/agents/pty')
+    const { typedSomething } = await import('@/main/services/agents/pty')
     expect(typedSomething('en español')).toBe(true)
     expect(typedSomething('\r')).toBe(true)
     expect(typedSomething('\x7f')).toBe(true)

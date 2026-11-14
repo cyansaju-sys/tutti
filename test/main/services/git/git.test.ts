@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { addWorktree, joinSummary, numstatPath, opArgs, parseWorktrees, removeWorktree, worktrees, worktreePath, branches, checkoutDetached, discardTracked, status, validBranchName } from '../../../../src/main/services/git/git'
+import { addWorktree, joinSummary, numstatPath, opArgs, parseWorktrees, removeWorktree, worktrees, worktreePath, branches, checkoutDetached, discardTracked, status, validBranchName } from '@/main/services/git/git'
 
 const H = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 

@@ -5,10 +5,10 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import type { AgentsPointerState, McpResult } from '../../../shared/types'
+import type { AgentsPointerState, McpResult } from '@/shared/types'
 import { tuttiDir } from './context'
-import { tm } from '../../utils/i18n'
-import { roadmapFile } from '../roadmap'
+import { tm } from '@/main/utils/i18n'
+import { roadmapFile } from '@/main/services/roadmap'
 
 export const AGENTS_START = '<!-- tutti:start -->'
 export const AGENTS_END = '<!-- tutti:end -->'

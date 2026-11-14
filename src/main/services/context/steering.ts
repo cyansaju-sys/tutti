@@ -9,9 +9,9 @@ import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, join, relative, resolve, sep } from 'node:path'
 import { tuttiDir } from './context'
-import { tm } from '../../utils/i18n'
-import { extendedPath } from '../../utils/shellpath'
-import { globsToRegex } from '../search'
+import { tm } from '@/main/utils/i18n'
+import { extendedPath } from '@/main/utils/shellpath'
+import { globsToRegex } from '@/main/services/search'
 
 export type Inclusion = 'always' | 'fileMatch' | 'manual' | 'auto'
 export interface Steering { file: string; base: string; name: string; inclusion: Inclusion; patterns: string[]; description: string; body: string; scope: 'project' | 'global' }

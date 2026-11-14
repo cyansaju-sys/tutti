@@ -1,9 +1,9 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
 import { MdExpandMore } from 'react-icons/md'
-import { Menu } from '@/shared/components/Menu'
-import { useT } from '@/shared/lib/i18n'
-import type { AgentOption } from '../lib/agentTarget'
+import { Menu } from '@/renderer/src/shared/components/Menu'
+import { useT } from '@/renderer/src/shared/lib/i18n'
+import type { AgentOption } from '@/renderer/src/features/tutti/lib/agentTarget'
 
 /** El agente al que se le pedirá algo: botón con el elegido y un menú con los abiertos y los instalados (estos se abren al enviar). */
 export function AgentSelect({ options, value, onChange, className }: { options: AgentOption[]; value: AgentOption | null; onChange: (key: string) => void; className?: string }) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { taskShown } from '../../../../src/main/services/agents/launch'
+import { taskShown } from '@/main/services/agents/launch'
 
 describe('taskShown', () => {
   const task = 'Renombra la función getUser a fetchUser en src/api y actualiza los tests'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SNIPPET_LINES, selectionMessage, selectionRef } from '../../../../src/renderer/src/features/files/lib/selectionRef'
+import { MAX_SNIPPET_LINES, selectionMessage, selectionRef } from '@/renderer/src/features/files/lib/selectionRef'
 
 describe('enviar la selección al agente', () => {
   it('la referencia lleva el rango de líneas y la @ solo donde se entiende', () => {

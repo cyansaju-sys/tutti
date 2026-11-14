@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { buildPrompt, cleanContext, fallbackContext, projectDigest, treeOf } from '../../../../src/main/services/context/contextGen'
+import { buildPrompt, cleanContext, fallbackContext, projectDigest, treeOf } from '@/main/services/context/contextGen'
 
 const project = (): string => {
   const dir = mkdtempSync(join(tmpdir(), 'tutti-ctx-'))

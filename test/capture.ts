@@ -3,12 +3,12 @@
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, screen, type BrowserWindow } from 'electron'
-import * as pty from '../src/main/services/agents/pty'
+import * as pty from '@/main/services/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { legacyContextFile } from '../src/main/services/context/context'
+import { legacyContextFile } from '@/main/services/context/context'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 

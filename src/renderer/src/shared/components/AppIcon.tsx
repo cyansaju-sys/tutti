@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { useStore } from '@/shared/store'
+import { useStore } from '@/renderer/src/shared/store'
 
 /**
  * Un icono propio de la app (los de la barra lateral, el logo). Son SVG de un solo color: con el color del sistema activo

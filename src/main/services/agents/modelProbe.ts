@@ -8,7 +8,7 @@
  */
 import { existsSync } from 'node:fs'
 import { isAbsolute } from 'node:path'
-import { which } from '../../utils/shellpath'
+import { which } from '@/main/utils/shellpath'
 import { childEnv } from './env'
 
 /** Cómo pasar la etiqueta que muestra cada agente al id que acepta su `--model`. */

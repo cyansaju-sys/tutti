@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { MdClose } from 'react-icons/md'
-import { useT } from '@/shared/lib/i18n'
+import { useT } from '@/renderer/src/shared/lib/i18n'
 
 /** Diálogo modal centrado arriba, se cierra con Esc o al pulsar fuera. */
 /** `top`: se ancla arriba y al centro (como los selectores rápidos), en vez de centrarse en vertical. */
