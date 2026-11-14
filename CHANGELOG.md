@@ -2,6 +2,13 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.1
+
+### Correcciones
+
+- En la app instalada, el chat con Claude no cargaba los modelos ni los comandos «/» y no podía enviar mensajes. Ya funciona.
+
+
 ## 1.5.0
 
 ### Cambios
