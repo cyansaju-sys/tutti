@@ -19,7 +19,7 @@ const guessKind = (m: string): ToastKind => {
 
 
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
-  newsSince: null, tab: 'files', sidebarOpen: true, chatOpen: false, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
+  newsSince: null, tab: 'files', sidebarOpen: true, chatOpen: true, chatWidth: 340, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], notices: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {

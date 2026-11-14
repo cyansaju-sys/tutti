@@ -54,6 +54,10 @@ export function App() {
       if (typeof savedFont === 'string' && savedFont.trim()) useStore.setState({ editorFont: savedFont })
       const savedWidth = await window.api.settings.get('sidebar_width')          // el ancho del sidebar es global: vale para todos los proyectos
       if (typeof savedWidth === 'number' && Number.isFinite(savedWidth)) useStore.setState({ sidebarWidth: Math.max(220, Math.min(520, savedWidth)) })
+      const savedChatOpen = await window.api.settings.get('chat_open')          // el chat se abre con el proyecto; si se cerró, así se queda
+      if (typeof savedChatOpen === 'boolean') useStore.setState({ chatOpen: savedChatOpen })
+      const savedChatWidth = await window.api.settings.get('chat_width')
+      if (typeof savedChatWidth === 'number' && Number.isFinite(savedChatWidth)) useStore.setState({ chatWidth: Math.max(280, Math.min(720, savedChatWidth)) })
       const savedLang = await window.api.settings.get('language')
       if (isLangPref(savedLang) && savedLang !== useStore.getState().langPref) useStore.getState().setLang(savedLang)
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
@@ -194,6 +198,8 @@ export function App() {
   }, [])
 
   const dragSidebar = useDrag(() => useStore.getState().sidebarWidth, (v) => s.set({ sidebarWidth: v }), 220, 520, s.sidebarSide === 'right', (v) => { void window.api.settings.set('sidebar_width', v) })
+  const dragChat = useDrag(() => useStore.getState().chatWidth, (v) => s.set({ chatWidth: v }), 280, 720, s.sidebarSide !== 'right', (v) => { void window.api.settings.set('chat_width', v) })
+  useEffect(() => { if (ready) void window.api.settings.set('chat_open', s.chatOpen) }, [ready, s.chatOpen])
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
 
@@ -221,7 +227,7 @@ export function App() {
             </>
           )}
         </div>
-        {s.chatOpen && <div className={s.sidebarSide === 'right' ? 'mr-1 flex' : 'ml-1 flex'}><ChatPanel /></div>}
+        {s.chatOpen && s.project && <><Resizer onDrag={dragChat} /><div className="flex"><ChatPanel /></div></>}
       </div>
       <Footer />
       {s.modal === 'agents' && <AgentPicker />}

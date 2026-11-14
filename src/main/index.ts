@@ -18,10 +18,10 @@ import { loadSteering } from './services/context/steering'
 import { createPower, installPower, listPowers, powerSources, removePower } from './services/powers'
 import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
-import { answerPermission, cancelChat, sendChat } from '@/harnes/chat'
-import { listCommands } from '@/harnes/commands'
+import { answerPermission, cancelChat, sendChat, answerQuestion } from '@/harnes/chat'
+import { listCommands, mcpStatus } from '@/harnes/commands'
 import { listModels } from '@/harnes/models'
-import { projectItems } from '@/harnes/project'
+import { projectItems, changesOf } from '@/harnes/project'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
@@ -140,8 +140,10 @@ function registerIpc(): void {
   ipcMain.handle('chat:models', () => listModels())
   ipcMain.handle('chat:send', (e, req: ChatSendRequest) => sendChat(e.sender, req))
   ipcMain.handle('chat:cancel', (e) => cancelChat(e.sender))
-  ipcMain.handle('chat:answer', (e, id: string, allow: boolean) => answerPermission(e.sender, id, allow))
-  ipcMain.handle('chat:items', (_e, project: string | null) => projectItems(project))
+  ipcMain.handle('chat:reply', (e, id: string, answers: Record<string, string> | null) => answerQuestion(e.sender, id, answers))
+  ipcMain.handle('chat:answer', (e, id: string, allow: boolean, always?: boolean) => answerPermission(e.sender, id, allow, always))
+  ipcMain.handle('chat:items', async (_e, project: string | null) => ({ ...projectItems(project), changes: await changesOf(project) }))
+  ipcMain.handle('chat:mcp-status', (_e, project: string | null) => mcpStatus(project))
   ipcMain.handle('chat:commands', (_e, cwd?: string) => listCommands(cwd))
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: unknown) => setSetting(key, value))

@@ -93,7 +93,8 @@ export interface UiSlice {
   newsSince: string | null
   tab: SidebarTab
   sidebarOpen: boolean
-  chatOpen: boolean                                     // panel de chat, al lado opuesto de la barra lateral
+  chatOpen: boolean                                     // panel de chat, al lado opuesto de la barra lateral (abierto por defecto; se recuerda si se cierra)
+  chatWidth: number                                     // su ancho, que el usuario arrastra
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
   editorFont: string                                    // font-family del editor de código, tal como lo escribe el usuario
   sidebarWidth: number

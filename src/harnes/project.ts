@@ -11,6 +11,7 @@ import { specsState } from '@/main/services/specs'
 import { roadmapState } from '@/main/services/roadmap'
 import { listRoles } from '@/main/services/context/roles'
 import { globalSteeringDir } from '@/main/services/context/context'
+import { status as gitStatus } from '@/main/services/git/git'
 import { loadSteering } from '@/main/services/context/steering'
 
 /** La descripción del frontmatter de un SKILL.md (`description: ...`), o '' si no la tiene. */
@@ -69,7 +70,34 @@ function roadmapOf(project: string): ChatItem[] {
   } catch { return [] }
 }
 
+/** Los documentos de `<.tutti|.agents>/docs` (.md, hasta dos niveles): la ruta sin extensión como nombre y su primer título (o su categoría). */
+function docsOf(project: string): ChatItem[] {
+  const root = join(tuttiDir(project), 'docs')
+  const out: ChatItem[] = []
+  const title = (file: string): string => { try { return /^#\s+(.+)$/m.exec(readFileSync(file, 'utf8'))?.[1].trim() ?? '' } catch { return '' } }
+  const walk = (dir: string, prefix: string, depth: number): void => {
+    let entries: import('node:fs').Dirent[] = []
+    try { entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)) } catch { return }
+    for (const e of entries) {
+      if (e.isDirectory() && depth < 2) walk(join(dir, e.name), `${prefix}${e.name}/`, depth + 1)
+      else if (e.isFile() && /\.md$/i.test(e.name)) out.push({ name: `${prefix}${e.name.replace(/\.md$/i, '')}`, description: title(join(dir, e.name)) || prefix.replace(/\/$/, ''), scope: 'local' })
+    }
+  }
+  walk(root, '', 0)
+  return out
+}
+
 export function projectItems(project: string | null): ChatProjectItems {
-  if (!project || !existsSync(project)) return { skills: [], hooks: [], mcp: [], roles: [], steering: [], powers: [], specs: [], roadmap: [] }
-  return { skills: skillsOf(project), hooks: hooksOf(project), mcp: mcpOf(project), roles: rolesOf(project), steering: steeringOf(project), powers: powersOf(project), specs: specsOf(project), roadmap: roadmapOf(project) }
+  if (!project || !existsSync(project)) return { skills: [], hooks: [], mcp: [], roles: [], steering: [], powers: [], specs: [], roadmap: [], docs: [], changes: [] }
+  return { skills: skillsOf(project), hooks: hooksOf(project), mcp: mcpOf(project), roles: rolesOf(project), steering: steeringOf(project), powers: powersOf(project), specs: specsOf(project), roadmap: roadmapOf(project), docs: docsOf(project), changes: [] }
+}
+
+/** Los cambios sin confirmar del repositorio (git status): «todos» y cada archivo con su estado. */
+export async function changesOf(project: string | null): Promise<ChatItem[]> {
+  if (!project || !existsSync(project)) return []
+  try {
+    const st = await gitStatus(project)
+    if (!st.isRepo || !st.files.length) return []
+    return [{ name: 'all', description: `${st.files.length}`, scope: 'local' }, ...st.files.map((f) => ({ name: f.path, description: f.code, scope: 'local' as const }))]
+  } catch { return [] }
 }

@@ -9,18 +9,20 @@ import type { ChatCommand, ChatItem, ChatProjectItems } from '@/shared/types'
 
 /** «/» son los comandos del SDK; «#» lo que tiene Tutti en el proyecto (.tutti o .agents). */
 export type Trigger = '/' | '#' | '@'
-export type Group = 'skills' | 'plugins' | 'help' | 'roles' | 'hooks' | 'mcp' | 'steering' | 'powers' | 'specs' | 'roadmap' | 'file' | 'dir'
+export type Group = 'skills' | 'plugins' | 'help' | 'roles' | 'hooks' | 'mcp' | 'steering' | 'powers' | 'specs' | 'roadmap' | 'docs' | 'changes' | 'file' | 'dir'
 export const GROUPS: Record<Trigger, Group[]> = {
-  '/': ['skills', 'plugins', 'help'],
-  '#': ['roles', 'specs', 'roadmap', 'hooks', 'steering', 'powers', 'file', 'dir'],
+  '/': ['mcp', 'skills', 'plugins', 'help'],
+  '#': ['roles', 'specs', 'roadmap', 'docs', 'hooks', 'steering', 'powers', 'changes', 'file', 'dir'],
   '@': []
 }
+/** Los que se ven al abrir la lista con «#»; los demás aparecen al escribir (y siguen funcionando como «#hooks» a mano). */
+export const MAIN: Record<Trigger, Group[]> = { '/': ['mcp', 'skills', 'plugins', 'help'], '#': ['specs', 'roles', 'changes', 'file'], '@': [] }
 const PLUGINS = new Set(['plugin-authoring', 'reload-plugins'])
 const SHOWN = new Set(['clear', ...PLUGINS])
 type ItemGroup = Exclude<Group, 'plugins' | 'help' | 'file' | 'dir'>
 /** Lo que se escribe en el input al elegir un elemento de «#». */
 const INSERT: Record<ItemGroup, (name: string) => string> = {
-  roles: (n) => `#role:${n} `, skills: (n) => `#skill:${n} `, hooks: (n) => `#hook:${n} `, mcp: (n) => `#mcp:${n} `, steering: (n) => `#steering:${n} `, powers: (n) => `#power:${n} `, specs: (n) => `#spec:${n} `, roadmap: (n) => `#road:${n} `
+  roles: (n) => `#role:${n} `, skills: (n) => `#skill:${n} `, hooks: (n) => `#hook:${n} `, mcp: (n) => `#mcp:${n} `, steering: (n) => `#steering:${n} `, powers: (n) => `#power:${n} `, specs: (n) => `#spec:${n} `, docs: (n) => `#doc:${n} `, changes: (n) => `#diff:${n} `, roadmap: (n) => `#road:${n.replace(/\s+/g, '_')} `
 }
 const label = (g: Group, trigger: Trigger): string => `chat.group${g[0].toUpperCase()}${g.slice(1)}${trigger === '/' && g === 'skills' ? 'Cmd' : ''}`
 
@@ -53,16 +55,25 @@ export function CommandPicker({ anchor, trigger, commands, items, files = null, 
     </button>
   )
   const cmdRow = (c: ChatCommand): JSX.Element => line(`c:${c.name}`, `/${c.name}${c.hint ? ' ' + c.hint : ''}`, c.description, `/${c.name} `)
-  const itemRow = (g: ItemGroup, i: ChatItem): JSX.Element => line(`${g}:${i.name}`, i.name, i.description, INSERT[g](i.name))
+  const itemRow = (g: ItemGroup, i: ChatItem): JSX.Element => i.status === undefined && g !== 'mcp' ? line(`${g}:${i.name}`, i.name, i.description, INSERT[g](i.name)) : (
+    <button key={`${g}:${i.name}`} data-row onClick={() => onPick(INSERT[g](i.name))} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent-bg data-[active=true]:bg-accent-bg">
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-[12px] text-text">{i.name}</span>
+        {i.description && <span className="truncate text-[10.5px] text-muted">{i.description}</span>}
+      </span>
+      <span className={`shrink-0 text-[10.5px] ${i.status === 'connected' ? 'text-accent' : i.status === 'failed' || i.status === 'needs-auth' ? 'text-danger' : 'text-muted'}`}>{i.status ? t(`chat.mcp.${i.status}` as never) : t('chat.mcp.pending' as never)}</span>
+    </button>
+  )
   const empty = (text: string): JSX.Element => <div className="px-2 py-1.5 text-[12px] text-muted">{text}</div>
   const rows = (list: JSX.Element[]): JSX.Element[] | JSX.Element => (list.length ? list : empty(t('chat.noCommands')))
 
   /** Filas de archivos y carpetas: sin escribir nada solo lo de la raíz (por orden alfabético); escribiendo, busca en todo. `only` limita a archivos o a carpetas. */
   const fileRows = (prefix: string, only: 'file' | 'dir' | null): JSX.Element[] => {
     if (!files) return [empty(t('chat.loadingModels'))]
-    const pool = (query ? files : files.filter((f) => !f.replace(/\/$/, '').includes('/'))).filter((f) => only === null || f.endsWith('/') === (only === 'dir'))
+    const own = (f: string): boolean => /^\.(tutti|agents)(\/|$)/.test(f)          // lo de .tutti y .agents ya tiene sus propios grupos
+    const pool = (query ? files : files.filter((f) => !f.replace(/\/$/, '').includes('/'))).filter((f) => !own(f) && (only === null || f.endsWith('/') === (only === 'dir')))
     const ranked = pool.map((f) => ({ f, s: fuzzyScore(query, f) })).filter((x): x is { f: string; s: number } => x.s !== null)
-      .sort((a, b) => a.s - b.s || (query ? a.f.length - b.f.length : a.f.localeCompare(b.f))).slice(0, 50)
+      .sort((a, b) => (query ? a.s - b.s : 0) || Number(b.f.endsWith('/')) - Number(a.f.endsWith('/')) || (query ? a.f.length - b.f.length : a.f.localeCompare(b.f))).slice(0, 50)      // sin escribir: carpetas primero y luego archivos
     return ranked.map(({ f }) => {
       const dir = f.endsWith('/'), clean = f.replace(/\/$/, ''), name = clean.split('/').pop() ?? clean, parent = clean.slice(0, clean.length - name.length).replace(/\/$/, '')
       return (
@@ -76,6 +87,7 @@ export function CommandPicker({ anchor, trigger, commands, items, files = null, 
   }
 
   const inGroup = (g: Group): JSX.Element[] => {
+    if (trigger === '/' && g === 'mcp') return (items?.mcp ?? []).map((i) => itemRow('mcp', i))
     if (trigger === '/') {
       const list = (commands ?? []).filter((c) => (g === 'plugins' ? PLUGINS.has(c.name) : g === 'help' ? c.builtin && !SHOWN.has(c.name) : !c.builtin && !PLUGINS.has(c.name)))
       return list.map(cmdRow)
@@ -110,7 +122,7 @@ export function CommandPicker({ anchor, trigger, commands, items, files = null, 
     body = rows(all)
   } else if (group) body = rows(inGroup(group))
   else {
-    const entries = GROUPS[trigger].map(groupRow)
+    const entries = MAIN[trigger].map(groupRow)
     const clear = trigger === '/' ? commands.find((c) => c.name === 'clear') : undefined
     body = [...(clear ? [cmdRow(clear)] : []), ...entries]
   }

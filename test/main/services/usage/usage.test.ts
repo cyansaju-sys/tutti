@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const store: Record<string, unknown> = {}
 vi.mock('@/main/services/settings', () => ({ getSetting: (k: string) => store[k], setSetting: (k: string, v: unknown) => { store[k] = v } }))
 
-import { claudeLimits, claudeSessions, inProject, parseClaudeJsonl, renameSession, sessionKey, sessionNames } from '@/main/services/usage/usage'
+import { claudeSessions, inProject, parseClaudeJsonl, renameSession, sessionKey, sessionNames } from '@/main/services/usage/usage'
 
 const HOUR = 3_600_000
 const msg = (id: string, ts: number, input: number, output: number, extra: object = {}): string => JSON.stringify({
@@ -76,7 +76,10 @@ describe('proyecto de una sesión', () => {
 })
 
 describe('límites y nombres', () => {
-  it('sin credenciales se explica por qué no hay porcentaje, y sin consultar la red', async () => {
+  it('si el SDK dice que no hay límites de plan se explica por qué no hay porcentaje', async () => {
+    vi.resetModules()
+    vi.doMock('@/harnes/usage', () => ({ planLimits: async () => ({ available: false, limits: [] }), sessionTitles: async () => new Map() }))
+    const { claudeLimits } = await import('@/main/services/usage/usage')
     const r = await claudeLimits(true)
     expect(r.limits).toEqual([])
     expect(r.error).toContain('Inicia sesión en Claude Code')
