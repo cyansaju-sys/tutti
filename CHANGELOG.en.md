@@ -17,6 +17,8 @@ Each version has its own `## x.y.z` section with sentences written for people wh
 - Powers that match what you ask for are offered on their own, without going through the MCP server. This only works in the built-in chat.
 
 
+## 1.4.13
+
 ### Changes
 
 - **Split view for up to 6 agents:** Ctrl+1 to Ctrl+6 show 1 to 6 agents at once (up to 3 across and 2 down). Missing ones appear as empty slots where you can pick an agent, and Ctrl+W closes a slot. Agents that hand out tasks join the grid on their own.
