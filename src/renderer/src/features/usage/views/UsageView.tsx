@@ -10,6 +10,7 @@ import { useT } from '@/renderer/src/shared/lib/i18n'
 import { useResizeHeight } from '@/renderer/src/shared/lib/useResizeHeight'
 import { basename } from '@/renderer/src/shared/lib/paths'
 import { useStore } from '@/renderer/src/shared/store'
+import { useChat } from '@/renderer/src/shared/store/chat'
 
 const REFRESH_MS = 30_000
 const WINDOW_MS = 5 * 3_600_000
@@ -125,6 +126,7 @@ export function UsageView() {
   const [deleting, setDeleting] = useState<SessionInfo | null>(null)
   const [clearing, setClearing] = useState(false)
   const [now, setNow] = useState(Date.now())
+  const [choosing, setChoosing] = useState<SessionInfo | null>(null)          // una conversación de Claude: ¿en la terminal o en el chat?
 
   const load = useCallback(async (fetchLimits: boolean) => {
     const [usage, saved] = await Promise.all([window.api.usage.collect(project, fetchLimits), window.api.usage.names()])
@@ -138,7 +140,19 @@ export function UsageView() {
   const toggle = (id: string): void => { const next = { ...folded, [id]: !folded[id] }; setFolded(next); void window.api.settings.set('collapsed', next) }
   const title = (s: SessionInfo): string => names[`${s.command}:${s.id}`] || s.title
 
+  /** En el chat: se carga lo que se dijo y los próximos mensajes continúan esa conversación. */
+  const resumeInChat = (s: SessionInfo): void => {
+    if (useChat.getState().running) { toast(t('us.chatBusy'), 'error'); return }
+    void window.api.chat.history(s.id, s.cwd || undefined).then((history) => {
+      useChat.getState().load(s.id, project, history)
+      set({ chatOpen: true })
+    }).catch(() => toast(t('us.cannotResume'), 'error'))
+  }
   const resume = (s: SessionInfo): void => {
+    if (s.command === 'claude' && project) { setChoosing(s); return }
+    resumeCli(s)
+  }
+  const resumeCli = (s: SessionInfo): void => {
     const args = resumeArgs(s.command, s.id)
     const agent = agents.find((a) => a.command === s.command)
     if (!args || !agent) { toast(t('us.cannotResume'), 'error'); return }
@@ -188,6 +202,15 @@ export function UsageView() {
           { label: t('us.renameItem'), icon: <MdEdit size={15} />, onClick: () => setRenaming(menu.session) },
           { label: t('us.deleteItem'), separator: true, icon: <MdDeleteOutline size={16} />, danger: true, onClick: () => setDeleting(menu.session) }
         ]} />
+      )}
+      {choosing && (
+        <Modal onClose={() => setChoosing(null)} width={380} title={t('us.openWhere')}>
+          <div className="flex flex-col gap-2 px-4 pb-4">
+            <p className="truncate text-[12px] text-muted">{title(choosing)}</p>
+            <button autoFocus onClick={() => { const s = choosing; setChoosing(null); resumeInChat(s) }} className="rounded-lg bg-accent px-4 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110">{t('us.openChat')}</button>
+            <button onClick={() => { const s = choosing; setChoosing(null); resumeCli(s) }} className="rounded-lg border border-line px-4 py-1.5 text-[12px] transition-colors hover:border-accent hover:bg-accent-bg">{t('us.openCli')}</button>
+          </div>
+        </Modal>
       )}
       {renaming && <RenameDialog session={renaming} current={title(renaming)} onClose={() => setRenaming(null)} onSaved={() => void load(false)} />}
       {clearing && (

@@ -2,6 +2,16 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.2
+
+### Cambios
+
+- **Conversaciones del chat en pestañas:** cada conversación abierta sale como una pestaña en la cabecera del chat, con su botón para cerrarla, y el **+** abre una nueva. Mientras Claude responde no se puede cambiar de pestaña.
+- **Retomar una conversación de Claude:** al pulsar una del historial se pregunta si abrirla en el chat de Tutti (con lo que se dijo) o en la terminal.
+- **Lo que pides desde la pestaña Tutti va al chat:** rellenar el AGENTS.md, crear hooks, specs o skills, aplicar una spec… se envían al chat, con el modelo, esfuerzo y modo que tengas elegidos, y el chat se abre si estaba cerrado.
+- **El chat lee el AGENTS.md del proyecto** y ya conoce el formato de los hooks y de las specs, así que esas peticiones son más cortas.
+- **La pestaña Tutti pide menos al disco:** hooks, steering, skills, docs y specs se leen al abrir, al terminar el chat y al volver a la ventana, no cada 5 segundos. El AGENTS.md y el roadmap se siguen actualizando solos.
+
 ## 1.5.1
 
 ### Correcciones

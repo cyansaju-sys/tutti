@@ -2,6 +2,16 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.2
+
+### Changes
+
+- **Chat conversations as tabs:** each open conversation shows as a tab in the chat header, with its own close button, and **+** opens a new one. You cannot switch tabs while Claude is answering.
+- **Resume a Claude conversation:** clicking one in the history asks whether to open it in the Tutti chat (with what was said) or in the terminal.
+- **What you ask from the Tutti tab goes to the chat:** filling in AGENTS.md, creating hooks, specs or skills, applying a spec… are sent to the chat, with the model, effort and mode you picked, and the chat opens if it was closed.
+- **The chat reads the project's AGENTS.md** and already knows the hook and spec formats, so those requests are shorter.
+- **The Tutti tab reads the disk less:** hooks, steering, skills, docs and specs are read when it opens, when the chat finishes and when you come back to the window, not every 5 seconds. AGENTS.md and the roadmap still update on their own.
+
 ## 1.5.1
 
 ### Fixes

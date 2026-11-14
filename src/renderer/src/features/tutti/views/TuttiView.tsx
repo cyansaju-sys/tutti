@@ -5,6 +5,7 @@ import type { MsgKey } from '@/shared/i18n'
 import type { AgentsPointerState, DirEntry, HookInfo, RoadmapState, SpecsState, SteeringInfo } from '@/shared/types'
 import { FIELD_SLIM, Modal } from '@/renderer/src/shared/components/ui'
 import { McpView } from '@/renderer/src/features/mcp/views/McpView'
+import { useChat } from '@/renderer/src/shared/store/chat'
 import { useAskAgent } from '@/renderer/src/features/tutti/lib/useAskAgent'
 import { SpecsBody } from '@/renderer/src/features/tutti/components/SpecsBody'
 import { createRoadmap, RoadmapBody } from '@/renderer/src/features/tutti/components/RoadmapBody'
@@ -84,7 +85,8 @@ export function TuttiView() {
 
   const [root, setRoot] = useState('')                // .tutti (o .agents si el proyecto ya lo usa); no se crea hasta que se añade algo
 
-  const refresh = useCallback(async () => {
+  /** Lo de estructura fija (hooks, steering, skills, docs, specs, MCP…): se lee al abrir y cuando algo lo cambia, no a cada rato. */
+  const readFixed = useCallback(async () => {
     if (!project) return
     const dir = await window.api.context.dir(project)
     setRoot(dir)
@@ -102,18 +104,28 @@ export function TuttiView() {
     setSpecs((prev) => (JSON.stringify(prev) === JSON.stringify(info) ? prev : info))
     const state = await window.api.specs.state(project).catch(() => null)
     setSp((prev) => (JSON.stringify(prev) === JSON.stringify(state) ? prev : state))
-    const rm = await window.api.roadmap.state(project).catch(() => null)
-    setRoadmap((prev) => (JSON.stringify(prev) === JSON.stringify(rm) ? prev : rm))
     const st = await window.api.context.steering(project).catch(() => [] as SteeringInfo[])
     const stMap = Object.fromEntries(st.map((x) => [x.file, x]))
     setSteeringInfo((prev) => (JSON.stringify(prev) === JSON.stringify(stMap) ? prev : stMap))
-    const am = await window.api.context.agents.state(project).catch(() => null)
-    setAgentsMd((prev) => (JSON.stringify(prev) === JSON.stringify(am) ? prev : am))
     const h = await window.api.hooks.list(project).catch(() => ({ hooks: [] as HookInfo[], trusted: false }))
     setHooks((prev) => (JSON.stringify(prev) === JSON.stringify({ list: h.hooks, trusted: h.trusted }) ? prev : { list: h.hooks, trusted: h.trusted }))
   }, [project])
 
-  useEffect(() => { void refresh(); const i = setInterval(() => void refresh(), REFRESH_MS); return () => clearInterval(i) }, [refresh])
+  /** Lo que cambia solo mientras se trabaja (el plan por fases y el AGENTS.md): se sigue leyendo cada pocos segundos. */
+  const readLive = useCallback(async () => {
+    if (!project) return
+    const rm = await window.api.roadmap.state(project).catch(() => null)
+    setRoadmap((prev) => (JSON.stringify(prev) === JSON.stringify(rm) ? prev : rm))
+    const am = await window.api.context.agents.state(project).catch(() => null)
+    setAgentsMd((prev) => (JSON.stringify(prev) === JSON.stringify(am) ? prev : am))
+  }, [project])
+
+  const refresh = useCallback(async () => { await Promise.all([readFixed(), readLive()]) }, [readFixed, readLive])
+
+  const chatRunning = useChat((c) => c.running)
+  useEffect(() => { void refresh() }, [refresh, chatRunning])          // al abrir y cuando Claude acaba (puede haber creado archivos)
+  useEffect(() => { const i = setInterval(() => void readLive(), REFRESH_MS); return () => clearInterval(i) }, [readLive])
+  useEffect(() => { const on = (): void => void readFixed(); window.addEventListener('focus', on); return () => window.removeEventListener('focus', on) }, [readFixed])          // y al volver a la ventana (cambios hechos fuera)
 
   if (!project) return <p className="px-3 py-2 text-[12px] text-muted">{t('tutti.noProject')}</p>
 

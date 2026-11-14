@@ -127,14 +127,36 @@ export function ChatPanel() {
   }
   const current = models?.find((m) => m.value === model) ?? models?.[0]
 
+  // lo que se le pide desde la pestaña Tutti se envía aquí, con el modelo, el esfuerzo y el modo elegidos; si está respondiendo, espera su turno
+  useEffect(() => {
+    if (!chat.queued || chat.running || !project) return
+    chat.send(chat.queued, { project, model: current?.value ?? model, effort, mode })
+    useChat.setState({ queued: null })
+  }, [chat.queued, chat.running, project])      // eslint-disable-line react-hooks/exhaustive-deps
+
   // los modelos se piden al abrir el panel: la pastilla ya muestra el actual
   useEffect(() => { window.api.chat.models().then(setModels).catch(() => undefined) }, [])
 
   return (
     <aside style={{ width }} className="flex shrink-0 flex-col overflow-hidden rounded-lg border border-line bg-panel">
-      <div className="flex h-[34px] shrink-0 items-center justify-between pl-3 pr-1">
-        <span className="flex items-center gap-2 text-[12px] font-medium text-muted"><MdChatBubbleOutline size={15} />{t('chat.title')}</span>
-        <div className="flex items-center">
+      <div className="flex h-[34px] shrink-0 items-center pl-1 pr-1">
+      {(
+        <div className="flex min-w-0 flex-1 items-stretch gap-0.5 self-stretch overflow-x-auto px-2 [scrollbar-width:none]">
+          {chat.tabs.map((x) => {
+            const active = x.id === chat.tab
+            const first = (active ? chat.messages : x.messages).find((m) => m.role === 'user')?.text.trim().replace(/\s+/g, ' ')
+            return (
+              <div key={x.id} className={`group relative flex h-[34px] max-w-[120px] shrink-0 items-center text-[11.5px] transition-colors ${active ? 'text-text' : 'text-muted hover:text-text'}`}>
+                <button disabled={chat.running && !active} onClick={() => chat.switchTab(x.id)} className="min-w-0 truncate pl-2 pr-5 text-left disabled:opacity-50">{first || t('chat.newChat')}</button>
+                <button disabled={chat.running && active} title={t('chat.closeTab')} onClick={() => chat.closeTab(x.id)} className={`absolute right-0.5 grid size-4 place-items-center rounded-full text-muted transition-opacity hover:bg-ov/10 hover:text-text disabled:opacity-40 ${active ? '' : 'opacity-60 group-hover:opacity-100'}`}><MdClose size={10} /></button>
+                {active && <span className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-accent" />}
+              </div>
+            )
+          })}
+        </div>
+      )}
+        <div className="ml-auto flex shrink-0 items-center">
+          <IconButton title={t('chat.newChat')} onClick={() => chat.newTab()}><MdAdd size={16} /></IconButton>
           <IconButton title={t('chat.close')} onClick={() => set({ chatOpen: false })}><MdClose size={15} /></IconButton>
         </div>
       </div>

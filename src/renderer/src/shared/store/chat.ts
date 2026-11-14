@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ChatEffort, ChatImage, ChatQuestion, ChatEvent, ChatSendRequest } from '@/shared/types'
+import type { ChatHistoryMessage, ChatEffort, ChatImage, ChatQuestion, ChatEvent, ChatSendRequest } from '@/shared/types'
 
 export interface ChatMessage { id: number; role: 'user' | 'assistant' | 'tool' | 'error'; text: string; detail?: string; images?: string[]; live?: boolean; context?: string; toolId?: string; body?: string; file?: string; result?: string; resultError?: boolean }      // images: data URLs para mostrarlas
 /** Lo que está seleccionado en el editor: el chat lo ofrece como contexto. */
@@ -9,7 +9,15 @@ export interface ChatUsage { cost: number; input: number; output: number; cacheR
 export interface ChatAsk { id: string; questions: ChatQuestion[] }
 export interface ChatPermission { id: string; tool: string; input: string }
 
+/** Una conversación abierta como pestaña; la activa vive en los campos de arriba y aquí queda su última copia. */
+export interface ChatTab { id: number; messages: ChatMessage[]; session: string | null; project: string | null; usage: ChatUsage }
+
 interface ChatState {
+  tabs: ChatTab[]
+  tab: number              // la pestaña activa
+  newTab: () => void
+  switchTab: (id: number) => void
+  closeTab: (id: number) => void
   messages: ChatMessage[]
   running: boolean
   session: string | null
@@ -17,6 +25,9 @@ interface ChatState {
   permissions: ChatPermission[]
   selection: EditorSelection | null
   asks: ChatAsk[]
+  queued: string | null              // una petición hecha desde fuera del panel (la pestaña Tutti): el panel la envía con su modelo, esfuerzo y modo
+  queue: (text: string) => void
+  load: (session: string, project: string | null, history: ChatHistoryMessage[]) => void      // retoma una conversación guardada: la muestra y los próximos mensajes la continúan
   reply: (id: string, answers: Record<string, string> | null) => void
   usage: ChatUsage
   setSelection: (selection: EditorSelection | null) => void
@@ -27,12 +38,41 @@ interface ChatState {
 }
 
 const ZERO: ChatUsage = { cost: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+let nextTab = 2
+const blank = (id: number, project: string | null): ChatTab => ({ id, messages: [], session: null, project, usage: ZERO })
+type Live = Pick<ChatState, 'tabs' | 'tab' | 'messages' | 'session' | 'project' | 'usage'>
+/** Las pestañas con la activa al día. */
+const saved = (s: Live): ChatTab[] => s.tabs.map((t) => (t.id === s.tab ? { ...t, messages: s.messages, session: s.session, project: s.project, usage: s.usage } : t))
+/** Pone una pestaña como la activa (permisos y preguntas pendientes son de la anterior y no pasan). */
+const show = (tabs: ChatTab[], t: ChatTab): Partial<ChatState> => ({ tabs, tab: t.id, messages: t.messages, session: t.session, project: t.project, usage: t.usage, permissions: [], asks: [] })
 let nextId = 1
 const add = (messages: ChatMessage[], m: Omit<ChatMessage, 'id'>): ChatMessage[] => [...messages, { ...m, id: nextId++ }]
 
 /** La conversación del chat: vive fuera del panel para no perderse al cerrarlo. */
 export const useChat = create<ChatState>((set, get) => ({
-  messages: [], running: false, session: null, project: null, permissions: [], selection: null, asks: [],
+  tabs: [blank(1, null)], tab: 1,
+  newTab: () => { const s = get(); if (s.running || !s.messages.length) return; const t = blank(nextTab++, s.project); set(show([...saved(s), t], t)) },
+  switchTab: (id) => { const s = get(); if (s.running || id === s.tab) return; const tabs = saved(s); const t = tabs.find((x) => x.id === id); if (t) set(show(tabs, t)) },
+  closeTab: (id) => {
+    const s = get()
+    if (s.running && id === s.tab) return
+    const tabs = saved(s), at = tabs.findIndex((x) => x.id === id)
+    const rest = tabs.filter((x) => x.id !== id)
+    if (!rest.length) { const t = blank(nextTab++, s.project); set(show([t], t)); return }
+    if (id === s.tab) set(show(rest, rest[Math.min(at, rest.length - 1)]))
+    else set({ tabs: rest })
+  },
+  messages: [], running: false, session: null, project: null, permissions: [], selection: null, asks: [], queued: null,
+  queue: (text) => set({ queued: text }),
+  load: (session, project, history) => {
+    const s = get()
+    if (s.running) return
+    const messages = history.map((m): ChatMessage => ({ id: nextId++, role: m.role, text: m.text }))
+    const opened = s.tabs.find((x) => x.session === session)          // ya abierta: se va a ella
+    if (opened && opened.id !== s.tab) { get().switchTab(opened.id); return }
+    const into = s.messages.length ? { ...blank(nextTab++, project), messages, session } : { ...blank(s.tab, project), messages, session }          // la pestaña vacía se reutiliza
+    set(show(s.messages.length ? [...saved(s), into] : saved(s).map((x) => (x.id === s.tab ? into : x)), into))
+  },
   reply: (id, answers) => { set((s) => ({ asks: s.asks.filter((a) => a.id !== id) })); void window.api.chat.reply(id, answers) }, usage: ZERO,
   setSelection: (selection) => set({ selection }),
   send: (text, opts) => {

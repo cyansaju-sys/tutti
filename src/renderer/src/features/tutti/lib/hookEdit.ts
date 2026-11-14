@@ -47,10 +47,9 @@ export function replaceHook(text: string, index: number, f: HookForm): string | 
   } catch { return null }
 }
 
-/** Lo que se le pide al agente para crear un hook a partir de una descripción en lenguaje natural (lo guarda apagado hasta que lo apruebes). */
+/** Lo que se le pide al agente para crear un hook a partir de una descripción en lenguaje natural (el formato ya lo tiene el chat en su prompt de sistema). */
 export function hookAgentPrompt(lang: Lang, description: string): string {
-  const shape = '{ "version": "v1", "hooks": [{ "name", "description", "trigger", "matcher", "action": { "type": "command" | "agent", "command" | "prompt" }, "timeout", "enabled" }] }'
   return lang === 'en'
-    ? `Create a hook in .tutti/hooks/<short-name>.json in Kiro's format: ${shape}. Events: PostFileSave (the only one Tutti runs), PreToolUse, PostToolUse, Stop; "matcher" is a regular expression on the file path. What I want: ${description.trim()}\nShow me the JSON before saving it, and save it with "enabled": false until I approve it.`
-    : `Crea un hook en .tutti/hooks/<nombre-corto>.json en el formato de Kiro: ${shape}. Eventos: PostFileSave (el único que ejecuta Tutti), PreToolUse, PostToolUse, Stop; "matcher" es una expresión regular sobre la ruta del archivo. Lo que quiero: ${description.trim()}\nEnséñame el JSON antes de guardarlo y guárdalo con "enabled": false hasta que yo lo apruebe.`
+    ? `Create a hook in .tutti/hooks/<short-name>.json. What I want: ${description.trim()}\nShow me the JSON before saving it, and save it with "enabled": false until I approve it.`
+    : `Crea un hook en .tutti/hooks/<nombre-corto>.json. Lo que quiero: ${description.trim()}\nEnséñame el JSON antes de guardarlo y guárdalo con "enabled": false hasta que yo lo apruebe.`
 }
