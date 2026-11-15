@@ -1,6 +1,7 @@
 /**
  * PATH completo del usuario, para encontrar los agentes aunque la app no se haya lanzado desde una terminal.
- * Junta el PATH del proceso, el de la shell de login (nvm, asdf...) y las carpetas habituales.
+ * Junta el PATH del proceso, el de la shell de login (nvm, asdf...) y las carpetas habituales: no depende de que
+ * la ruta esté en un archivo concreto (.zshrc, .zshenv...) ni de que la shell conteste a tiempo.
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, statSync, accessSync, constants } from 'node:fs'
