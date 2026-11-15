@@ -3,12 +3,12 @@
  * guarda un PNG de cada una y cierra. Sirve para regenerar las capturas de la documentación.
  */
 import { app, screen, type BrowserWindow } from 'electron'
-import * as pty from '@/main/services/agents/pty'
+import * as pty from '@/backend/services/agents/pty'
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { legacyContextFile } from '@/main/services/context/context'
+import { legacyContextFile } from '@/backend/services/context/context'
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
@@ -24,8 +24,8 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
   const store = 'window.__tutti.getState()'
   // los archivos de ejemplo salen del propio proyecto: el de Tutti si es su repositorio, o los de cualquier otro (p. ej. una app de tareas)
   const pick = (...files: string[]): string => files.find((f) => existsSync(join(project, f))) ?? files[files.length - 1]
-  const isTutti = existsSync(join(project, 'src/main/services/git/git.ts'))
-  const MAIN = pick('src/main/services/git/git.ts', 'app.js'), SECOND = pick('docs/demo/Contador.tsx', 'logic.js'), THIRD = pick('docs/demo/ejemplo.sql', 'style.css')
+  const isTutti = existsSync(join(project, 'src/backend/services/git/git.ts'))
+  const MAIN = pick('src/backend/services/git/git.ts', 'app.js'), SECOND = pick('docs/demo/Contador.tsx', 'logic.js'), THIRD = pick('docs/demo/ejemplo.sql', 'style.css')
   const TERM = isTutti ? ['agente', 'asistente'] : ['tarea', 'pendiente']
   const open = (file: string): Promise<unknown> => (existsSync(join(project, file)) ? run(`${store}.openDoc(${JSON.stringify(join(project, file))})`) : Promise.resolve())
   // TUTTI_CAPTURE_INTERNAL=1: en la pantalla integrada (si hay varias) y ocupando su área útil; si no, un tamaño fijo
@@ -153,7 +153,7 @@ export async function runCapture(win: BrowserWindow, outDir: string, project: st
     await run(`${store}.set({ panes: [], activePane: null })`)
   }
   if (process.env.TUTTI_CAPTURE_NEW) {               // inicio sin agentes, contexto del proyecto y novedades
-    const tuttiSample = '# Tutti\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/main: proceso principal (agentes, git, contexto, uso)\n- src/renderer: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
+    const tuttiSample = '# Tutti\n\n## Qué es\nPanel de escritorio (Electron + React) para trabajar con varios agentes de programación a la vez.\n\n## Estructura\n- src/backend: proceso principal (agentes, git, contexto, uso)\n- src/app, src/components, src/features: interfaz\n- test: pruebas con vitest\n\n## Cómo se ejecuta y se prueba\n- npm run dev\n- npm test y npm run typecheck\n\n## Convenciones\n- Mensajes de commit en Conventional Commits, en español.\n'
     const sample = isTutti ? tuttiSample : '# Lista de tareas\n\n## Qué es\nAplicación web para llevar una lista de tareas: añadir, editar, filtrar y marcar como hechas, con los datos guardados en el navegador.\n\n## Estructura\n- index.html y style.css: la página\n- app.js: la interfaz\n- logic.js: la lógica, con sus pruebas en logic.test.js\n\n## Cómo se ejecuta y se prueba\n- Abrir index.html en el navegador\n- node --test logic.test.js\n'
     // el ejemplo va a la ubicación antigua (configuración aislada de la captura): así no se crea un AGENTS.md en el proyecto fotografiado
     mkdirSync(dirname(legacyContextFile(project)), { recursive: true })

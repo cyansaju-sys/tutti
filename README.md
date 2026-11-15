@@ -406,13 +406,21 @@ Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `yarn 
 
 ```
 src/
-  main/        proceso principal
+  backend/     proceso principal
     services/     la lógica, una carpeta por tema (agents, git, context, usage, mcp, files, search, settings, updater)
     utils/       idioma de los mensajes, versión, ruta del shell, autotest
   preload/     el puente seguro hacia la interfaz (window.api)
-  renderer/    interfaz en React + Tailwind (features/ por tema, shared/ y estado con zustand)
+  app/         arranque de la interfaz (App.tsx, main.tsx)
+  components/  componentes de React compartidos (ui/, dialogs/)
+  features/    la interfaz por tema (agents, files, git, mcp, tutti…)
+  lib/         utilidades de la interfaz
+  store/       estado con zustand
+  styles/      estilos (Tailwind)
+  models/      modelos de formularios
+  index.html   entrada de la interfaz
   shared/      tipos compartidos
-test/          pruebas (vitest) en test/main y test/renderer, y capture.ts, el modo de capturas
+test/          pruebas (vitest) en test/backend y test/renderer, y capture.ts, el modo de capturas
+public/        recursos estáticos de la interfaz (fuentes, íconos)
 resources/     ícono de la app
 scripts/       dev.mjs
 ```

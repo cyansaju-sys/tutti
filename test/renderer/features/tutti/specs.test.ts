@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyPrompt, planPrompt, specName } from '@/renderer/src/features/tutti/lib/specs'
+import { applyPrompt, planPrompt, specName } from '@/features/tutti/lib/specs'
 
 describe('specs', () => {
   it('el nombre de la carpeta sale de lo pedido, o del indicado', () => {

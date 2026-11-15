@@ -1,0 +1,139 @@
+import { clsx } from 'clsx'
+import type { MsgKey } from '@/shared/i18n'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MdAdd, MdLanguage, MdSwapHoriz, MdOutlineEditNote, MdOutlineSettings, MdPalette, MdTerminal } from 'react-icons/md'
+import { Menu } from '@/components/Menu'
+import { useT } from '@/lib/i18n'
+import { sidebarIcon } from '@/lib/icons'
+import { AppIcon } from './AppIcon'
+import { useStore, type SidebarTab } from '@/store'
+import { AgentsView } from '@/features/agents/views/AgentsView'
+import { FilesView } from '@/features/files/views/FilesView'
+import { PowersView, type PowersHandle } from '@/features/powers/views/PowersView'
+import { GitView } from '@/features/git/views/GitView'
+import { SearchView } from '@/features/search/views/SearchView'
+import { TuttiView } from '@/features/tutti/views/TuttiView'
+import { UsageView } from '@/features/usage/views/UsageView'
+
+export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
+  { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
+  { id: 'tutti', icon: 'tutti', titleKey: 'tab.tutti', key: 'J' },
+  { id: 'agents', icon: 'agents', titleKey: 'tab.agents', key: 'A' },
+  { id: 'search', icon: 'search', titleKey: 'tab.search', key: 'F' },
+  { id: 'git', icon: 'git', titleKey: 'tab.git', key: 'G' },
+  { id: 'powers', icon: 'mcp', titleKey: 'tab.powers', key: 'X' },
+  { id: 'ai', icon: 'ai', titleKey: 'tab.ai', key: 'U' }
+]
+
+const ORDER_KEY = 'sidebar_order'
+
+/** Las pestañas en el orden guardado; las que no aparezcan en él (p. ej. una nueva) van al final en su orden de siempre. */
+const ordered = (ids: string[]): typeof TABS => [...ids.flatMap((id) => TABS.filter((x) => x.id === id)), ...TABS.filter((x) => !ids.includes(x.id))]
+
+export function Sidebar() {
+  const tab = useStore((s) => s.tab)
+  const set = useStore((s) => s.set)
+  const saved = useStore((s) => s.sidebarWidth)
+  const [viewport, setViewport] = useState(window.innerWidth)
+  useEffect(() => { const on = (): void => setViewport(window.innerWidth); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on) }, [])
+  const width = Math.max(180, Math.min(saved, Math.round(viewport * 0.4)))          // el ancho elegido se respeta mientras la ventana lo permita; en una estrecha, nunca pasa del 40 % (mínimo 180 px)
+  const open = useStore((s) => s.sidebarOpen)
+  const changes = useStore((s) => s.git?.files.length ?? 0)
+  const sysAccent = useStore((s) => s.sysAccent)
+  const setSysAccent = useStore((s) => s.setSysAccent)
+  const langPref = useStore((s) => s.langPref)
+  const setLang = useStore((s) => s.setLang)
+  const side = useStore((s) => s.sidebarSide)
+  const setSide = useStore((s) => s.setSidebarSide)
+  const t = useT()
+  const [menu, setMenu] = useState<DOMRect | null>(null)
+  const powers = useRef<PowersHandle>(null)
+  const [order, setOrder] = useState<string[]>([])           // el orden de los iconos, a gusto del usuario
+  const [dragged, setDragged] = useState<SidebarTab | null>(null)
+  const [over, setOver] = useState<SidebarTab | null>(null)
+  const tabs = useMemo(() => ordered(order), [order])
+  useEffect(() => { void window.api.settings.get(ORDER_KEY).then((v) => { if (Array.isArray(v)) setOrder(v.filter((x): x is string => typeof x === 'string')) }) }, [])
+
+  // suelta `dragged` en el lugar de `target`
+  const drop = (target: SidebarTab): void => {
+    if (dragged && dragged !== target) {
+      const ids = tabs.map((x) => x.id).filter((id) => id !== dragged)
+      ids.splice(ids.indexOf(target) + (tabs.findIndex((x) => x.id === dragged) < tabs.findIndex((x) => x.id === target) ? 1 : 0), 0, dragged)
+      setOrder(ids)
+      void window.api.settings.set(ORDER_KEY, ids)
+    }
+    setDragged(null); setOver(null)
+  }
+
+  return (
+    <div style={{ width: open ? width + 56 : 56 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', side === 'right' && 'flex-row-reverse', !open && (side === 'right' ? 'ml-1.5' : 'mr-1.5'))}>
+      <div className={clsx('flex w-14 shrink-0 flex-col items-center gap-1 border-line p-0.5', side === 'right' ? 'border-l' : 'border-r')}>
+        {tabs.map((tab_) => (
+          <button
+            key={tab_.id}
+            draggable
+            onDragStart={(e) => { setDragged(tab_.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tab_.id) }}
+            onDragOver={(e) => { if (dragged) { e.preventDefault(); setOver(tab_.id) } }}
+            onDrop={(e) => { e.preventDefault(); drop(tab_.id) }}
+            onDragEnd={() => { setDragged(null); setOver(null) }}
+            title={`${t(tab_.titleKey)} (Ctrl+Shift+${tab_.key})`}
+            onClick={() => set(tab === tab_.id && open ? { sidebarOpen: false } : { tab: tab_.id, sidebarOpen: true })}
+            onDoubleClick={() => set({ tab: tab_.id, sidebarOpen: !open })}
+            className={clsx('relative grid size-9 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg', dragged === tab_.id && 'opacity-40', over === tab_.id && dragged !== tab_.id && 'ring-1 ring-accent')}
+          >
+            <AppIcon src={sidebarIcon(tab_.icon)} className="size-6" />
+            {tab_.id === 'git' && changes > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[9px] font-bold text-bg">
+                {changes > 99 ? '99+' : changes}
+              </span>
+            )}
+          </button>
+        ))}
+        <button
+          title={t('settings.title')}
+          onClick={(e) => setMenu(e.currentTarget.getBoundingClientRect())}
+          className={clsx('mt-auto grid size-10 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent', menu && 'bg-accent-bg text-accent')}
+        >
+          <MdOutlineSettings size={22} />
+        </button>
+      </div>
+      {menu && (
+        <Menu width={230} anchor={menu} onClose={() => setMenu(null)} items={[
+          { heading: t('settings.title'), label: t('theme.group'), icon: <MdPalette size={15} />, submenu: [
+            { label: t('theme.color'), onClick: () => set({ modal: 'theme' }) },
+            { label: t('icons.title'), onClick: () => set({ modal: 'iconTheme' }) },
+            { label: t('theme.accent'), checked: sysAccent, onClick: () => void setSysAccent(!sysAccent) }
+          ] },
+          { label: t('lang.title'), icon: <MdLanguage size={15} />, detail: t(`lang.s.${langPref}`), submenu: [
+            { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },
+            { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
+            { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
+          ] },
+          { label: t('editor.title'), icon: <MdOutlineEditNote size={15} />, onClick: () => set({ modal: 'editorSettings' }) },
+          { label: t('shell.title'), icon: <MdTerminal size={15} />, onClick: () => set({ modal: 'shell' }) },
+          { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), icon: <MdSwapHoriz size={15} />, onClick: () => setSide(side === 'left' ? 'right' : 'left') }
+        ]} />
+      )}
+      {open && <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-1.5">
+        <div className="flex items-center justify-between pb-1 pr-2">
+          <h3 className="truncate px-3.5 pb-1 pt-0.5 text-[12px] font-medium text-muted/75">{t(`tt.${tab}` as MsgKey)}</h3>
+          {tab === 'powers' && (
+            <button title={t('powers.add')} onClick={() => powers.current?.add()}
+              className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
+              <MdAdd size={16} />
+            </button>
+          )}
+        </div>
+        <div className="min-h-0 flex-1">
+        {tab === 'files' && <FilesView />}
+        {tab === 'search' && <SearchView />}
+        {tab === 'agents' && <AgentsView />}
+        {tab === 'git' && <GitView />}
+        {tab === 'tutti' && <TuttiView />}
+        {tab === 'ai' && <UsageView />}
+        {tab === 'powers' && <PowersView ref={powers} />}
+        </div>
+      </div>}
+    </div>
+  )
+}

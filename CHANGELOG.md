@@ -2,6 +2,16 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.3
+
+### Cambios
+
+- **Cambios internos:** se reorganizó y simplificó parte del código y de la estructura del proyecto.
+
+### Correcciones
+
+- El chat con Claude encuentra los comandos y los servidores MCP (`npx`, lo instalado con nvm o en las carpetas habituales de binarios…) aunque abras Tutti desde el lanzador de escritorio y no desde una terminal. Antes podían no conectar.
+
 ## 1.5.2
 
 ### Cambios
