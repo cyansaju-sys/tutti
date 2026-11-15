@@ -641,7 +641,7 @@ Si tu terminal define `ELECTRON_RUN_AS_NODE` (algunos editores lo hacen), `yarn 
 
 ```
 src/
-  main/        proceso principal (index.ts: ventana y rutas IPC)
+  backend/     proceso principal (index.ts: ventana y rutas IPC)
     services/    la lógica, una carpeta por tema:
       agents/      detección, terminales (node-pty), reparto de tareas (servidor MCP) y su arranque
       git/         git y el mensaje de commit con IA

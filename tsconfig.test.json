@@ -5,5 +5,5 @@
     "noEmit": false, "emitDeclarationOnly": true, "outDir": "./node_modules/.tmp/test", "types": ["node", "vite/client"],
     "paths": { "@/*": ["./src/*"] }, "baseUrl": "."
   },
-  "include": ["test/**/*", "vitest.config.ts", "src/shared/**/*", "src/shared/locales/*.json", "src/main/**/*", "src/harnes/**/*", "src/app/**/*", "src/components/**/*", "src/features/**/*", "src/lib/**/*", "src/models/**/*", "src/store/**/*", "src/preload/index.d.ts"]
+  "include": ["test/**/*", "vitest.config.ts", "src/shared/**/*", "src/shared/locales/*.json", "src/backend/**/*", "src/harnes/**/*", "src/app/**/*", "src/components/**/*", "src/features/**/*", "src/functions/**/*", "src/lib/**/*", "src/models/**/*", "src/store/**/*", "src/preload/index.d.ts"]
 }

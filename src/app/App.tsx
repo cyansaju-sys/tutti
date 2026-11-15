@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { AgentsArea, TerminalSection } from '@/features/agents/components/AgentsArea'
 import { confirmAsk, useConfirm } from '@/lib/confirm'
 import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/components/dialogs'
@@ -11,12 +11,20 @@ import { Resizer } from '@/components/ui'
 import { Tooltips } from '@/components/Tooltip'
 import { refreshGit } from '@/features/git/lib/gitSync'
 import { t } from '@/lib/i18n'
-import { isLangPref } from '@/shared/i18n'
 import { isGlobalShortcut } from '@/lib/shortcuts'
-import { cacheAccent, isPref, resolveTheme, paintAccent, paintTheme } from '@/lib/theme'
-import { isIconFlavor, loadIconTheme } from '@/lib/icons'
+import { cacheAccent, resolveTheme, paintAccent, paintTheme } from '@/lib/theme'
+import { loadIconTheme } from '@/lib/icons'
+import { loadSettings } from '@/functions/loadSettings'
 import { ChatPanel } from '@/components/ChatPanel'
 import { isDirty, useStore } from '@/store'
+
+/** Diálogo que se abre con cada valor de `modal`. */
+const MODALS: Record<string, ComponentType | undefined> = {
+  agents: AgentPicker, addAgent: AddAgentDialog, editorSettings: EditorSettingsDialog, shell: ShellDialog, shortcuts: ShortcutsDialog,
+  branches: BranchPicker, worktrees: WorktreeDialog, quickOpen: QuickOpenDialog, goLine: GoLineDialog, theme: ThemePicker, iconTheme: IconThemePicker
+}
+/** Los que solo tienen sentido con un proyecto abierto. */
+const NEEDS_PROJECT = ['branches', 'worktrees']
 
 /** Arrastra un divisor: parte del ancho que tenía al empezar y suma el desplazamiento. */
 function useDrag(get: () => number, apply: (value: number) => void, min: number, max: number, invert = false, onDone?: (value: number) => void) {
@@ -42,24 +50,7 @@ export function App() {
       const fromArgs = reloaded ? null : await window.api.window.startProject()          // `tutti .` o `tutti archivo`: se abre eso en vez del último proyecto
       const project = (empty && !reloaded) || fromArgs ? undefined : (await window.api.settings.get('project')) as string | undefined
       const edit = await window.api.settings.get('edit_enabled')
-      const savedTheme = await window.api.settings.get('theme')
-      if (isPref(savedTheme) && savedTheme !== useStore.getState().theme) useStore.getState().setTheme(savedTheme)
-      const savedAccent = await window.api.settings.get('system_accent')
-      if (typeof savedAccent === 'boolean') useStore.setState({ sysAccent: savedAccent })
-      const savedFlavor = await window.api.settings.get('icon_flavor')
-      if (isIconFlavor(savedFlavor)) useStore.setState({ iconFlavor: savedFlavor })
-      const savedSide = await window.api.settings.get('sidebar_side')
-      if (savedSide === 'left' || savedSide === 'right') useStore.setState({ sidebarSide: savedSide })
-      const savedFont = await window.api.settings.get('editor_font')
-      if (typeof savedFont === 'string' && savedFont.trim()) useStore.setState({ editorFont: savedFont })
-      const savedWidth = await window.api.settings.get('sidebar_width')          // el ancho del sidebar es global: vale para todos los proyectos
-      if (typeof savedWidth === 'number' && Number.isFinite(savedWidth)) useStore.setState({ sidebarWidth: Math.max(220, Math.min(520, savedWidth)) })
-      const savedChatOpen = await window.api.settings.get('chat_open')          // el chat se abre con el proyecto; si se cerró, así se queda
-      if (typeof savedChatOpen === 'boolean') useStore.setState({ chatOpen: savedChatOpen })
-      const savedChatWidth = await window.api.settings.get('chat_width')
-      if (typeof savedChatWidth === 'number' && Number.isFinite(savedChatWidth)) useStore.setState({ chatWidth: Math.max(280, Math.min(720, savedChatWidth)) })
-      const savedLang = await window.api.settings.get('language')
-      if (isLangPref(savedLang) && savedLang !== useStore.getState().langPref) useStore.getState().setLang(savedLang)
+      await loadSettings()
       const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
@@ -162,17 +153,25 @@ export function App() {
       if (st.modal || useConfirm.getState().ask) return
       const key = e.key.toUpperCase()
       const doc = st.docs.find((d) => d.path === st.activeDoc)
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'W' && st.focus === 'editor' && doc) {
-        e.preventDefault(); e.stopPropagation()
-        if (!isDirty(doc)) st.closeDoc(doc.path)
-        else void confirmAsk(t('app.unsaved', { title: doc.title }), t('app.closeAnyway')).then((yes) => { if (yes) useStore.getState().closeDoc(doc.path) })
-        return
+      const plain = e.ctrlKey && !e.shiftKey && !e.altKey
+      if (plain) {
+        const consume = (): void => { e.preventDefault(); e.stopPropagation() }
+        if (key === 'W' && st.focus === 'editor' && doc) {
+          consume()
+          if (!isDirty(doc)) st.closeDoc(doc.path)
+          else void confirmAsk(t('app.unsaved', { title: doc.title }), t('app.closeAnyway')).then((yes) => { if (yes) useStore.getState().closeDoc(doc.path) })
+          return
+        }
+        // cada acción dice si se encargó de la tecla (cerrar un hueco puede no hacer nada)
+        const actions: Record<string, (() => boolean) | undefined> = {
+          W: () => st.closeSlot(),
+          P: () => { st.set({ modal: 'quickOpen' }); return true },
+          G: () => { st.set({ modal: 'goLine' }); return true },
+          Q: () => { window.api.window.close(); return true },
+          ...(st.panes.length && /^[1-6]$/.test(key) ? { [key]: () => { st.splitPanes(Number(key)); return true } } : {})
+        }
+        if (actions[key]?.()) { consume(); return }
       }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'W' && st.closeSlot()) { e.preventDefault(); e.stopPropagation(); return }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'P') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'quickOpen' }); return }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'G') { e.preventDefault(); e.stopPropagation(); st.set({ modal: 'goLine' }); return }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && /^[1-6]$/.test(key) && st.panes.length) { e.preventDefault(); e.stopPropagation(); st.splitPanes(Number(key)); return }
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'Q') { e.preventDefault(); e.stopPropagation(); window.api.window.close(); return }
       if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }
       if (!isGlobalShortcut(e)) return
       e.preventDefault(); e.stopPropagation()
@@ -187,11 +186,14 @@ export function App() {
       if (key === 'H') { st.set({ tab: 'search', sidebarOpen: true, searchReplace: true, searchToken: st.searchToken + 1 }); return }
       const tab = TABS.find((t) => t.key === key)
       if (tab) { st.set({ tab: tab.id, sidebarOpen: true, ...(tab.id === 'search' && { searchToken: st.searchToken + 1, searchReplace: false }) }); return }
-      if (key === 'N') st.set({ modal: 'agents' })
-      else if (key === 'T') void st.toggleShell()
-      else if (key === 'B') st.set({ sidebarOpen: !st.sidebarOpen })
-      else if (key === 'L') st.setEdit(!st.editEnabled)
-      else if (key === 'W') { const id = st.activePane; if (id) st.closePane(id) }
+      const shortcuts: Record<string, () => void> = {
+        N: () => st.set({ modal: 'agents' }),
+        T: () => { void st.toggleShell() },
+        B: () => st.set({ sidebarOpen: !st.sidebarOpen }),
+        L: () => st.setEdit(!st.editEnabled),
+        W: () => { if (st.activePane) st.closePane(st.activePane) }
+      }
+      shortcuts[key]?.()
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -202,6 +204,7 @@ export function App() {
   useEffect(() => { if (ready) void window.api.settings.set('chat_open', s.chatOpen) }, [ready, s.chatOpen])
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
+  const Modal = s.modal ? MODALS[s.modal] : undefined
 
   return (
     <div className="flex h-full flex-col bg-bg">
@@ -230,17 +233,7 @@ export function App() {
         {s.chatOpen && s.project && <><Resizer onDrag={dragChat} /><div className="flex"><ChatPanel /></div></>}
       </div>
       <Footer />
-      {s.modal === 'agents' && <AgentPicker />}
-      {s.modal === 'addAgent' && <AddAgentDialog />}
-      {s.modal === 'editorSettings' && <EditorSettingsDialog />}
-      {s.modal === 'shell' && <ShellDialog />}
-      {s.modal === 'shortcuts' && <ShortcutsDialog />}
-      {s.modal === 'branches' && s.project && <BranchPicker />}
-      {s.modal === 'worktrees' && s.project && <WorktreeDialog />}
-      {s.modal === 'quickOpen' && <QuickOpenDialog />}
-      {s.modal === 'goLine' && <GoLineDialog />}
-      {s.modal === 'theme' && <ThemePicker />}
-      {s.modal === 'iconTheme' && <IconThemePicker />}
+      {Modal && (s.project || !NEEDS_PROJECT.includes(s.modal!)) && <Modal />}
       <ConfirmDialog />
       <Toasts />
       <Tooltips />

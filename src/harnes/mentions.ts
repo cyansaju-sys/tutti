@@ -3,12 +3,12 @@ import { execFileSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, relative } from 'node:path'
-import { globalSteeringDir, tuttiDir } from '@/main/services/context/context'
-import { listRoles } from '@/main/services/context/roles'
-import { loadSteering } from '@/main/services/context/steering'
-import { loadHooks } from '@/main/services/hooks'
-import { listPowers, powerSummaries } from '@/main/services/powers'
-import { roadmapState } from '@/main/services/roadmap'
+import { globalSteeringDir, tuttiDir } from '@/backend/services/context/context'
+import { listRoles } from '@/backend/services/context/roles'
+import { loadSteering } from '@/backend/services/context/steering'
+import { loadHooks } from '@/backend/services/hooks'
+import { listPowers, powerSummaries } from '@/backend/services/powers'
+import { roadmapState } from '@/backend/services/roadmap'
 
 const TOKEN = /(?:^|\s)#(role|spec|road|doc|diff|hook|steering|power|skill|mcp|file|dir):(\S+)/g
 

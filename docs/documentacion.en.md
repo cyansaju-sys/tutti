@@ -641,7 +641,7 @@ If your terminal defines `ELECTRON_RUN_AS_NODE` (some editors do), `yarn dev` al
 
 ```
 src/
-  main/        main process (index.ts: window and IPC routes)
+  backend/     main process (index.ts: window and IPC routes)
     services/    the logic, one folder per topic:
       agents/      detection, terminals (node-pty), task delegation (MCP server) and their launch
       git/         git and the AI commit message

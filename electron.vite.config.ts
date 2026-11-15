@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // Desde electron-vite 5 las dependencias de main y preload quedan fuera del bundle por defecto (antes, externalizeDepsPlugin).
 export default defineConfig({
-  main: { resolve: { alias: { '@': resolve('src') } } },
+  main: { build: { rollupOptions: { input: resolve('src/backend/index.ts') } }, resolve: { alias: { '@': resolve('src') } } },
   preload: { resolve: { alias: { '@': resolve('src') } } },
   renderer: {
     root: resolve('src'),

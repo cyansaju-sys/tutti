@@ -4,5 +4,5 @@
     "skipLibCheck": true, "esModuleInterop": true, "types": ["node"], "noEmit": false, "emitDeclarationOnly": true,
     "outDir": "./node_modules/.tmp/node", "paths": { "@/*": ["./src/*"] }, "baseUrl": "."
   },
-  "include": ["electron.vite.config.ts", "test/capture.ts", "src/main/**/*", "src/harnes/**/*", "src/preload/**/*", "src/shared/**/*", "src/shared/locales/*.json"]
+  "include": ["electron.vite.config.ts", "test/capture.ts", "src/backend/**/*", "src/harnes/**/*", "src/preload/**/*", "src/shared/**/*", "src/shared/locales/*.json"]
 }

@@ -4,11 +4,12 @@ import type { Options, PermissionMode, SDKUserMessage } from '@anthropic-ai/clau
 import type { ChatEvent, ChatQuestion, ChatSendRequest } from '@/shared/types'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { tuttiDir } from '@/main/services/context/context'
+import { tuttiDir } from '@/backend/services/context/context'
+import { childEnv } from '@/backend/services/agents/env'
 import { expandMentions } from './mentions'
 import { TUTTI_FORMATS } from './formats'
 import { claudeExecutable } from './probe'
-import { getSetting, setSetting } from '@/main/services/settings'
+import { getSetting, setSetting } from '@/backend/services/settings'
 
 interface Run { abort: AbortController; pending: Map<string, (allow: boolean, always?: boolean) => void>; questions: Map<string, (answers: Record<string, string> | null) => void> }
 const runs = new Map<number, Run>()
@@ -103,6 +104,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     },
     abortController: run.abort,
     pathToClaudeCodeExecutable: claudeExecutable(),
+    env: childEnv(),          // PATH ampliado (nvm, ~/.local/bin…): así los comandos y los MCP (npx, viamemory…) se encuentran aunque Tutti no se lance desde una terminal
     permissionMode: mode.permissionMode,
     disallowedTools: mode.disallowedTools,
     model: req.model && req.model !== 'default' ? req.model : undefined,

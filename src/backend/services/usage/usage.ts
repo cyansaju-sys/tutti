@@ -1,0 +1,311 @@
+/**
+ * Consumo de tokens e historial de los agentes, leído de sus archivos locales.
+ *
+ * - Claude Code: ~/.claude/projects/<proyecto>/<sesión>.jsonl (cada respuesta trae su `usage`); los límites del plan y los títulos los da el SDK.
+ * - OpenCode: su base SQLite (tabla session_v2).
+ * - Codex: ~/.codex/sessions/AAAA/MM/DD/rollout-*.jsonl (tokens acumulados y límites de su plan en cada aviso).
+ * - Antigravity (agy): solo historial, desde conversation_summaries.db (no guarda tokens).
+ *
+ * Solo se lee: nunca se modifica nada de los agentes (salvo borrar una sesión si el usuario lo pide).
+ */
+import { execFile } from 'node:child_process'
+import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, unlinkSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { basename, join, relative, isAbsolute } from 'node:path'
+import type { AgentInfo, AgentUsage, LimitInfo, McpResult, SessionInfo, UsageData } from '@/shared/types'
+import { deleteAgyConversation, readAgyConversations } from './agyDb'
+import { deleteCodexSession, readCodexData } from './codexDb'
+import { readKiroUsage } from './kiroDb'
+import { readOpenCodeSessions } from './opencodeDb'
+import { getSetting, setSetting } from '@/backend/services/settings'
+import { extendedPath } from '@/backend/utils/shellpath'
+import { tm } from '@/backend/utils/i18n'
+import { planLimits, sessionTitles } from '@/harnes/usage'
+
+export const WINDOW_HOURS = 5          // Claude reinicia el límite de sesión en ventanas de 5 horas
+const HOUR = 3_600_000
+
+interface Tokens { input: number; output: number; cacheWrite: number; cacheRead: number }
+/** Tokens procesados de verdad; la lectura de caché se cuenta aparte (es barata). */
+const processed = (t: Tokens): number => t.input + t.output + t.cacheWrite
+
+// --- límites de Claude (los da el SDK, con la sesión de Claude Code) ---------------------------------------------------
+const LIMITS_TTL = 60                   // mínimo entre consultas reales (el endpoint limita las peticiones frecuentes)
+const LIMITS_BACKOFF = 120              // espera mínima tras un 429
+const LIMIT_LABELS = (): Array<[string, string]> => [
+  ['five_hour', tm('m.us.five')], ['seven_day', tm('m.us.seven')], ['seven_day_opus', tm('m.us.opus')], ['seven_day_sonnet', tm('m.us.sonnet')]
+]
+const limitsState: { nextTry: number; error: string; good: { at: number; limits: LimitInfo[] } | null } = { nextTry: 0, error: '', good: null }
+
+/** Último dato bueno guardado: sirve tras reiniciar o durante una espera (mismo formato que la versión anterior). */
+function loadGood(): { at: number; limits: LimitInfo[] } | null {
+  const saved = getSetting('limits_cache') as { at?: number; limits?: Array<{ label: string; percent: number; resets_at: string }> } | undefined
+  try {
+    const limits = (saved?.limits ?? []).map((i) => ({ label: i.label, percent: Number(i.percent), resetsAt: Date.parse(i.resets_at) }))
+    return limits.length && saved?.at ? { at: saved.at, limits } : null
+  } catch { return null }
+}
+const saveGood = (at: number, limits: LimitInfo[]): void =>
+  setSetting('limits_cache', { at, limits: limits.map((l) => ({ label: l.label, percent: l.percent, resets_at: new Date(l.resetsAt).toISOString() })) })
+
+/** Los límites que da el SDK, con el nombre que se muestra de cada uno. */
+async function fetchLimits(): Promise<LimitInfo[] | null> {
+  const { available, limits } = await planLimits()
+  if (!available) return null
+  const labels = new Map(LIMIT_LABELS())
+  return limits.flatMap((l) => (labels.has(l.key) ? [{ label: labels.get(l.key)!, percent: l.percent, resetsAt: l.resetsAt }] : []))
+}
+
+/**
+ * Límites de Claude con el porcentaje y el reinicio reales, pedidos al SDK (`/usage`). Solo consulta si `fetchNow` es true (al entrar en la
+ * pestaña); si no, devuelve el último dato guardado. Si falla se espera y se sigue mostrando el último dato bueno (los límites que ya se
+ * reiniciaron se descartan).
+ */
+export async function claudeLimits(fetchNow: boolean): Promise<{ limits: LimitInfo[]; error: string; age: number }> {
+  const now = Date.now()
+  limitsState.good ??= loadGood()
+  if (fetchNow && now >= limitsState.nextTry) {
+    try {
+      const limits = await fetchLimits()
+      if (limits === null) Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.login') })
+      else if (limits.length) { limitsState.good = { at: now, limits }; Object.assign(limitsState, { error: '', nextTry: now + LIMITS_TTL * 1000 }); saveGood(now, limits) }
+      else Object.assign(limitsState, { error: tm('m.us.noLimits'), nextTry: now + LIMITS_TTL * 1000 })
+    } catch { Object.assign(limitsState, { nextTry: now + 60_000, error: tm('m.us.offline') }) }
+  }
+  const good = limitsState.good
+  if (good) {
+    const current = good.limits.filter((l) => l.resetsAt > now)       // lo ya reiniciado no vale
+    if (current.length) return { limits: current, error: '', age: (now - good.at) / 1000 }
+  }
+  return { limits: [], error: limitsState.error, age: 0 }
+}
+
+// --- Claude Code ------------------------------------------------------------------------------
+interface ClaudeFile { msgs: Map<string, { ts: number; tokens: Tokens }>; title: string; cwd: string }
+const claudeCache = new Map<string, { stamp: string; data: ClaudeFile }>()      // ruta -> datos (se reparsea solo si cambió)
+
+export function parseClaudeJsonl(text: string): ClaudeFile {
+  const msgs = new Map<string, { ts: number; tokens: Tokens }>()
+  let title = '', lastPrompt = '', cwd = ''
+  for (const line of text.split('\n')) {
+    if (!line) continue
+    // la mayoría de las líneas son mensajes del usuario y resultados de herramientas (enormes): solo se interpreta lo que sirve
+    if (cwd && !line.includes('assistant') && !line.includes('ai-title') && !line.includes('last-prompt')) continue
+    let d: Record<string, any>   // eslint-disable-line @typescript-eslint/no-explicit-any
+    try { d = JSON.parse(line) } catch { continue }
+    cwd ||= d.cwd ?? ''                                  // carpeta inicial de la sesión
+    if (d.type === 'ai-title') title = d.aiTitle || title
+    else if (d.type === 'last-prompt') lastPrompt = d.lastPrompt || lastPrompt
+    else if (d.type === 'assistant') {
+      const m = d.message ?? {}
+      const u = m.usage
+      if (!u || !d.timestamp) continue
+      msgs.set(`${m.id}|${d.requestId}`, {                // las respuestas parciales se sobrescriben con la final
+        ts: Date.parse(d.timestamp),
+        tokens: { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0 }
+      })
+    }
+  }
+  return { msgs, title: title || lastPrompt || tm('m.us.untitled'), cwd }
+}
+
+const claudeFiles = (): string[] => {
+  const root = join(homedir(), '.claude', 'projects')
+  try {
+    return readdirSync(root).flatMap((dir) => {
+      try { return readdirSync(join(root, dir)).filter((f) => f.endsWith('.jsonl')).map((f) => join(root, dir, f)) } catch { return [] }
+    })
+  } catch { return [] }
+}
+
+export function claudeSessions(now: number): { usage: Omit<AgentUsage, 'limits' | 'limitsError' | 'limitsAge' | 'name'>; sessions: SessionInfo[] } {
+  const data = new Map<string, ClaudeFile>()
+  for (const path of claudeFiles()) {
+    try {
+      const st = statSync(path)
+      const stamp = `${st.mtimeMs}:${st.size}`
+      let cached = claudeCache.get(path)
+      if (!cached || cached.stamp !== stamp) { cached = { stamp, data: parseClaudeJsonl(readFileSync(path, 'utf8')) }; claudeCache.set(path, cached) }
+      data.set(path, cached.data)
+    } catch { /* archivo en uso o borrado */ }
+  }
+  const seen = new Set<string>()                          // entradas únicas entre archivos (las sesiones reanudadas repiten mensajes)
+  const entries: Array<{ ts: number; tokens: Tokens }> = []
+  const sessions: SessionInfo[] = []
+  for (const [path, d] of data) {
+    let total = 0, first = Infinity, last = 0
+    for (const [key, e] of d.msgs) {
+      if (seen.has(key)) continue
+      seen.add(key); entries.push(e)
+      total += processed(e.tokens); first = Math.min(first, e.ts); last = Math.max(last, e.ts)
+    }
+    if (last) {
+      sessions.push({ command: 'claude', agent: 'Claude Code', id: basename(path, '.jsonl'), title: d.title, cwd: d.cwd,
+        project: d.cwd ? basename(d.cwd) : basename(join(path, '..')), tokens: total, start: first, end: last })
+    }
+  }
+  entries.sort((a, b) => a.ts - b.ts)
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0)
+  const weekStart = now - 7 * 24 * HOUR
+  let today = 0, week = 0, total = 0
+  let block: { start: number; end: number; tokens: number } | null = null
+  for (const { ts, tokens } of entries) {
+    const n = processed(tokens)
+    total += n
+    if (ts >= startOfToday) today += n
+    if (ts >= weekStart) week += n
+    if (!block || ts >= block.end) {                      // ventana nueva si el mensaje cae fuera de la anterior (inicio redondeado a la hora)
+      const start = Math.floor(ts / HOUR) * HOUR
+      block = { start, end: start + WINDOW_HOURS * HOUR, tokens: 0 }
+    }
+    block.tokens += n
+  }
+  sessions.sort((a, b) => b.end - a.end)
+  return { usage: { command: 'claude', window: block && now < block.end ? block : null, today, week, total, note: '' }, sessions }
+}
+
+// --- OpenCode ---------------------------------------------------------------------------------
+export function opencodeSessions(now: number): { usage: Omit<AgentUsage, 'limits' | 'limitsError' | 'limitsAge' | 'name'>; sessions: SessionInfo[] } | null {
+  const rows = readOpenCodeSessions()
+  if (rows === null) return null
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0)
+  const weekStart = now - 7 * 24 * HOUR
+  let today = 0, week = 0, total = 0
+  const sessions: SessionInfo[] = rows.map((r) => {
+    const tokens = (r.tokens_input ?? 0) + (r.tokens_output ?? 0) + (r.tokens_reasoning ?? 0) + (r.tokens_cache_write ?? 0)
+    total += tokens
+    if (r.time_updated >= startOfToday) today += tokens
+    if (r.time_updated >= weekStart) week += tokens
+    return { command: 'opencode', agent: 'OpenCode', id: r.id, title: r.title || tm('m.us.untitled'), cwd: r.directory ?? '',
+      project: basename(r.directory ?? ''), tokens, start: r.time_created, end: r.time_updated }
+  })
+  sessions.sort((a, b) => b.end - a.end)
+  return { usage: { command: 'opencode', window: null, today, week, total, note: tm('m.us.opencodeNote') }, sessions }
+}
+
+// --- Antigravity (agy) ------------------------------------------------------------------------
+/** Fecha de la base: milisegundos, segundos o texto ISO. */
+const toMs = (v: string | number): number => {
+  const n = typeof v === 'number' ? v : Number(v)
+  if (Number.isFinite(n) && n > 0) return n < 1e11 ? n * 1000 : n
+  const t = Date.parse(String(v)); return Number.isFinite(t) ? t : 0
+}
+const uriToPath = (u: string): string => { try { return u.startsWith('file://') ? decodeURIComponent(new URL(u).pathname) : u } catch { return u } }
+const firstWorkspace = (raw: string): string => {
+  try { const v = JSON.parse(raw) as unknown; const first = Array.isArray(v) ? v[0] : v; return typeof first === 'string' ? uriToPath(first) : '' } catch { return uriToPath(raw.split(',')[0] ?? '') }
+}
+
+/** agy no guarda tokens en local: solo el historial de conversaciones (título, pasos, carpeta). */
+export function agySessions(now: number): { usage: Omit<AgentUsage, 'limits' | 'limitsError' | 'limitsAge' | 'name'>; sessions: SessionInfo[] } | null {
+  const rows = readAgyConversations()
+  if (rows === null) return null
+  const sessions: SessionInfo[] = rows.map((r) => {
+    const cwd = firstWorkspace(r.workspace_uris)
+    const end = toMs(r.last_modified_time)
+    return { command: 'agy' as const, agent: 'Antigravity', id: r.conversation_id, title: r.title || r.preview || tm('m.us.untitled'), cwd,
+      project: basename(cwd), tokens: 0, start: end, end }
+  }).sort((a, b) => b.end - a.end)
+  const startOfToday = new Date(now).setHours(0, 0, 0, 0)
+  const note = sessions.length
+    ? tm('m.us.agyNote', { n: sessions.length, today: sessions.filter((s) => s.end >= startOfToday).length })
+    : tm('m.us.agyEmpty')
+  return { usage: { command: 'agy', window: null, today: 0, week: 0, total: 0, note }, sessions }
+}
+
+// --- reunir todo ------------------------------------------------------------------------------
+const real = (p: string): string => { try { return realpathSync.native(p) } catch { return p } }
+/** ¿La sesión se ejecutó en el proyecto (o en una de sus subcarpetas)? Sigue enlaces simbólicos. */
+export function inProject(cwd: string, project: string): boolean {
+  if (!cwd) return false
+  const rel = relative(real(project), real(cwd))
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+}
+
+/** Consumo e historial de Codex, desde sus registros locales (los límites vienen en ellos: no hace falta red). */
+export function codexSessions(now: number): { usage: Omit<AgentUsage, 'limits' | 'limitsError' | 'limitsAge' | 'name'>; sessions: SessionInfo[]; limits: LimitInfo[]; limitsAge: number } | null {
+  const data = readCodexData(now)
+  if (!data) return null
+  return { usage: { command: 'codex', window: null, ...data.usage, note: data.sessions.length ? '' : tm('m.us.noCodex') }, sessions: data.sessions, limits: data.limits, limitsAge: data.limitsAge }
+}
+
+/** Kiro se lanza como `kiro-cli` (o `kiro`), con o sin ruta. */
+const isKiro = (command: string): boolean => /^kiro(-cli)?(\.exe)?$/i.test(command.split(/[\\/]/).pop() ?? '')
+
+export async function collectUsage(agents: AgentInfo[], project: string | null, fetchLimits: boolean): Promise<UsageData> {
+  const now = Date.now()
+  const out: AgentUsage[] = []
+  const all: SessionInfo[] = []
+  const titlesNow = agents.some((a) => a.command === 'claude') ? sessionTitles().catch(() => new Map<string, string>()) : null      // los títulos de las conversaciones, del SDK
+  const claudeLimitsNow = agents.some((a) => a.command === 'claude') ? claudeLimits(fetchLimits) : null      // la consulta a Anthropic va mientras se leen los archivos
+  for (const agent of agents) {
+    let found: ReturnType<typeof claudeSessions> | null = null
+    if (agent.command === 'claude') found = claudeSessions(now)
+    else if (agent.command === 'opencode') found = opencodeSessions(now)
+    else if (agent.command === 'agy') found = agySessions(now)
+    else if (isKiro(agent.command)) {          // Kiro mide en créditos y no deja historial que se pueda retomar desde aquí
+      const k = readKiroUsage(now)
+      out.push({ name: agent.name, command: agent.command, window: null, today: k?.today ?? 0, week: k?.week ?? 0, total: k?.total ?? 0, unit: 'credits',
+        note: k?.total ? tm('m.us.kiroNote') : tm('m.us.kiroEmpty'), limits: [], limitsError: '', limitsAge: 0 })
+      continue
+    }
+    else if (agent.command === 'codex') {
+      const c = codexSessions(now)
+      if (c) { out.push({ ...c.usage, name: agent.name, limits: c.limits, limitsError: '', limitsAge: c.limitsAge }); all.push(...c.sessions) }
+      else out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: tm('m.us.noCodex'), limits: [], limitsError: '', limitsAge: 0 })
+      continue
+    }
+    if (!found) {
+      out.push({ name: agent.name, command: agent.command, window: null, today: 0, week: 0, total: 0, note: tm('m.us.unreadable'), limits: [], limitsError: '', limitsAge: 0 })
+      continue
+    }
+    const lim = agent.command === 'claude' && claudeLimitsNow ? await claudeLimitsNow : { limits: [], error: '', age: 0 }
+    out.push({ ...found.usage, name: agent.name, limits: lim.limits, limitsError: lim.error, limitsAge: lim.age })
+    if (agent.command === 'claude' && titlesNow) { const titles = await titlesNow; for (const x of found.sessions) x.title = titles.get(x.id) ?? x.title }
+    all.push(...found.sessions)
+  }
+  const history = project ? all.filter((s) => inProject(s.cwd, project)).sort((a, b) => b.end - a.end).slice(0, 40) : []
+  return { agents: out, history }
+}
+
+// --- acciones sobre una sesión ----------------------------------------------------------------
+export const sessionKey = (s: Pick<SessionInfo, 'command' | 'id'>): string => `${s.command}:${s.id}`
+export const sessionNames = (): Record<string, string> => (getSetting('session_names') as Record<string, string>) ?? {}
+
+/** Guarda un nombre propio (vacío = volver al original). No toca los archivos del agente. */
+export function renameSession(session: SessionInfo, name: string): void {
+  const names = { ...sessionNames() }
+  if (name.trim()) names[sessionKey(session)] = name.trim()
+  else delete names[sessionKey(session)]
+  setSetting('session_names', names)
+}
+
+export function deleteSession(session: SessionInfo): Promise<McpResult> {
+  const finish = (res: McpResult): McpResult => {
+    if (res.ok) { const names = { ...sessionNames() }; if (delete names[sessionKey(session)]) setSetting('session_names', names) }
+    return res
+  }
+  if (session.command === 'claude') {
+    let removed = false
+    const root = join(homedir(), '.claude', 'projects')
+    for (const dir of existsSync(root) ? readdirSync(root) : []) {
+      const file = join(root, dir, `${session.id}.jsonl`)
+      if (existsSync(file)) {
+        unlinkSync(file); claudeCache.delete(file); rmSync(join(root, dir, session.id), { recursive: true, force: true }); removed = true   // carpeta auxiliar de la sesión
+      }
+    }
+    return Promise.resolve(finish({ ok: removed, message: removed ? tm('m.us.deleted') : tm('m.us.noFile') }))
+  }
+  if (session.command === 'agy') {
+    const ok = deleteAgyConversation(session.id)
+    return Promise.resolve(finish({ ok, message: ok ? tm('m.us.deleted') : tm('m.us.agyBusy') }))
+  }
+  if (session.command === 'codex') {
+    const ok = deleteCodexSession(session.id)
+    return Promise.resolve(finish({ ok, message: ok ? tm('m.us.deleted') : tm('m.us.noFile') }))
+  }
+  if (session.command !== 'opencode') return Promise.resolve({ ok: false, message: tm('m.us.noDelete') })
+  return new Promise((done) => {
+    execFile('opencode', ['session', 'delete', session.id], { cwd: session.cwd || undefined, timeout: 30_000, encoding: 'utf8', env: { ...process.env, PATH: extendedPath() } },
+      (err, stdout, stderr) => done(finish({ ok: !err, message: ((err ? stderr || stdout : stdout) || '').trim() || (err ? String(err.message) : tm('m.us.deleted')) })))
+  })
+}

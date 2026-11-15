@@ -1,0 +1,359 @@
+/**
+ * Servidor MCP local para que los agentes repartan tareas entre sí.
+ *
+ * Escucha solo en 127.0.0.1, con un token aleatorio por ejecución. Cada agente lo ve como un servidor MCP más
+ * («tutti») con las herramientas list_agents, delegate_task, wait_agent y read_agent_output. La app (`host`) hace
+ * el trabajo real: abrir paneles, escribir en sus terminales y leer su pantalla.
+ */
+import { randomBytes } from 'node:crypto'
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { getSetting } from '@/backend/services/settings'
+
+export const PROTOCOL = '2025-03-26'
+
+const INSTRUCTIONS = `Eres un agente de una app que ejecuta varios agentes de programación en paralelo, cada uno con su propio modelo. Herramientas:
+- list_agents: agentes abiertos e instalados, con modelo actual, nivel (basic, standard, advanced), límite de uso y modelos que ofrece cada uno (available_models).
+- delegate_task: manda una tarea a otro agente; si no está abierto, la app lo abre en su propio panel. Con "model" eliges el modelo exacto.
+- read_agent_output / wait_agent: lee la pantalla de un agente o espera a que termine.
+- list_roles: los roles del proyecto (nombre, especialidad, entregable, dificultad, de qué roles depende, agente y modelo sugeridos). Úsalo al repartir trabajo: si hay un rol que encaja, delega con su agente y su modelo y respeta sus dependencias.
+- assign_roles: reparte una tarea a cada rol que indiques y Tutti las lanza solo, en el orden de las dependencias: cada rol empieza cuando terminaron aquellos de los que depende, con su agente y modelo, y recibe lo que entregaron. roles_status: cómo va ese plan.
+- Los roles se gestionan SOLO con estas herramientas (list_roles, assign_roles, roles_status): no abras ni leas los archivos de la carpeta de roles (.tutti/roles o .agents/roles) ni los busques en disco; toda su información ya viene en list_roles.
+- list_powers / use_power: los Powers son paquetes de herramientas y guías que se cargan solo cuando hacen falta.
+
+Al recibir una petición del usuario, antes de empezar: llama a list_powers con la petición en "task". Si no hay Powers, sigue sin más. Si alguno encaja (los que traen matches: true, o cuya descripción cuadre con la tarea), cárgalo con use_power y sigue su guía; si ninguno encaja, no cargues ninguno.
+
+Para repartir, llama a delegate_task con "difficulty" (easy, medium o hard) y la app asigna según capacidad y límite de uso. Lo fácil o mecánico \
+(renombrar, texto, boilerplate, tests simples, búsquedas) va a agentes basic o standard; lo difícil (arquitectura, bugs sutiles, cambios amplios) \
+hazlo tú o pásalo a uno advanced. Para elegir modelo usa available_models sin inventar nombres; si viene vacío, busca en la web el comando con el que \
+ese agente lista sus modelos y ejecútalo. Cada tarea debe ser autosuficiente (archivos, objetivo, criterio de terminado) y sin que dos agentes editen \
+los mismos archivos. Cuando un agente termina, la app te avisa con un mensaje «[Tutti]»: sigue con lo tuyo y lee el resultado con read_agent_output \
+(wait_agent solo si no puedes avanzar sin él). Revisa siempre el resultado antes de darlo por bueno.
+
+report_done es solo para trabajadores: úsala si la tarea te llegó de otro agente (con delegate_task) o de la app. \
+Al acabarla llama a report_done: status "done" si la terminaste, "blocked" si necesitas una respuesta para seguir (explica cuál en summary) o \
+"failed" si no pudiste hacerla; en summary, qué hiciste y si algo del criterio de terminado no se cumple. Sin report_done, quien te la pasó no sabe \
+con certeza que acabaste. Si eres el líder o la tarea te la dio el usuario directamente, no la llames: contéstale a él.
+
+Si mientras trabajas en una tarea delegada te falta información, pregunta con ask_leader en vez de suponer: la respuesta te llega escrita como \
+«[Tutti] Respuesta…». Si te preguntan a ti (aviso «[Tutti] … pregunta»), contesta con answer_agent. \
+Los avisos «[Tutti]» te llegan escritos cuando estás libre; si trabajas mucho rato seguido, consúltalos con get_updates.`
+
+/** Pizarra compartida (post_note / read_notes): se activa en los ajustes del editor (`"agent_notes"`); apagada por defecto. */
+export const notesEnabled = (): boolean => getSetting('agent_notes') === true
+const NOTES_TOOLS = ['post_note', 'read_notes']
+const NOTES_HINT = ' Las decisiones que afectan a otros agentes (nombres, contratos de API, formatos, convenciones) déjalas con post_note y lee las de los demás con read_notes antes de decidir algo parecido.'
+const instructions = (): string => (notesEnabled() ? INSTRUCTIONS.replace('Los avisos «[Tutti]»', `${NOTES_HINT.trim()} Los avisos «[Tutti]»`) : INSTRUCTIONS)
+
+export const TOOLS = [
+  {
+    name: 'list_agents',
+    description: 'Lista los agentes abiertos (con id, modelo, nivel y si están ocupados) y los instalados que se pueden abrir, ambos con la lista de modelos que ofrece cada agente (available_models) para elegir a quién asignar cada tarea.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'list_roles',
+    description: 'Los roles del proyecto (carpeta roles de .tutti o .agents): nombre, título, especialidad, entregable, descripción, dificultad (low, medium, high), de qué roles depende (depends_on), y el agente y modelo que se le asignan. Úsalo para repartir el trabajo respetando el orden de las dependencias. No hace falta leer los archivos de los roles: aquí está todo.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'assign_roles',
+    description: 'Asigna una tarea a cada rol (de list_roles) y las lanza en el orden de sus dependencias (depends_on): los que no dependen de nadie empiezan ya, cada uno con el agente y modelo de su rol, y el resto cuando terminan aquellos de los que dependen (reciben su resumen). Si un rol falla, los que dependen de él no se lanzan. Tutti te avisa con «[Tutti]» al avanzar y al terminar; consulta el estado con roles_status.',
+    inputSchema: {
+      type: 'object',
+      properties: { tasks: { type: 'array', description: 'Una tarea por rol que participa.', items: { type: 'object', properties: { role: { type: 'string', description: 'Nombre del rol (de list_roles).' }, task: { type: 'string', description: 'Lo que debe hacer ese rol, con el contexto necesario.' } }, required: ['role', 'task'] } } },
+      required: ['tasks']
+    }
+  },
+  {
+    name: 'roles_status',
+    description: 'El estado de los planes de roles lanzados con assign_roles: cada rol en espera, en curso, hecho, fallido o saltado, de qué espera y su resumen al terminar.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'delegate_task',
+    description: 'Envía una tarea a otro agente. `agent` es el id de un agente abierto (p. ej. "a2") o el nombre de un agente ' +
+      'instalado (p. ej. "opencode" o "claude"): si no hay uno libre, la app abre uno nuevo en su propio panel con la tarea ya ' +
+      'cargada. Pasa `difficulty` para que la app revise la lista de agentes, compruebe su capacidad y su límite de uso y asigne el ' +
+      'más adecuado (con agent "auto" o sin `agent`); si el agente que pides no tiene capacidad suficiente, te lo rechaza y propone otro.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agent: { type: 'string', description: 'Id de un agente abierto, nombre de uno instalado o "auto" (con difficulty) para que la app elija.' },
+        difficulty: { type: 'string', enum: ['easy', 'medium', 'hard'], description: 'Dificultad de la tarea: easy (mecánica), medium o hard (arquitectura, bugs sutiles).' },
+        model: { type: 'string', description: 'Modelo concreto con el que debe trabajar el agente (uno de available_models de list_agents). Si el agente ya abierto usa otro, la app abre una instancia nueva con ese modelo. No todos los agentes lo permiten: la app te lo dice.' },
+        force: { type: 'boolean', description: 'Mantener el agente pedido aunque no tenga capacidad suficiente.' },
+        task: { type: 'string', description: 'Instrucción completa y autosuficiente.' },
+        new_instance: { type: 'boolean', description: 'Abrir uno nuevo aunque ya haya uno libre.' }
+      },
+      required: ['task']
+    }
+  },
+  {
+    name: 'report_done',
+    description: 'Solo para trabajadores: avisa del resultado de la tarea que te pasó otro agente (con delegate_task) o la app. Llámala al acabar esa tarea: así quien te la pasó sabe que terminaste y qué hiciste. No la uses para las tareas que te da el usuario directamente.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['done', 'blocked', 'failed'], description: 'done: terminada · blocked: necesitas una respuesta para seguir · failed: no se pudo hacer.' },
+        summary: { type: 'string', description: 'Qué hiciste y entregaste; si blocked, qué necesitas; si failed, por qué. Di si algo del criterio de terminado no se cumple.' },
+        files_changed: { type: 'array', items: { type: 'string' }, description: 'Archivos que creaste o editaste.' }
+      },
+      required: ['status', 'summary']
+    }
+  },
+  {
+    name: 'list_powers',
+    description: 'Powers instalados (nombre, descripción y palabras clave). Pasa la petición del usuario en "task" y los que encajan salen primero, con matches: true. Si uno encaja, cárgalo con use_power.',
+    inputSchema: { type: 'object', properties: { task: { type: 'string', description: 'La petición del usuario o la tarea que vas a hacer, con sus palabras.' } } }
+  },
+  {
+    name: 'use_power',
+    description: 'Carga un Power cuando la tarea lo necesita: su guía, los archivos de steering y skills que trae y las herramientas de sus servidores MCP.',
+    inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Nombre del Power (de list_powers).' } }, required: ['name'] }
+  },
+  {
+    name: 'ask_leader',
+    description: 'Pregunta algo a quien te pasó la tarea (el líder) sin darla por terminada. Te quedas esperando: la respuesta te llega escrita como «[Tutti] Respuesta…». Úsala en vez de suponer cuando te falte información.',
+    inputSchema: { type: 'object', properties: { question: { type: 'string', description: 'La pregunta, concreta y con el contexto necesario para contestarla.' } }, required: ['question'] }
+  },
+  {
+    name: 'answer_agent',
+    description: 'Contesta a un agente que te preguntó con ask_leader o que se bloqueó (report_done con status blocked): sigue con su misma tarea y su contexto.',
+    inputSchema: { type: 'object', properties: { agent_id: { type: 'string' }, answer: { type: 'string' } }, required: ['agent_id', 'answer'] }
+  },
+  {
+    name: 'post_note',
+    description: 'Deja una nota en la pizarra compartida del proyecto (.tutti/notes.md) para los demás agentes: decisiones que les afectan (nombres, contratos de API, formatos, convenciones). Breve y concreta.',
+    inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] }
+  },
+  {
+    name: 'read_notes',
+    description: 'Lee las últimas notas de la pizarra compartida del proyecto, con quién las dejó y cuándo.',
+    inputSchema: { type: 'object', properties: { limit: { type: 'integer', description: 'Cuántas (por defecto 30).' } } }
+  },
+  {
+    name: 'get_updates',
+    description: 'Devuelve los avisos «[Tutti]» que tienes pendientes (tareas terminadas, preguntas, revisiones) y los da por entregados. La app te los escribe cuando estás libre; úsala si llevas mucho rato trabajando.',
+    inputSchema: { type: 'object', properties: {} }
+  },
+  {
+    name: 'wait_agent',
+    description: 'Espera a que un agente termine (sin salida durante `quiet_seconds`) y devuelve las últimas líneas de su pantalla. Úsala solo si no puedes avanzar sin ese resultado: la app te avisa cuando un agente termina.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        agent_id: { type: 'string' },
+        timeout_seconds: { type: 'integer', description: 'Máximo a esperar (por defecto 120).' },
+        quiet_seconds: { type: 'integer', description: 'Silencio que cuenta como terminado (5).' },
+        lines: { type: 'integer', description: 'Cuántas líneas devolver (por defecto 80).' }
+      },
+      required: ['agent_id']
+    }
+  },
+  {
+    name: 'read_agent_output',
+    description: 'Lee las últimas líneas de la pantalla de un agente y dice si sigue ocupado.',
+    inputSchema: {
+      type: 'object',
+      properties: { agent_id: { type: 'string' }, lines: { type: 'integer', description: 'Cuántas líneas (por defecto 80).' } },
+      required: ['agent_id']
+    }
+  }
+]
+
+export type ReportStatus = 'done' | 'blocked' | 'failed'
+export const isReportStatus = (v: unknown): v is ReportStatus => v === 'done' || v === 'blocked' || v === 'failed'
+/** Lo que un agente dice de su tarea con report_done. */
+export interface TaskReport { status: ReportStatus; summary: string; files: string[] }
+
+export interface AgentOutput {
+  agent_id: string; busy: boolean; idle_seconds: number; text: string; finished?: boolean; note?: string
+  /** Lo que el agente avisó con report_done de su última tarea. */
+  report?: TaskReport
+  /** Está parado esperando un permiso o una respuesta en su panel. */
+  awaiting_input?: boolean
+  /** Preguntó con ask_leader y espera que le contesten con answer_agent. */
+  question?: string
+}
+
+/** Lo que la app ofrece al servidor. */
+export interface Host {
+  listAgents(caller: string): unknown | Promise<unknown>
+  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string }): Promise<{ ok: boolean; info: unknown }>
+  report(caller: string, report: TaskReport): { ok: boolean; info: unknown }
+  listRoles(caller: string): { ok: boolean; info: unknown }
+  assignRoles(caller: string, tasks: Array<{ role: string; task: string }>): Promise<{ ok: boolean; info: unknown }>
+  rolesStatus(caller: string): { ok: boolean; info: unknown }
+  listPowers(caller: string, task?: string): { ok: boolean; info: unknown }
+  usePower(caller: string, name: string): Promise<{ ok: boolean; info: unknown }>
+  askLeader(caller: string, question: string): { ok: boolean; info: unknown }
+  answerAgent(caller: string, agentId: string, answer: string): { ok: boolean; info: unknown }
+  postNote(caller: string, text: string): { ok: boolean; info: unknown }
+  readNotes(caller: string, limit: number): { ok: boolean; info: unknown }
+  updates(caller: string): { ok: boolean; info: unknown }
+  output(agentId: string, lines: number): AgentOutput | null
+  /** wait_agent ya entregó el resultado de este agente: no hace falta avisar al líder. */
+  reported?(agentId: string): void
+  /** El agente habló con el servidor: tiene report_done y se puede esperar a que avise. */
+  seen?(caller: string): void
+}
+
+interface RpcMessage { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> }
+const text = (value: unknown, error = false): object => ({
+  content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 1) }],
+  isError: error
+})
+/** Los argumentos de una llamada; algunos modelos los mandan como texto JSON en vez de como objeto, y se aceptan igual. */
+function toolArgs(raw: unknown): Record<string, unknown> {
+  let value = raw
+  if (typeof value === 'string') { try { value = JSON.parse(value) } catch { return {} } }
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+
+type HostResult = { ok: boolean; info: unknown }
+type MaybeAsync<T> = T | Promise<T>
+/** Respuesta MCP a partir del resultado de la app (`ok` false → error). */
+const reply = ({ ok, info }: HostResult): object => text(info, !ok)
+/** Exige un argumento de texto no vacío; si falta, responde `missing`, y si no, ejecuta `run` con él. */
+const withText = async (args: Record<string, unknown>, key: string, missing: string, run: (value: string) => MaybeAsync<HostResult>): Promise<object> => {
+  const value = String(args[key] ?? '').trim()
+  return value ? reply(await run(value)) : text(missing, true)
+}
+
+export class Orchestra {
+  readonly token = randomBytes(24).toString('base64url')
+  port = 0
+  private server: Server | null = null
+
+  constructor(private readonly host: Host) {}
+
+  async start(): Promise<this> {
+    this.server = createServer((req, res) => void this.onRequest(req, res))
+    await new Promise<void>((resolve, reject) => {
+      this.server!.once('error', reject)
+      this.server!.listen(0, '127.0.0.1', resolve)
+    })
+    this.port = (this.server.address() as AddressInfo).port
+    return this
+  }
+
+  stop(): void { this.server?.close(); this.server = null }
+
+  /** Entrada de servidor MCP (formato `mcpServers`) para que un agente se conecte como `callerId`. */
+  configFor(callerId: string): { type: 'http'; url: string; headers: { Authorization: string } } {
+    return { type: 'http', url: `http://127.0.0.1:${this.port}/mcp/${callerId}`, headers: { Authorization: `Bearer ${this.token}` } }
+  }
+
+  private send(res: ServerResponse, code: number, payload?: unknown): void {
+    const body = payload === undefined ? '' : JSON.stringify(payload)
+    res.writeHead(code, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) })
+    res.end(body)
+  }
+
+  private async onRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (req.headers.authorization !== `Bearer ${this.token}`) return this.send(res, 401, { error: 'unauthorized' })
+    if (req.method === 'GET') return this.send(res, 405)            // no hay canal de eventos del servidor
+    if (req.method === 'DELETE') return this.send(res, 200)
+    if (req.method !== 'POST') return this.send(res, 405)
+    const caller = (req.url ?? '').split('?')[0].replace(/\/+$/, '').split('/').pop() ?? ''
+    const chunks: Buffer[] = []
+    let size = 0
+    for await (const chunk of req) {
+      size += (chunk as Buffer).length
+      if (size > 1_000_000) return this.send(res, 413, { error: 'too large' })
+      chunks.push(chunk as Buffer)
+    }
+    let data: RpcMessage | RpcMessage[]
+    try { data = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') } catch { return this.send(res, 400, { error: 'invalid json' }) }
+    const batch = Array.isArray(data) ? data : [data]
+    const replies = (await Promise.all(batch.map((m) => this.handle(m, caller)))).filter((r) => r !== null)
+    if (!replies.length) return this.send(res, 202)
+    this.send(res, 200, Array.isArray(data) ? replies : replies[0])
+  }
+
+  /** JSON-RPC: devuelve null para las notificaciones (sin respuesta). */
+  async handle(message: RpcMessage, caller: string): Promise<object | null> {
+    const { method, params = {}, id } = message
+    if (process.env.TUTTI_MCP_LOG) console.log(`MCP ${caller} ${method}${method === 'tools/call' ? ' ' + String(params.name) : ''}`)   // depuración: qué piden los agentes
+    if (caller) this.host.seen?.(caller)
+    if (id === undefined || id === null) return null
+    try {
+      let result: unknown
+      if (method === 'initialize') {
+        result = {
+          protocolVersion: (params.protocolVersion as string) || PROTOCOL, capabilities: { tools: { listChanged: false } },
+          serverInfo: { name: 'tutti', version: '0.2' }, instructions: instructions()
+        }
+      } else if (method === 'ping') result = {}
+      else if (method === 'tools/list') result = { tools: notesEnabled() ? TOOLS : TOOLS.filter((x) => !NOTES_TOOLS.includes(x.name)) }
+      else if (method === 'tools/call') result = await this.call(String(params.name), toolArgs(params.arguments), caller)
+      else return { jsonrpc: '2.0', id, error: { code: -32601, message: `método desconocido: ${method}` } }
+      return { jsonrpc: '2.0', id, result }
+    } catch (e) {          // un fallo de una herramienta no debe tumbar el servidor
+      return { jsonrpc: '2.0', id, result: text(`Error interno: ${e instanceof Error ? e.message : String(e)}`, true) }
+    }
+  }
+
+  /** Cada herramienta MCP con su manejador; `call` solo busca el nombre en la tabla. */
+  private readonly tools: Record<string, (args: Record<string, unknown>, caller: string) => object | Promise<object>> = {
+    list_agents: async (_a, caller) => text(await this.host.listAgents(caller)),
+    delegate_task: async (args, caller) => {
+      const task = String(args.task ?? '').trim()
+      const difficulty = args.difficulty === undefined ? undefined : String(args.difficulty)
+      if (!task || (!args.agent && !difficulty)) return text('Faltan `task` y `agent` (o `difficulty` para que la app elija).', true)
+      if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) return text('`difficulty` debe ser easy, medium o hard.', true)
+      return reply(await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force), model: args.model === undefined ? undefined : String(args.model).trim() || undefined }))
+    },
+    report_done: (args, caller) => {
+      const summary = String(args.summary ?? '').trim()
+      if (!isReportStatus(args.status)) return text('`status` debe ser done, blocked o failed.', true)
+      if (!summary) return text('Falta `summary`: di qué hiciste (o qué necesitas, o por qué falló).', true)
+      const files = Array.isArray(args.files_changed) ? args.files_changed.filter((f): f is string => typeof f === 'string' && !!f.trim()).map((f) => f.trim()) : []
+      return reply(this.host.report(caller, { status: args.status, summary, files }))
+    },
+    ask_leader: (args, caller) => withText(args, 'question', 'Falta `question`.', (question) => this.host.askLeader(caller, question)),
+    answer_agent: (args, caller) => withText(args, 'answer', 'Falta `answer`.', (answer) => this.host.answerAgent(caller, String(args.agent_id ?? '').trim(), answer)),
+    post_note: (args, caller) => withText(args, 'text', 'Falta `text`.', (note) => this.host.postNote(caller, note)),
+    read_notes: (args, caller) => reply(this.host.readNotes(caller, Math.min(Math.max(Number(args.limit) || 30, 1), 200))),
+    get_updates: (_a, caller) => reply(this.host.updates(caller)),
+    assign_roles: async (args, caller) => {
+      const list = Array.isArray(args.tasks) ? args.tasks : []
+      const tasks = list.map((x) => ({ role: String((x as Record<string, unknown>)?.role ?? '').trim(), task: String((x as Record<string, unknown>)?.task ?? '').trim() }))
+      if (!tasks.length || tasks.some((x) => !x.role || !x.task)) return text('Falta `tasks`: una lista de { role, task } con el nombre de cada rol y su tarea.', true)
+      return reply(await this.host.assignRoles(caller, tasks))
+    },
+    roles_status: (_a, caller) => reply(this.host.rolesStatus(caller)),
+    list_roles: (_a, caller) => reply(this.host.listRoles(caller)),
+    list_powers: (args, caller) => reply(this.host.listPowers(caller, String(args.task ?? '').trim() || undefined)),
+    use_power: (args, caller) => withText(args, 'name', 'Falta `name`: el nombre de un Power de list_powers.', (power) => this.host.usePower(caller, power)),
+    read_agent_output: (args) => {
+      const out = this.host.output(String(args.agent_id ?? ''), Number(args.lines) || 80)
+      return out ? text(out) : text('No existe ese agente.', true)
+    },
+    wait_agent: (args) => this.wait(args)
+  }
+
+  private async call(name: string, args: Record<string, unknown>, caller: string): Promise<object> {
+    if (NOTES_TOOLS.includes(name) && !notesEnabled()) return text('La pizarra de notas está desactivada (ajustes del editor).', true)
+    const tool = Object.hasOwn(this.tools, name) ? this.tools[name] : undefined
+    return tool ? tool(args, caller) : text(`Herramienta desconocida: ${name}`, true)
+  }
+
+  private async wait(args: Record<string, unknown>): Promise<object> {
+    const id = String(args.agent_id ?? '')
+    const timeout = Math.min(Number(args.timeout_seconds) || 120, 600)
+    const quiet = Math.max(2, Number(args.quiet_seconds) || 5)
+    const deadline = Date.now() + timeout * 1000
+    for (;;) {
+      const out = this.host.output(id, Number(args.lines) || 80)
+      if (!out) return text('No existe ese agente.', true)
+      if (out.question) return text({ ...out, finished: false, note: `No terminó: espera tu respuesta a su pregunta. Contéstale con answer_agent(agent_id: "${id}", answer: ...) y no hagas tú su tarea.` })
+      if (out.report || out.idle_seconds >= quiet) { this.host.reported?.(id); return text({ ...out, finished: true }) }
+      if (out.awaiting_input) return text({ ...out, finished: false, note: 'El agente espera un permiso o una respuesta del usuario en su panel.' })
+      if (Date.now() >= deadline) return text({ ...out, finished: false, note: 'Se agotó la espera; el agente sigue trabajando.' })
+      await sleep(500)
+    }
+  }
+}
