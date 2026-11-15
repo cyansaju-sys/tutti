@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { expandMentions } from '@/harnes/mentions'
+import { expandMentions } from '@/harnes/claude/mentions'
 
 let project = ''
 beforeEach(() => { project = mkdtempSync(join(tmpdir(), 'tutti-mentions-')); process.env.TUTTI_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'tutti-cfg-')) })

@@ -78,7 +78,7 @@ describe('proyecto de una sesión', () => {
 describe('límites y nombres', () => {
   it('si el SDK dice que no hay límites de plan se explica por qué no hay porcentaje', async () => {
     vi.resetModules()
-    vi.doMock('@/harnes/usage', () => ({ planLimits: async () => ({ available: false, limits: [] }), sessionTitles: async () => new Map() }))
+    vi.doMock('@/harnes/claude/usage', () => ({ planLimits: async () => ({ available: false, limits: [] }), sessionTitles: async () => new Map() }))
     const { claudeLimits } = await import('@/backend/services/usage/usage')
     const r = await claudeLimits(true)
     expect(r.limits).toEqual([])

@@ -20,7 +20,7 @@ import { readOpenCodeSessions } from './opencodeDb'
 import { getSetting, setSetting } from '@/backend/services/settings'
 import { extendedPath } from '@/backend/utils/shellpath'
 import { tm } from '@/backend/utils/i18n'
-import { planLimits, sessionTitles } from '@/harnes/usage'
+import { planLimits, sessionTitles } from '@/harnes/claude/usage'
 
 export const WINDOW_HOURS = 5          // Claude reinicia el límite de sesión en ventanas de 5 horas
 const HOUR = 3_600_000
