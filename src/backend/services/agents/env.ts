@@ -7,11 +7,12 @@ const SESSION_VARS = [
   'CLAUDE_CODE_EXECPATH', 'CLAUDE_CODE_MESSAGING_SOCKET', 'CLAUDE_CODE_MESSAGING_TOKEN', 'CLAUDE_AGENT_SDK_VERSION', 'CLAUDE_PID'
 ]
 
-/** Entorno del agente: sin variables de sesión ajenas y con el PATH ampliado. */
+/** Entorno del agente: sin variables de sesión ajenas y con el PATH ampliado (una sola variable, con el nombre que usa cada sistema). */
 export function childEnv(extra: Record<string, string> = {}): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined && !SESSION_VARS.includes(k) && !k.startsWith('ELECTRON_')) env[k] = v
-  env.PATH = extendedPath()
+  for (const k of Object.keys(env)) if (k.toUpperCase() === 'PATH') delete env[k]          // en Windows se llama «Path»: una sola clave, para no dejar dos distintas
+  env[process.platform === 'win32' ? 'Path' : 'PATH'] = extendedPath()
   env.TERM = 'xterm-256color'
   env.COLORTERM = 'truecolor'
   return { ...env, ...extra }
