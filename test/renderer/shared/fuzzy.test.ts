@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fuzzyScore } from '@/renderer/src/shared/lib/fuzzy'
+import { fuzzyScore } from '@/lib/fuzzy'
 
 describe('búsqueda difusa de rutas', () => {
   it('ordena: nombre que empieza, nombre que contiene, ruta, letras sueltas', () => {

@@ -651,9 +651,17 @@ src/
                    (and here: files, search, settings, updater)
     utils/       message language, version, shell path, self-test
   preload/     the secure bridge to the interface (window.api)
-  renderer/    React + Tailwind interface (features/ by topic, shared/ and zustand state)
+  app/         interface bootstrap (App.tsx, main.tsx)
+  components/  shared React components (ui/, dialogs/)
+  features/    the interface by topic (agents, files, git, mcp, tutti…)
+  lib/         interface utilities
+  store/       zustand state
+  styles/      styles (Tailwind)
+  models/      form models
+  index.html   interface entry point
   shared/      shared types and texts (locales/es.json, en.json)
 test/          tests (vitest) and capture.ts, the capture mode
+public/        static assets for the interface (fonts, icons)
 resources/     app icon
 scripts/       dev.mjs
 ```

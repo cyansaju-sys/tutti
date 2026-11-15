@@ -8,6 +8,9 @@ export default defineConfig({
   main: { resolve: { alias: { '@': resolve('src') } } },
   preload: { resolve: { alias: { '@': resolve('src') } } },
   renderer: {
+    root: resolve('src'),
+    publicDir: resolve('public'),
+    build: { rollupOptions: { input: resolve('src/index.html') } },
     resolve: { alias: { '@': resolve('src') } },
     plugins: [react(), tailwindcss()]
   }

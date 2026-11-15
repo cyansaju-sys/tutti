@@ -1,4 +1,4 @@
-// Copia a src/renderer/public/icons/catppuccin los íconos de «Catppuccin Icons for VS Code» (https://github.com/catppuccin/vscode-icons)
+// Copia a public/icons/catppuccin los íconos de «Catppuccin Icons for VS Code» (https://github.com/catppuccin/vscode-icons)
 // y genera su tabla. Uso: node scripts/catppuccin-icons.mjs <carpeta «extension» del .vsix descomprimido>
 // Se copian sus cuatro paletas (latte, frappe, macchiato y mocha). La tabla es la misma para todas.
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -7,7 +7,7 @@ import { join } from 'node:path'
 
 const dir = process.argv[2]
 if (!dir) { console.error('Falta la carpeta de la extensión Catppuccin Icons'); process.exit(1) }
-const out = fileURLToPath(new URL('../src/renderer/public/icons/catppuccin', import.meta.url))
+const out = fileURLToPath(new URL('../public/icons/catppuccin', import.meta.url))
 const src = JSON.parse(readFileSync(join(dir, 'dist', 'mocha', 'theme.json'), 'utf8'))
 
 for (const flavor of ['latte', 'frappe', 'macchiato', 'mocha']) {
