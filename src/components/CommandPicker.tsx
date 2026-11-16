@@ -18,7 +18,7 @@ export const GROUPS: Record<Trigger, Group[]> = {
 /** Los que se ven al abrir la lista con «#»; los demás aparecen al escribir (y siguen funcionando como «#hooks» a mano). */
 export const MAIN: Record<Trigger, Group[]> = { '/': ['mcp', 'skills', 'plugins', 'help'], '#': ['specs', 'roles', 'changes', 'file'], '@': [] }
 const PLUGINS = new Set(['plugin-authoring', 'reload-plugins'])
-const SHOWN = new Set(['clear', ...PLUGINS])
+const SHOWN = new Set(['clear', 'btw', ...PLUGINS])
 type ItemGroup = Exclude<Group, 'plugins' | 'help' | 'file' | 'dir'>
 /** Lo que se escribe en el input al elegir un elemento de «#». */
 const INSERT: Record<ItemGroup, (name: string) => string> = {
@@ -123,15 +123,15 @@ export function CommandPicker({ anchor, trigger, commands, items, files = null, 
   } else if (group) body = rows(inGroup(group))
   else {
     const entries = MAIN[trigger].map(groupRow)
-    const clear = trigger === '/' ? commands.find((c) => c.name === 'clear') : undefined
-    body = [...(clear ? [cmdRow(clear)] : []), ...entries]
+    const top = trigger === '/' ? ['clear', 'btw'].map((n) => commands.find((c) => c.name === n)).filter((c): c is ChatCommand => !!c) : []          // los dos comandos de Tutti arriba
+    body = [...top.map(cmdRow), ...entries]
   }
 
   return createPortal(
     <div ref={box} style={{ left: anchor.left, width: anchor.width, bottom: window.innerHeight - anchor.top + 4, maxHeight: Math.min(300, Math.max(160, anchor.top - 14)) }}
       className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
-      <div className="shrink-0 px-3 pb-1 pt-2 text-[11px] text-muted">{group && !query ? `${trigger}${group}` : trigger === '#' ? 'Tutti' : trigger === '@' ? t('chat.files') : t('chat.commandsTitle')}</div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">{body}</div>
+      {trigger !== '@' && <div className="shrink-0 px-3 pb-1 pt-2 text-[11px] text-muted">{group && !query ? `${trigger}${group}` : trigger === '#' ? 'Tutti' : t('chat.commandsTitle')}</div>}
+      <div className={`min-h-0 flex-1 overflow-y-auto px-1 pb-1${trigger === '@' ? ' pt-1' : ''}`}>{body}</div>
     </div>, document.body
   )
 }

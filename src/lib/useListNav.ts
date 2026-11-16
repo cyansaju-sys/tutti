@@ -1,8 +1,8 @@
 import { useEffect, type RefObject } from 'react'
 
 /**
- * Navegación con el teclado de una lista flotante: flecha arriba/abajo recorre los botones con `data-row`, Enter pulsa el resaltado
- * (solo si se ha navegado; si no, el Enter sigue siendo del input) y flecha izquierda llama a `onBack`. Se reinicia al cambiar `reset`.
+ * Navegación con el teclado de una lista flotante: flecha arriba/abajo recorre los botones con `data-row`, Enter o Tab pulsan el resaltado
+ * (solo si se ha navegado; si no, siguen siendo del input) y flecha izquierda llama a `onBack`. Se reinicia al cambiar `reset`.
  */
 export function useListNav(box: RefObject<HTMLElement | null>, reset: unknown, onBack?: () => void): void {
   useEffect(() => {
@@ -19,7 +19,7 @@ export function useListNav(box: RefObject<HTMLElement | null>, reset: unknown, o
         e.preventDefault(); e.stopPropagation()
         index = e.key === 'ArrowDown' ? (index + 1) % list.length : index <= 0 ? list.length - 1 : index - 1
         mark(list)
-      } else if (e.key === 'Enter' && index >= 0 && list[index]) {
+      } else if ((e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) && index >= 0 && list[index]) {          // Tab autocompleta lo resaltado, igual que Enter
         e.preventDefault(); e.stopPropagation()
         list[index].click()
       } else if (e.key === 'ArrowLeft' && onBack && index >= 0) {

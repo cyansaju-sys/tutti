@@ -1,17 +1,19 @@
 /** El chat con Claude: una conversación del SDK por ventana, con sus eventos enviados al renderer. */
 import type { WebContents } from 'electron'
 import type { Options, PermissionMode, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import type { ChatEvent, ChatQuestion, ChatSendRequest } from '@/shared/types'
-import { existsSync, readFileSync } from 'node:fs'
+import type { ChatEvent, ChatPlanDecision, ChatQuestion, ChatSendRequest } from '@/shared/types'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tuttiDir } from '@/backend/services/context/context'
 import { childEnv } from '@/backend/services/agents/env'
+import { roleSubagents } from '@/backend/services/context/roles'
 import { expandMentions } from './mentions'
 import { TUTTI_FORMATS } from './formats'
 import { claudeExecutable } from './probe'
 import { getSetting, setSetting } from '@/backend/services/settings'
 
-interface Run { abort: AbortController; pending: Map<string, (allow: boolean, always?: boolean) => void>; questions: Map<string, (answers: Record<string, string> | null) => void> }
+interface Run { abort: AbortController; pending: Map<string, (allow: boolean, always?: boolean) => void>; questions: Map<string, (answers: Record<string, string> | null) => void>; plans: Map<string, (d: ChatPlanDecision) => void> }
 const runs = new Map<number, Run>()
 let permissionId = 1
 
@@ -47,7 +49,23 @@ export function bodyOf(name: string, input: Record<string, unknown>): string {
   if (name === 'MultiEdit' && Array.isArray(input.edits)) return clip((input.edits as Array<Record<string, unknown>>).flatMap((e) => [...lines(e.old_string, '-'), ...lines(e.new_string, '+')]))
   if (name === 'Write') return clip(lines(input.content, '+'))
   if (name === 'Bash') return `$ ${String(input.command ?? '')}`
+  if (name === 'ExitPlanMode') return planText(input)
   return JSON.stringify(input, null, 2).slice(0, 2000)
+}
+
+/**
+ * El plan que Claude presenta al salir del modo plan: va en el propio input (`plan`) o, en las versiones que lo escriben en un archivo,
+ * en `~/.claude/plans/*.md` (se usa el indicado o, si no, el último modificado hace poco). Vacío si no se encuentra.
+ */
+export function planText(input: Record<string, unknown>, home: string = homedir()): string {
+  if (typeof input.plan === 'string' && input.plan.trim()) return input.plan.trim()
+  const named = [input.planFilePath, input.plan_file_path, input.planFile].find((v): v is string => typeof v === 'string')
+  try {
+    if (named) return readFileSync(named, 'utf8').trim()
+    const dir = join(home, '.claude', 'plans')
+    const latest = readdirSync(dir).filter((f) => f.endsWith('.md')).map((f) => ({ f, at: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.at - a.at)[0]
+    return latest && Date.now() - latest.at < 30 * 60_000 ? readFileSync(join(dir, latest.f), 'utf8').trim() : ''
+  } catch { return '' }
 }
 
 const textOf = (content: unknown): string => typeof content === 'string' ? content : Array.isArray(content) ? content.map((b: { type?: string; text?: string }) => (b.type === 'text' ? b.text ?? '' : '')).join('\n') : ''
@@ -72,13 +90,25 @@ function agentsMd(project: string): string {
   } catch { return '' }
 }
 
+/** El progreso de un subagente (los mensajes `task_*` del SDK) como evento del chat; null si el mensaje es de otra cosa o no es de una herramienta. */
+export function taskEvent(msg: { type: string; subtype?: string; [k: string]: unknown }): Extract<ChatEvent, { kind: 'task' }> | null {
+  const id = msg.tool_use_id
+  if (msg.type !== 'system' || typeof id !== 'string') return null
+  const usage = msg.usage as { total_tokens?: number; tool_uses?: number; duration_ms?: number } | undefined
+  const stats = { tools: usage?.tool_uses, tokens: usage?.total_tokens, ms: usage?.duration_ms }
+  if (msg.subtype === 'task_started') return { kind: 'task', id, status: 'running' }
+  if (msg.subtype === 'task_progress') return { kind: 'task', id, status: 'running', ...stats, last: typeof msg.last_tool_name === 'string' ? msg.last_tool_name : undefined }
+  if (msg.subtype === 'task_notification' && (msg.status === 'completed' || msg.status === 'failed' || msg.status === 'stopped')) return { kind: 'task', id, status: msg.status, ...stats }
+  return null
+}
+
 const send = (target: WebContents, event: ChatEvent): void => { if (!target.isDestroyed()) target.send('chat:event', event) }
 
 /** Envía un mensaje al SDK y va avisando de lo que pasa; termina cuando Claude acaba la respuesta. */
 export async function sendChat(target: WebContents, req: ChatSendRequest): Promise<void> {
   if (runs.has(target.id)) return
   const { query } = await import('@anthropic-ai/claude-agent-sdk')
-  const run: Run = { abort: new AbortController(), pending: new Map(), questions: new Map() }
+  const run: Run = { abort: new AbortController(), pending: new Map(), questions: new Map(), plans: new Map() }
   runs.set(target.id, run)
   let finish: () => void = () => undefined
   const finished = new Promise<void>((resolve) => { finish = resolve })
@@ -102,6 +132,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
       type: 'preset', preset: 'claude_code',
       append: req.project ? `${agentsMd(req.project)}${TUTTI_FORMATS}\n\nEl terminal ya está en la carpeta del proyecto (${req.project}) y ahí se queda entre comandos. No empieces los comandos con «cd» ni con rutas absolutas del proyecto: usa rutas relativas. Haz «cd» solo si de verdad necesitas otra carpeta.` : undefined
     },
+    agents: roleSubagents(req.project),          // los roles (~/.agents, ~/.tutti y los del proyecto) como subagentes
     abortController: run.abort,
     pathToClaudeCodeExecutable: claudeExecutable(),
     env: childEnv(),          // PATH ampliado (nvm, ~/.local/bin…): así los comandos y los MCP (npx, viamemory…) se encuentran aunque Tutti no se lance desde una terminal
@@ -109,7 +140,9 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     disallowedTools: mode.disallowedTools,
     model: req.model && req.model !== 'default' ? req.model : undefined,
     effort: req.effort,
+    thinking: req.thinking ? { type: 'adaptive', display: 'summarized' } : undefined,          // el razonamiento resumido, para mostrarlo
     includePartialMessages: true,
+    promptSuggestions: true,          // al acabar cada turno llega un posible mensaje siguiente
     settings: (own.settings ?? undefined) as Options['settings'],
     resume: req.session ?? undefined,
     canUseTool: (tool, input, { signal }) => new Promise((resolve) => {
@@ -122,6 +155,18 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
         run.questions.set(id, settle)
         signal.addEventListener('abort', () => settle(null), { once: true })
         send(target, { kind: 'question', id, questions: input.questions as ChatQuestion[] })
+        return
+      }
+      if (tool === 'ExitPlanMode') {          // el plan de Claude: se muestra completo y el usuario lo aprueba o pide cambios
+        const id = String(permissionId++)
+        const settle = (d: ChatPlanDecision): void => {
+          run.plans.delete(id)
+          if (d.decision === 'revise') resolve({ behavior: 'deny', message: d.feedback?.trim() ? `El usuario quiere cambios en el plan: ${d.feedback.trim()}` : 'El usuario quiere seguir planeando: no lo apruebes todavía.' })
+          else resolve({ behavior: 'allow', updatedInput: input, ...(d.decision === 'approve-edits' ? { updatedPermissions: [{ type: 'setMode' as const, mode: 'acceptEdits' as const, destination: 'session' as const }] } : {}) })
+        }
+        run.plans.set(id, settle)
+        signal.addEventListener('abort', () => settle({ decision: 'revise' }), { once: true })
+        send(target, { kind: 'plan', id, plan: planText(input) })
         return
       }
       if (allowed(req.project).includes(tool)) { resolve({ behavior: 'allow', updatedInput: input }); return }
@@ -142,15 +187,23 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     for await (const msg of q) {
       if ('session_id' in msg && msg.session_id) send(target, { kind: 'session', id: msg.session_id })
       if (msg.type === 'stream_event') {
+        if (msg.parent_tool_use_id) continue          // lo que escribe un subagente no se va dibujando: llega completo, dentro de su bloque
         const ev = msg.event
         if (ev.type === 'content_block_start' && ev.content_block.type === 'text') send(target, { kind: 'blockstart' })
+        else if (ev.type === 'content_block_start' && ev.content_block.type === 'thinking') send(target, { kind: 'blockstart', think: true })
         else if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') send(target, { kind: 'delta', text: ev.delta.text })
+        else if (ev.type === 'content_block_delta' && ev.delta.type === 'thinking_delta') send(target, { kind: 'delta', text: ev.delta.thinking, think: true })
+      } else if (msg.type === 'system') {
+        const task = taskEvent(msg)
+        if (task) send(target, task)
       } else if (msg.type === 'assistant') {
+        const parent = msg.parent_tool_use_id ?? undefined          // distinto de null: lo dice un subagente
         for (const block of msg.message.content) {
-          if (block.type === 'text' && block.text.trim()) send(target, { kind: 'text', text: block.text })
+          if (block.type === 'text' && block.text.trim()) send(target, { kind: 'text', text: block.text, parent })
+          else if (block.type === 'thinking' && block.thinking.trim()) send(target, { kind: 'thinking', text: block.thinking, parent })
           else if (block.type === 'tool_use') {
             const input = block.input as Record<string, unknown>
-            send(target, { kind: 'tool', id: block.id, name: block.name, input: summarize(input), body: bodyOf(block.name, input), file: typeof input.file_path === 'string' ? input.file_path : undefined })
+            send(target, { kind: 'tool', id: block.id, name: block.name, input: summarize(input), body: bodyOf(block.name, input), file: typeof input.file_path === 'string' ? input.file_path : undefined, parent, sub: typeof input.subagent_type === 'string' ? input.subagent_type : undefined })
           }
         }
       } else if (msg.type === 'user') {
@@ -158,6 +211,8 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
         if (Array.isArray(content)) for (const b of content as Array<{ type?: string; tool_use_id?: string; content?: unknown; is_error?: boolean }>) {
           if (b.type === 'tool_result' && b.tool_use_id) send(target, { kind: 'toolResult', id: b.tool_use_id, text: textOf(b.content).slice(0, 4000), error: !!b.is_error })
         }
+      } else if (msg.type === 'prompt_suggestion') {
+        if (msg.suggestion.trim()) send(target, { kind: 'suggestion', text: msg.suggestion.trim() })
       } else if (msg.type === 'result') {
         const u = msg.usage as { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number } | undefined
         send(target, { kind: 'usage', cost: msg.total_cost_usd ?? 0, input: u?.input_tokens ?? 0, output: u?.output_tokens ?? 0, cacheRead: u?.cache_read_input_tokens ?? 0, cacheWrite: u?.cache_creation_input_tokens ?? 0 })
@@ -182,3 +237,6 @@ export function answerPermission(target: WebContents, id: string, allow: boolean
 
 /** Las respuestas del usuario a una pregunta de Claude (pregunta -> respuesta); null si la descartó. */
 export function answerQuestion(target: WebContents, id: string, answers: Record<string, string> | null): void { runs.get(target.id)?.questions.get(id)?.(answers) }
+
+/** La decisión del usuario sobre el plan que Claude presentó. */
+export function answerPlan(target: WebContents, id: string, d: ChatPlanDecision): void { runs.get(target.id)?.plans.get(id)?.(d) }

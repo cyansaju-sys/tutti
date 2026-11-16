@@ -12,6 +12,7 @@ import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { agentRef } from '@/features/agents/lib/agentRef'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
+import { useChat, workingSubagents } from '@/store/chat'
 
 const dirname = (p: string): string => p.replace(/[\\/][^\\/]*$/, '')
 
@@ -33,7 +34,13 @@ export function FilesView() {
   const openRoleGraph = useStore((s) => s.openRoleGraph)
   const paneRoles = useStore((s) => s.paneRoles)
   const [playing, setPlaying] = useState(false)          // el diálogo que pide el objetivo para lanzar los roles
-  const working = (name: string): boolean => Object.values(paneRoles).some((r) => r.working && r.role === name.replace(/\.md$/i, ''))          // un plan tiene a este rol trabajando
+  const chatMessages = useChat((s) => s.messages)
+  const chatRunning = useChat((s) => s.running)
+  const asSubagent = useMemo(() => workingSubagents(chatMessages, chatRunning), [chatMessages, chatRunning])
+  const working = (name: string): boolean => {
+    const role = name.replace(/\.md$/i, '')
+    return Object.values(paneRoles).some((r) => r.working && r.role === role) || asSubagent.has(role)          // un plan lo tiene trabajando, o es un subagente del chat
+  }
   const removeRole = async (r: { name: string; path: string }): Promise<void> => {
     if (!(await confirmBox(t('fs.confirmDeleteRole', { name: r.name.replace(/\.md$/i, '') })))) return
     const res = await window.api.fs.trash(r.path)

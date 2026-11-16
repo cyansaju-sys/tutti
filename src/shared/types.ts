@@ -163,10 +163,14 @@ export type Settings = Record<string, unknown>
 
 /** Un modelo de Claude que ofrece el SDK. */
 export type ChatEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
-export interface ChatModel { value: string; displayName: string; description: string; efforts?: ChatEffort[] }
+export interface ChatModel { value: string; displayName: string; description: string; efforts?: ChatEffort[]; /** puede mostrar su razonamiento (thinking adaptativo) */ thinking?: boolean }
 
 /** Lo que se envía al SDK con cada mensaje del chat. */
-export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; images?: ChatImage[] }
+export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; images?: ChatImage[]; /** pedir el razonamiento resumido (el modelo lo admite) */ thinking?: boolean }
+/** «/btw»: una pregunta al margen, sin tocar la conversación ni interrumpir la respuesta en curso. */
+export interface ChatBtwRequest { id: string; question: string; project: string | null; session: string | null; model: string }
+/** Lo que el usuario decide ante el plan de Claude: aprobarlo (con o sin aceptar las ediciones solas) o pedir cambios. */
+export type ChatPlanDecision = { decision: 'approve' | 'approve-edits' } | { decision: 'revise'; feedback?: string }
 /** Una imagen adjunta al mensaje (base64, sin el prefijo `data:`). */
 export interface ChatImage { mediaType: 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'; data: string }
 /** Una pregunta que Claude le hace al usuario (la herramienta AskUserQuestion): opciones y si se puede elegir más de una. */
@@ -174,11 +178,16 @@ export interface ChatQuestion { question: string; header: string; multiSelect: b
 /** Lo que el SDK va contando mientras responde. */
 export type ChatEvent =
   | { kind: 'session'; id: string }
-  | { kind: 'text'; text: string }
+  | { kind: 'text'; text: string; parent?: string }          // `parent`: id de la herramienta Agent cuyo subagente lo escribió
   | { kind: 'context'; text: string }                       // lo que la app añadió al mensaje del usuario (menciones expandidas, diffs…)
-  | { kind: 'blockstart' }                                  // empieza un bloque de texto: los `delta` siguientes lo van llenando
-  | { kind: 'delta'; text: string }
-  | { kind: 'tool'; id: string; name: string; input: string; body: string; file?: string }
+  | { kind: 'blockstart'; think?: boolean }                 // empieza un bloque de texto (o de razonamiento con `think`): los `delta` siguientes lo van llenando
+  | { kind: 'delta'; text: string; think?: boolean }
+  | { kind: 'thinking'; text: string; parent?: string }     // el razonamiento ya completo (sustituye al que se iba escribiendo)
+  | { kind: 'suggestion'; text: string }                     // el mensaje que Claude cree que el usuario escribirá a continuación
+  | { kind: 'plan'; id: string; plan: string }              // Claude pide aprobar su plan (ExitPlanMode)
+  | { kind: 'btw'; id: string; text?: string; done?: boolean; error?: string }          // la respuesta a un /btw, a trozos
+  | { kind: 'tool'; id: string; name: string; input: string; body: string; file?: string; parent?: string; sub?: string }          // `sub`: en la herramienta Agent, el subagente (rol) elegido
+  | { kind: 'task'; id: string; status: 'running' | 'completed' | 'failed' | 'stopped'; tools?: number; tokens?: number; ms?: number; last?: string }          // progreso de un subagente (`id` = el de su herramienta Agent)
   | { kind: 'toolResult'; id: string; text: string; error: boolean }
   | { kind: 'usage'; cost: number; input: number; output: number; cacheRead: number; cacheWrite: number }
   | { kind: 'permission'; id: string; tool: string; input: string }
@@ -188,12 +197,16 @@ export type ChatEvent =
 export interface ChatItem { name: string; description: string; scope: 'local' | 'global'; status?: 'connected' | 'failed' | 'needs-auth' | 'pending' | 'disabled' }      // status: solo los servidores MCP
 export interface ChatProjectItems { skills: ChatItem[]; hooks: ChatItem[]; mcp: ChatItem[]; roles: ChatItem[]; steering: ChatItem[]; powers: ChatItem[]; specs: ChatItem[]; roadmap: ChatItem[]; docs: ChatItem[]; changes: ChatItem[] }
 /** Un mensaje de una conversación guardada de Claude. */
-export interface ChatHistoryMessage { role: 'user' | 'assistant'; text: string }
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant' | 'tool' | 'thinking'; text: string
+  /** Solo `tool`: lo mismo que ve el chat en directo (resumen, cambio, id, resultado) y, si es de un subagente, de qué herramienta Agent cuelga. */
+  detail?: string; body?: string; file?: string; toolId?: string; result?: string; resultError?: boolean; parent?: string; sub?: string
+}
 export interface ChatCommand { name: string; description: string; hint: string; builtin: boolean }
 
 export interface Api {
   chat: { models(): Promise<ChatModel[]>; history(id: string, dir?: string): Promise<ChatHistoryMessage[]>; commands(cwd?: string): Promise<ChatCommand[]>; items(project: string | null): Promise<ChatProjectItems>; mcpStatus(project: string | null): Promise<Record<string, NonNullable<ChatItem['status']>>>
-    send(req: ChatSendRequest): Promise<void>; cancel(): Promise<void>; answer(id: string, allow: boolean, always?: boolean): Promise<void>; reply(id: string, answers: Record<string, string> | null): Promise<void>; onEvent(cb: (e: ChatEvent) => void): () => void }
+    send(req: ChatSendRequest): Promise<void>; btw(req: ChatBtwRequest): Promise<void>; btwCancel(id: string): Promise<void>; planReply(id: string, d: ChatPlanDecision): Promise<void>; cancel(): Promise<void>; answer(id: string, allow: boolean, always?: boolean): Promise<void>; reply(id: string, answers: Record<string, string> | null): Promise<void>; onEvent(cb: (e: ChatEvent) => void): () => void }
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   theme: { accent(): Promise<string | null>; onAccent(cb: (color: string | null) => void): () => void }          // el color de acento del sistema (#rrggbb)
   dialog: { chooseFolder(start?: string): Promise<string | null> }

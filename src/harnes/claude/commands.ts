@@ -1,9 +1,13 @@
 import type { ChatCommand, ChatItem } from '@/shared/types'
 import { probe } from './probe'
+import { tm } from '@/backend/utils/i18n'
 
 /** Los comandos «/» disponibles: los de Claude Code y los de las skills del usuario y del proyecto abierto. */
-export const listCommands = (cwd?: string): Promise<ChatCommand[]> => probe(async (q) =>
-  (await q.supportedCommands()).map((c) => ({ name: c.name, description: c.description, hint: c.argumentHint, builtin: Boolean(c.builtin) })), cwd)
+export const listCommands = (cwd?: string): Promise<ChatCommand[]> => probe(async (q) => {
+  const list = (await q.supportedCommands()).map((c) => ({ name: c.name, description: c.description, hint: c.argumentHint, builtin: Boolean(c.builtin) }))
+  // /btw lo resuelve Tutti (una pregunta al margen), no el SDK: se ofrece siempre
+  return list.some((c) => c.name === 'btw') ? list : [...list, { name: 'btw', description: tm('chat.btwDesc'), hint: tm('chat.btwHint'), builtin: true }]
+}, cwd)
 
 /** El estado de conexión de cada servidor MCP que ve Claude en el proyecto; espera un poco a que dejen de estar «pending». */
 export const mcpStatus = (project: string | null): Promise<Record<string, NonNullable<ChatItem['status']>>> => probe(async (q) => {
