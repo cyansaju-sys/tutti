@@ -116,6 +116,8 @@ export function ChatPanel() {
     if ((kind === '#' || text.trim() === '/') && !/\s/.test(text.trim())) { if (!slash) openCommands(null, kind); return }      // «#algo» suelto o «/» no se envían: son para elegir de la lista
     const aside = /^\/btw(?:\s+([\s\S]*))?$/i.exec(text.trim())          // «/btw pregunta»: una nota al margen, se puede hacer aunque Claude esté respondiendo
     if (aside) { setSlash(null); if (aside[1]?.trim()) { chat.askBtw(aside[1], { project, model: current?.value ?? model }); setText('') } return }
+    const auth = /^\/(login|logout)$/.exec(text.trim())          // el inicio y cierre de sesión van en una terminal (el primero es interactivo)
+    if (auth) { setText(''); setSlash(null); void useStore.getState().openAgent({ name: 'Claude Code', command: 'claude' }, ['auth', auth[1]], { cwd: project ?? undefined, title: `Claude Code · ${auth[1]}` }); return }
     if (text.trim() === '/clear') { setText(''); setSlash(null); chat.clear(); return }
     if ((!text.trim() && !images.length) || chat.running) return
     setSlash(null)

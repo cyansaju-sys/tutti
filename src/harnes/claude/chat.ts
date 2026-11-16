@@ -7,6 +7,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tuttiDir } from '@/backend/services/context/context'
 import { childEnv } from '@/backend/services/agents/env'
+import { chatMcp } from '@/backend/services/agents/hub'
 import { roleSubagents } from '@/backend/services/context/roles'
 import { expandMentions } from './mentions'
 import { TUTTI_FORMATS } from './formats'
@@ -125,7 +126,11 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
   const mode = MODES[req.mode]
   const own = projectSettings(req.project)
   if (own.error) send(target, { kind: 'error', message: own.error })
+  // el MCP de Tutti (si el servidor está en marcha): con él Claude reparte tareas a los agentes que no son Claude Code
+  const tutti = chatMcp(target.id, req.project ?? homedir())
   const options: Options = {
+    mcpServers: tutti?.servers,
+    allowedTools: tutti?.tools,
     cwd: req.project ?? undefined,
     settingSources: req.project ? ['user', 'project', 'local'] : ['user'],
     systemPrompt: {
@@ -224,6 +229,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     if (!run.abort.signal.aborted) send(target, { kind: 'error', message: e instanceof Error ? e.message : String(e) })
   } finally {
     finish()
+    tutti?.release()
     runs.delete(target.id)
     send(target, { kind: 'done' })
   }
