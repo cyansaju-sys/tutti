@@ -50,7 +50,7 @@ function mcpOf(project: string): ChatItem[] {
   return [...own, ...powers].filter((i) => !seen.has(i.name) && !!seen.add(i.name))
 }
 
-/** Los roles de `<.tutti|.agents>/roles`: el nombre y su título (o, si no tiene, el agente y la dificultad). */
+/** Los roles de `<.tutti|.agents>/agents`: el nombre y su título (o, si no tiene, el agente y la dificultad). */
 const rolesOf = (project: string): ChatItem[] => listRoles(project).map((r) => ({ name: r.name, description: r.title !== r.name ? r.title : [r.agent, r.difficulty].filter(Boolean).join(' · '), scope: 'local' as const }))
 
 const steeringOf = (project: string): ChatItem[] =>

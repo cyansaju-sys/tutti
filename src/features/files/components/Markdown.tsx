@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { MdCheck, MdContentCopy } from 'react-icons/md'
+import { useT } from '@/lib/i18n'
 
 /**
  * Vista de Markdown sin dependencias: títulos, listas, citas, código, énfasis y enlaces. Genera elementos de React (nunca HTML en crudo),
@@ -149,6 +151,22 @@ export function parseBlocks(source: string): Block[] {
 
 const HEADING = ['', 'text-[17px] font-semibold mt-1', 'text-[14px] font-semibold mt-4 text-text', 'text-[13px] font-semibold mt-3', 'text-[12px] font-semibold mt-3 text-muted']
 
+/** Bloque de código con un botón para copiarlo (aparece al pasar el ratón). */
+function CodeBlock({ text }: { text: string }) {
+  const t = useT()
+  const [done, setDone] = useState(false)
+  const copy = (): void => { void navigator.clipboard.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 1500) }).catch(() => undefined) }
+  return (
+    <div className="group relative">
+      <pre className="m-0 overflow-x-auto rounded-md bg-ov/[0.06] p-2.5 font-mono text-[11.5px] leading-snug">{text}</pre>
+      <button onClick={copy} title={t(done ? 'md.copied' : 'md.copy')} aria-label={t('md.copy')}
+        className="absolute right-1.5 top-1.5 rounded p-1 text-muted opacity-0 transition-opacity hover:text-text focus:opacity-100 group-hover:opacity-100">
+        {done ? <MdCheck size={14} /> : <MdContentCopy size={14} />}
+      </button>
+    </div>
+  )
+}
+
 function renderBlocks(blocks: Block[]): ReactNode[] {
   return blocks.map((b, i) => {
         switch (b.kind) {
@@ -156,7 +174,7 @@ function renderBlocks(blocks: Block[]): ReactNode[] {
           case 'h': return <div key={i} role="heading" aria-level={b.level} className={HEADING[b.level]}>{inline(b.text)}</div>
           case 'p': return <p key={i} className="m-0">{inline(b.text)}</p>
           case 'quote': return <blockquote key={i} className="m-0 border-l-2 border-accent/50 pl-3 text-muted">{inline(b.text)}</blockquote>
-          case 'code': return <pre key={i} className="m-0 overflow-x-auto rounded-md bg-ov/[0.06] p-2.5 font-mono text-[11.5px] leading-snug">{b.text}</pre>
+          case 'code': return <CodeBlock key={i} text={b.text} />
           case 'hr': return <hr key={i} className="my-1 border-line" />
           case 'table': return (
             <div key={i} className="overflow-x-auto">

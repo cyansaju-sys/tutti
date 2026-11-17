@@ -1,3 +1,4 @@
+import { ROLES_DIR } from '@/shared/rolesDir'
 import { clsx } from 'clsx'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdAccountTree, MdDriveFileRenameOutline, MdEdit, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdPlayArrow, MdSend, MdSmartToy, MdUnfoldLess } from 'react-icons/md'
@@ -12,6 +13,7 @@ import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { agentRef } from '@/features/agents/lib/agentRef'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
+import { useChat, workingSubagents } from '@/store/chat'
 
 const dirname = (p: string): string => p.replace(/[\\/][^\\/]*$/, '')
 
@@ -33,7 +35,13 @@ export function FilesView() {
   const openRoleGraph = useStore((s) => s.openRoleGraph)
   const paneRoles = useStore((s) => s.paneRoles)
   const [playing, setPlaying] = useState(false)          // el diálogo que pide el objetivo para lanzar los roles
-  const working = (name: string): boolean => Object.values(paneRoles).some((r) => r.working && r.role === name.replace(/\.md$/i, ''))          // un plan tiene a este rol trabajando
+  const chatMessages = useChat((s) => s.messages)
+  const chatRunning = useChat((s) => s.running)
+  const asSubagent = useMemo(() => workingSubagents(chatMessages, chatRunning), [chatMessages, chatRunning])
+  const working = (name: string): boolean => {
+    const role = name.replace(/\.md$/i, '')
+    return Object.values(paneRoles).some((r) => r.working && r.role === role) || asSubagent.has(role)          // un plan lo tiene trabajando, o es un subagente del chat
+  }
   const removeRole = async (r: { name: string; path: string }): Promise<void> => {
     if (!(await confirmBox(t('fs.confirmDeleteRole', { name: r.name.replace(/\.md$/i, '') })))) return
     const res = await window.api.fs.trash(r.path)
@@ -58,7 +66,7 @@ export function FilesView() {
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
   const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
   const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
-  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/roles
+  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/agents
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -78,7 +86,7 @@ export function FilesView() {
   const loadRoles = useCallback(async () => {
     if (!project) return
     const dir = await window.api.context.dir(project)
-    const files = await window.api.fs.list(`${dir}/roles`).catch(() => [] as DirEntry[])
+    const files = await window.api.fs.list(`${dir}/${ROLES_DIR}`).catch(() => [] as DirEntry[])
     // el agente de cada rol está en su cabecera («agent: claude»): da su icono
     const list = await Promise.all(files.filter((f) => !f.isDir).map(async (f) => {
       const text = await window.api.fs.read(f.path).then((d) => d.text, () => '')

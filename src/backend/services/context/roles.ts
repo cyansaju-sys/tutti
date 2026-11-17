@@ -1,5 +1,7 @@
-/** Los roles del proyecto: archivos .md de `.tutti/roles` (o `.agents/roles`) con una cabecera (name, difficulty, depends-on, agent, model) y secciones. */
+/** Los roles del proyecto: archivos .md de `.tutti/agents` (o `.agents/agents`) con una cabecera (name, difficulty, depends-on, agent, model) y secciones. */
+import { ROLES_DIR } from '@/shared/rolesDir'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { tuttiDir } from './context'
 
@@ -22,13 +24,49 @@ export function parseRole(name: string, text: string, file = ''): RoleSummary {
   }
 }
 
-/** Los roles del proyecto, por nombre; vacío si no hay carpeta de roles. */
-export function listRoles(project: string): RoleSummary[] {
-  const dir = join(tuttiDir(project), 'roles')
+/** Los roles de una carpeta, por nombre; vacío si no existe. */
+function rolesIn(dir: string): RoleSummary[] {
   if (!existsSync(dir)) return []
   return readdirSync(dir).filter((f) => /\.md$/i.test(f)).sort().map((f) => {
     let text = ''
     try { text = readFileSync(join(dir, f), 'utf8') } catch { /* ilegible: se lista vacío */ }
     return parseRole(f.replace(/\.md$/i, ''), text, join(dir, f))
   })
+}
+
+/** Los roles del proyecto, por nombre; vacío si no hay carpeta de roles. */
+export function listRoles(project: string): RoleSummary[] {
+  return rolesIn(join(tuttiDir(project), ROLES_DIR))
+}
+
+/** Los roles personales, válidos en todos los proyectos: `~/.agents/agents` y `~/.tutti/agents` (si un nombre está en las dos, gana `.tutti`). */
+export function listGlobalRoles(home: string = homedir()): RoleSummary[] {
+  const byName = new Map<string, RoleSummary>()
+  for (const dir of ['.agents', '.tutti']) for (const r of rolesIn(join(home, dir, ROLES_DIR))) byName.set(r.name, r)
+  return [...byName.values()]
+}
+
+/** Los alias de modelo (o ids completos) que entiende Claude; el modelo de un rol puede ser de otro agente y entonces se ignora. */
+const CLAUDE_MODEL = /^(sonnet|opus|haiku|fable|inherit|claude-[\w.-]+)$/i
+
+/**
+ * Los roles como subagentes de Claude (la opción `agents` del SDK): los globales y los del proyecto, y si un nombre se repite gana el del
+ * proyecto. Se omiten los roles que piden otro agente (`agent: opencode`…): solo cuentan los que no fijan agente o fijan Claude.
+ */
+export function roleSubagents(project: string | null, home: string = homedir()): Record<string, { description: string; prompt: string; model?: string }> {
+  const byName = new Map<string, RoleSummary>()
+  for (const r of [...listGlobalRoles(home), ...(project ? listRoles(project) : [])]) byName.set(r.name, r)
+  const out: Record<string, { description: string; prompt: string; model?: string }> = {}
+  for (const r of byName.values()) {
+    if (r.agent && !/claude/i.test(r.agent)) continue
+    const name = r.name.trim().replace(/\s+/g, '-')
+    if (!name) continue
+    const prompt = [`# ${r.title}`, r.specialty && `## Especialidad\n${r.specialty}`, r.deliverable && `## Entregable\n${r.deliverable}`, r.description && `## Descripción\n${r.description}`].filter(Boolean).join('\n\n')
+    out[name] = {
+      description: `Rol «${r.title}»${r.specialty ? `: ${r.specialty.replace(/\s+/g, ' ').slice(0, 240)}` : ''}`,
+      prompt,
+      model: CLAUDE_MODEL.test(r.model) ? r.model : undefined
+    }
+  }
+  return out
 }

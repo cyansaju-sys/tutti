@@ -18,7 +18,8 @@ import { loadSteering } from './services/context/steering'
 import { createPower, installPower, listPowers, powerSources, removePower } from './services/powers'
 import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
-import { answerPermission, cancelChat, sendChat, answerQuestion } from '@/harnes/claude/chat'
+import { answerPermission, answerPlan, cancelChat, sendChat, answerQuestion } from '@/harnes/claude/chat'
+import { askBtw, cancelBtw } from '@/harnes/claude/btw'
 import { listCommands, mcpStatus } from '@/harnes/claude/commands'
 import { listModels } from '@/harnes/claude/models'
 import { sessionHistory } from '@/harnes/claude/history'
@@ -26,7 +27,7 @@ import { projectItems, changesOf } from '@/harnes/claude/project'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { ChatSendRequest, GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
+import type { ChatBtwRequest, ChatPlanDecision, ChatSendRequest, GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -141,6 +142,9 @@ function registerIpc(): void {
   ipcMain.handle('chat:models', () => listModels())
   ipcMain.handle('chat:history', (_e, id: string, dir?: string) => sessionHistory(id, dir))
   ipcMain.handle('chat:send', (e, req: ChatSendRequest) => sendChat(e.sender, req))
+  ipcMain.handle('chat:btw', (e, req: ChatBtwRequest) => askBtw(e.sender, req))
+  ipcMain.handle('chat:btw-cancel', (_e, id: string) => cancelBtw(id))
+  ipcMain.handle('chat:plan-reply', (e, id: string, d: ChatPlanDecision) => answerPlan(e.sender, id, d))
   ipcMain.handle('chat:cancel', (e) => cancelChat(e.sender))
   ipcMain.handle('chat:reply', (e, id: string, answers: Record<string, string> | null) => answerQuestion(e.sender, id, answers))
   ipcMain.handle('chat:answer', (e, id: string, allow: boolean, always?: boolean) => answerPermission(e.sender, id, allow, always))

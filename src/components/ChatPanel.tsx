@@ -13,6 +13,10 @@ import { CommandPicker, GROUPS, type Group, type Trigger } from './CommandPicker
 import { effortLabel, ModelPicker } from './ModelPicker'
 import { ModePicker, MODES, type ChatMode } from './ModePicker'
 import { ChatQuestions } from './ChatQuestion'
+import { ChatSubagent, isSubagentTool } from './ChatSubagent'
+import { ChatThinking } from './ChatThinking'
+import { ChatPlanCard } from './ChatPlan'
+import { ChatBtwCard } from './ChatBtw'
 import { IconButton } from './ui'
 
 /** Las dos formas de empezar: charlar y construir (Vibe) o planificar antes de construir (Spec, el modo plan). */
@@ -30,7 +34,7 @@ export function ChatPanel() {
   const width = useStore((s) => s.chatWidth)
   const chat = useChat()
   const list = useRef<HTMLDivElement>(null)
-  useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight }) }, [chat.messages, chat.permissions, chat.asks])
+  useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight }) }, [chat.messages, chat.permissions, chat.asks, chat.plans, chat.btw])
   const [text, setText] = useState('')
   const [models, setModels] = useState<ChatModel[] | null>(null)
   const [model, setModel] = useState('default')
@@ -110,13 +114,17 @@ export function ChatPanel() {
     if ((kind === '/' || kind === '#') && (GROUPS[kind] as string[]).includes(word)) { setText(''); openCommands(word as Group, kind); return }
     if (slash && trigger === '@' && /(?:^|\s)@\S*$/.test(text)) return      // con la lista de archivos abierta, Enter no envía
     if ((kind === '#' || text.trim() === '/') && !/\s/.test(text.trim())) { if (!slash) openCommands(null, kind); return }      // «#algo» suelto o «/» no se envían: son para elegir de la lista
+    const aside = /^\/btw(?:\s+([\s\S]*))?$/i.exec(text.trim())          // «/btw pregunta»: una nota al margen, se puede hacer aunque Claude esté respondiendo
+    if (aside) { setSlash(null); if (aside[1]?.trim()) { chat.askBtw(aside[1], { project, model: current?.value ?? model }); setText('') } return }
+    const auth = /^\/(login|logout)$/.exec(text.trim())          // el inicio y cierre de sesión van en una terminal (el primero es interactivo)
+    if (auth) { setText(''); setSlash(null); void useStore.getState().openAgent({ name: 'Claude Code', command: 'claude' }, ['auth', auth[1]], { cwd: project ?? undefined, title: `Claude Code · ${auth[1]}` }); return }
     if (text.trim() === '/clear') { setText(''); setSlash(null); chat.clear(); return }
     if ((!text.trim() && !images.length) || chat.running) return
     setSlash(null)
     const fileRef = file && project ? `@${toPosix(relative(project, file))}\n` : ''
     const sel = chat.selection && project && !hideSel ? chat.selection : null
     const body = sel ? selectionMessage('claude', toPosix(relative(project!, sel.path)), sel.startLine, sel.endLine, sel.text) + text.trim() : fileRef + text.trim()
-    chat.send(body, { project, model: current?.value ?? model, effort, mode, images: images.length ? images : undefined, shown: sel ? `${selectionRef('claude', toPosix(relative(project!, sel.path)), sel.startLine, sel.endLine)}\n${text.trim()}` : fileRef ? fileRef + text.trim() : undefined })
+    chat.send(body, { project, model: current?.value ?? model, effort, mode, thinking: current?.thinking, images: images.length ? images : undefined, shown: sel ? `${selectionRef('claude', toPosix(relative(project!, sel.path)), sel.startLine, sel.endLine)}\n${text.trim()}` : fileRef ? fileRef + text.trim() : undefined })
     setText(''); setImages([])
   }
   const pick = (value: string): void => {
@@ -130,7 +138,7 @@ export function ChatPanel() {
   // lo que se le pide desde la pestaña Tutti se envía aquí, con el modelo, el esfuerzo y el modo elegidos; si está respondiendo, espera su turno
   useEffect(() => {
     if (!chat.queued || chat.running || !project) return
-    chat.send(chat.queued, { project, model: current?.value ?? model, effort, mode })
+    chat.send(chat.queued, { project, model: current?.value ?? model, effort, mode, thinking: current?.thinking })
     useChat.setState({ queued: null })
   }, [chat.queued, chat.running, project])      // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -187,8 +195,8 @@ export function ChatPanel() {
             </div>
           </div>
         )}
-        {chat.messages.map((m) => m.role === 'user' ? (
-          <div key={m.id} className="ml-6 self-end whitespace-pre-wrap break-words rounded-lg bg-line/50 px-2.5 py-1.5 text-[12px] text-text">
+        {chat.messages.filter((m) => !m.parent).map((m) => isSubagentTool(m) ? <ChatSubagent key={m.id} m={m} all={chat.messages} live={chat.running} /> : m.role === 'thinking' ? <ChatThinking key={m.id} text={m.text} live={m.liveThink} /> : m.role === 'user' ? (
+          <div key={m.id} className="ml-6 min-w-0 max-w-full self-end whitespace-pre-wrap rounded-lg bg-line/50 px-2.5 py-1.5 text-[12px] text-text [overflow-wrap:anywhere]">
             {m.images && <div className="mb-1 flex flex-wrap gap-1">{m.images.map((src, i) => <img key={i} src={src} alt="" className="max-h-24 max-w-full rounded-md" />)}</div>}{m.text}
             {m.context && (
               <div className="mt-1.5 border-t border-line/60 pt-1 text-[10.5px] text-muted">
@@ -230,7 +238,9 @@ export function ChatPanel() {
             </div>
           </div>
         ))}
-        {chat.running && chat.permissions.length === 0 && chat.asks.length === 0 && <div className="text-[11px] text-muted">{t('chat.thinking')}</div>}
+        {chat.plans.map((p) => <ChatPlanCard key={p.id} plan={p.plan} onDecide={(d) => chat.planReply(p.id, d)} />)}
+        {chat.btw && <ChatBtwCard btw={chat.btw} onClose={chat.closeBtw} />}
+        {chat.running && chat.permissions.length === 0 && chat.asks.length === 0 && chat.plans.length === 0 && <div className="text-[11px] text-muted">{t('chat.thinking')}</div>}
       </div>
       <div className="shrink-0 p-2">
         <div ref={composer} onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault() }} onDrop={(e) => { const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')); if (files.length) { e.preventDefault(); void attach(files) } }}
@@ -262,7 +272,7 @@ export function ChatPanel() {
           )}
           <div className="relative border-b border-line">
             <div ref={marks} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-transparent [scrollbar-gutter:stable]">{mentions(text)}</div>
-          <textarea ref={input} rows={1} onPaste={(e) => { const files = [...e.clipboardData.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter((f): f is File => !!f); if (files.length) { e.preventDefault(); void attach(files) } }} onScroll={(e) => { if (marks.current) marks.current.scrollTop = e.currentTarget.scrollTop }} value={text} onChange={(e) => onType(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); setMode(MODES[(MODES.findIndex((m) => m.id === mode) + 1) % MODES.length].id) } }} placeholder={t('chat.placeholder')}
+          <textarea ref={input} rows={1} onPaste={(e) => { const files = [...e.clipboardData.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter((f): f is File => !!f); if (files.length) { e.preventDefault(); void attach(files) } }} onScroll={(e) => { if (marks.current) marks.current.scrollTop = e.currentTarget.scrollTop }} value={text} onChange={(e) => onType(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } else if (e.key === 'Tab' && !e.shiftKey && !text && chat.suggestion) { e.preventDefault(); const s = chat.takeSuggestion(); if (s) onType(s) } else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); setMode(MODES[(MODES.findIndex((m) => m.id === mode) + 1) % MODES.length].id) } }} placeholder={chat.suggestion ? `${chat.suggestion}   ⇥ Tab` : t('chat.placeholder')}
             className="relative block max-h-[140px] w-full resize-none bg-transparent px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-text outline-none [scrollbar-gutter:stable] placeholder:text-muted" />
           </div>
           <div className="flex items-center py-1 pl-0.5 pr-1">

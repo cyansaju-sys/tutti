@@ -17,10 +17,11 @@ import { codexConfig } from '@/backend/services/mcp/mcp'
 import { dropCodexBridgeCopy } from '@/backend/services/mcp/mirror'
 import { launchServers } from '@/backend/services/mcp/sync'
 import { agyBridgeStatus, ensureAgyBridge } from './agyBridge'
+import { chatId, chatMeta, registerChat, unregisterChat } from './chatCaller'
 import { trackRecord } from './history'
 import { deliverNotices, noticeCounts, notify, takeNotices } from './inbox'
 import { askingIds, checkAttention } from './attention'
-import { awaitingInput, buildLaunch, parseMajor, PROMPT_ARGS, taskShown } from './launch'
+import { awaitingInput, buildLaunch, parseMajor, PROMPT_ARGS, taskShown, TUTTI_TOOLS, type McpEntry } from './launch'
 import { chooseLeader, currentLeader } from './leader'
 import { availableModels, currentModel, MODEL_FLAG, tier } from './models'
 import { appendNote, readNotes } from './notes'
@@ -109,7 +110,7 @@ function deliverTask(id: string, task: string, viaArgs: boolean): void {
 }
 const MIN_ANSWER_ROWS = 4
 
-const me = (caller: string): pty.Meta | undefined => pty.agentSessions().find((m) => m.id === caller)
+const me = (caller: string): pty.Meta | undefined => pty.agentSessions().find((m) => m.id === caller) ?? chatMeta(caller)
 
 const host: Host = {
   async listAgents(caller) {
@@ -226,7 +227,7 @@ const host: Host = {
 
   async delegate(caller, requested, task, newInstance, opts = {}) {
     const open = pty.agentSessions()
-    const self = open.find((m) => m.id === caller)
+    const self = me(caller)
     if (!self) return { ok: false, info: 'Solo los agentes abiertos en la app pueden repartir tareas.' }
     let target = requested
     const difficulty: Difficulty | undefined = isDifficulty(opts.difficulty) ? opts.difficulty : undefined
@@ -411,7 +412,18 @@ function opencodeMajor(): number {
   return majorCache
 }
 
-export const stopHub = (): void => { orchestra?.stop(); if (ticker) clearInterval(ticker); ticker = null }
+/**
+ * El servidor MCP de Tutti para el chat de una ventana: así Claude puede repartir tareas a los demás agentes (OpenCode, Codex…).
+ * `release` quita al chat como llamador al acabar; null si el servidor no está en marcha.
+ */
+export function chatMcp(windowId: number, cwd: string): { servers: Record<string, McpEntry>; tools: string[]; release: () => void } | null {
+  if (!orchestra) return null
+  const id = chatId(windowId)
+  registerChat(id, cwd)
+  return { servers: { tutti: orchestra.configFor(id) }, tools: TUTTI_TOOLS, release: () => unregisterChat(id) }
+}
+
+export const stopHub =(): void => { orchestra?.stop(); if (ticker) clearInterval(ticker); ticker = null }
 
 /** Configuración MCP de un agente (para las pruebas); null si el servidor no arrancó. */
 export const orchestraConfig = (id: string): ReturnType<Orchestra['configFor']> | null => orchestra?.configFor(id) ?? null

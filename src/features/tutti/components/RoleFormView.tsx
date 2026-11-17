@@ -1,3 +1,4 @@
+import { ROLES_DIR } from '@/shared/rolesDir'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
@@ -26,7 +27,7 @@ function readRole(text: string): Record<string, string> {
   return { name: /^# (.*)$/m.exec(body)?.[1]?.trim() ?? key('name'), difficulty: key('difficulty'), dependsOn: key('depends-on'), agent: key('agent'), model: key('model'), specialty: nth(0), deliverable: nth(1), description: nth(2) }
 }
 
-/** Crear un rol (o editar uno que ya existe: `path` = «role:edit:<archivo>») como una pestaña del editor; se guarda en .tutti/roles (o .agents/roles). */
+/** Crear un rol (o editar uno que ya existe: `path` = «role:edit:<archivo>») como una pestaña del editor; se guarda en .tutti/agents (o .agents/agents). */
 export function RoleFormView({ path }: { path: string }) {
   const t = useT()
   const project = useStore((s) => s.project)
@@ -39,7 +40,7 @@ export function RoleFormView({ path }: { path: string }) {
   const [roles, setRoles] = useState<string[]>([])          // los roles que ya existen, para «depende de»
   useEffect(() => {
     if (!project) return
-    void window.api.context.dir(project).then((dir) => { setRoot(basename(dir)); return window.api.fs.list(`${dir}/roles`) }).then((l) => setRoles(l.filter((e) => !e.isDir).map((e) => e.name.replace(/\.md$/i, ''))), () => setRoles([]))
+    void window.api.context.dir(project).then((dir) => { setRoot(basename(dir)); return window.api.fs.list(`${dir}/${ROLES_DIR}`) }).then((l) => setRoles(l.filter((e) => !e.isDir).map((e) => e.name.replace(/\.md$/i, ''))), () => setRoles([]))
   }, [project])
   const agents = useMemo(() => [...new Map(ask.options.map((o) => [o.command, { command: o.command, name: o.name }])).values()], [ask.options])
   const [models, setModels] = useState<Record<string, string[]>>({})          // los modelos de cada agente, leídos al elegirlo
@@ -73,7 +74,7 @@ export function RoleFormView({ path }: { path: string }) {
       closeDoc(path); void openDoc(file)
       return
     }
-    const dir = await window.api.context.init(project, 'roles')
+    const dir = await window.api.context.init(project, ROLES_DIR)
     const made = await window.api.fs.create(dir, `${slug(name) || 'role'}.md`, false)
     if (!made.ok) { toast(made.message, 'error'); return }
     await window.api.fs.write(made.message, roleFile(v, t), false)

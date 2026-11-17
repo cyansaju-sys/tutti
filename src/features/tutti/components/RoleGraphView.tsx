@@ -1,3 +1,4 @@
+import { ROLES_DIR } from '@/shared/rolesDir'
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdFitScreen, MdRefresh, MdRemove, MdRestartAlt } from 'react-icons/md'
@@ -31,7 +32,7 @@ export function RoleGraphView() {
   const load = useCallback(async () => {
     if (!project) return
     const dir = await window.api.context.dir(project)
-    const files = (await window.api.fs.list(`${dir}/roles`).catch(() => [])).filter((f) => !f.isDir && /\.md$/i.test(f.name))
+    const files = (await window.api.fs.list(`${dir}/${ROLES_DIR}`).catch(() => [])).filter((f) => !f.isDir && /\.md$/i.test(f.name))
     const list = await Promise.all(files.map(async (f) => parseRole(f.name.replace(/\.md$/i, ''), await window.api.fs.read(f.path).then((d) => d.text, () => ''), f.path)))
     setRoles((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
   }, [project])

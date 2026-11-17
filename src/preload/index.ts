@@ -9,7 +9,7 @@ const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => voi
 
 const api: Api = {
   chat: { models: () => ipcRenderer.invoke('chat:models'), history: (id, dir) => ipcRenderer.invoke('chat:history', id, dir), commands: (cwd) => ipcRenderer.invoke('chat:commands', cwd), items: (project) => ipcRenderer.invoke('chat:items', project), mcpStatus: (project) => ipcRenderer.invoke('chat:mcp-status', project),
-    send: (req) => ipcRenderer.invoke('chat:send', req), cancel: () => ipcRenderer.invoke('chat:cancel'), answer: (id, allow, always) => ipcRenderer.invoke('chat:answer', id, allow, always), reply: (id, answers) => ipcRenderer.invoke('chat:reply', id, answers), onEvent: (cb) => subscribe<[ChatEvent]>('chat:event', cb) },
+    send: (req) => ipcRenderer.invoke('chat:send', req), btw: (req) => ipcRenderer.invoke('chat:btw', req), btwCancel: (id) => ipcRenderer.invoke('chat:btw-cancel', id), planReply: (id, d) => ipcRenderer.invoke('chat:plan-reply', id, d), cancel: () => ipcRenderer.invoke('chat:cancel'), answer: (id, allow, always) => ipcRenderer.invoke('chat:answer', id, allow, always), reply: (id, answers) => ipcRenderer.invoke('chat:reply', id, answers), onEvent: (cb) => subscribe<[ChatEvent]>('chat:event', cb) },
   settings: { get: (k) => ipcRenderer.invoke('settings:get', k), set: (k, v) => ipcRenderer.invoke('settings:set', k, v) },
   theme: { accent: () => ipcRenderer.invoke('theme:accent'), onAccent: (cb) => subscribe<[string | null]>('theme:accent', cb) },
   dialog: { chooseFolder: (start) => ipcRenderer.invoke('dialog:chooseFolder', start) },

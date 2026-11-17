@@ -1,4 +1,5 @@
 /** Los avisos «[Tutti]» para los agentes: esperan en una bandeja y se les escriben, juntos, cuando están libres. */
+import { isChat } from './chatCaller'
 import { currentLeader } from './leader'
 import * as pty from './pty'
 
@@ -9,7 +10,7 @@ const PATIENCE_MS = 60_000               // si el agente sigue ocupado tanto tie
 
 /** Deja un aviso para un agente: se le escribe cuando está libre y el usuario no está tecleando en su panel (o lo pide con get_updates). */
 export function notify(agentId: string, text: string): void {
-  if (!pty.hasSession(agentId)) {          // quien lo esperaba se cerró: lo recibe el líder, que sigue el trabajo
+  if (!pty.hasSession(agentId) && !isChat(agentId)) {          // quien lo esperaba se cerró: lo recibe el líder, que sigue el trabajo
     const leader = currentLeader()
     if (!leader || leader.id === agentId) return
     agentId = leader.id
@@ -20,6 +21,7 @@ export function notify(agentId: string, text: string): void {
 /** Entrega los avisos pendientes de cada agente, todos juntos en un solo mensaje. */
 export function deliverNotices(): void {
   for (const [id, list] of inbox) {
+    if (isChat(id)) continue          // el chat no tiene terminal donde escribirle: los lee con get_updates
     if (!pty.hasSession(id)) { inbox.delete(id); continue }
     if (pty.typedFor(id) < TYPING_QUIET_SECONDS) continue          // nunca encima de lo que escribe el usuario
     if (pty.idleFor(id) < 3 && Date.now() - list[0].at < PATIENCE_MS) continue          // ocupado: si tarda mucho, se le entrega igual

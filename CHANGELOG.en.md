@@ -2,6 +2,22 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.4
+
+### Changes
+
+- **Claude hands out tasks to other agents:** the chat connects to Tutti's MCP server, so Claude can assign work to OpenCode, Codex and the other open agents, and read their notices.
+- **Your roles as subagents:** roles from `~/.agents/agents`, `~/.tutti/agents` and the project (if a name repeats, the project's wins) are available to Claude as subagents. Roles that ask for another agent are ignored. The roles list shows which one is working.
+- **Subagent progress:** each one shows in its own block, with its tools, tokens and time, and its status (working, done, failed, stopped).
+- **Claude's plan:** in Plan mode the plan is shown in full and you can **approve it**, **approve it and accept edits**, or **keep planning** with your changes.
+- **Visible reasoning:** when the model supports it, the chat shows its summarized reasoning in a separate block.
+- **`/btw` question:** a side question answered without interrupting or changing the conversation, even while Claude is working.
+- **Suggested next message:** after each answer Claude proposes a message that shows as a placeholder in the box; **Tab** fills it in.
+- **Tab** also picks the highlighted command or file in the "/", "#" and "@" lists.
+- **Resume full conversations:** opening one from the history now also shows the reasoning, the tools with their results and what each subagent did, not just the text.
+- **`/login` and `/logout` in the chat:** they open a terminal running `claude auth login` or `claude auth logout`, so you can sign in or out of Claude Code without leaving Tutti.
+- **Copy code blocks:** hovering a code block (in the chat, plans, `/btw` and subagents) shows a button to copy it.
+
 ## 1.5.3
 
 ### Changes
