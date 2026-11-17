@@ -1,4 +1,5 @@
-/** Los roles del proyecto: archivos .md de `.tutti/roles` (o `.agents/roles`) con una cabecera (name, difficulty, depends-on, agent, model) y secciones. */
+/** Los roles del proyecto: archivos .md de `.tutti/agents` (o `.agents/agents`) con una cabecera (name, difficulty, depends-on, agent, model) y secciones. */
+import { ROLES_DIR } from '@/shared/rolesDir'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -35,13 +36,13 @@ function rolesIn(dir: string): RoleSummary[] {
 
 /** Los roles del proyecto, por nombre; vacío si no hay carpeta de roles. */
 export function listRoles(project: string): RoleSummary[] {
-  return rolesIn(join(tuttiDir(project), 'roles'))
+  return rolesIn(join(tuttiDir(project), ROLES_DIR))
 }
 
-/** Los roles personales, válidos en todos los proyectos: `~/.agents/roles` y `~/.tutti/roles` (si un nombre está en las dos, gana `.tutti`). */
+/** Los roles personales, válidos en todos los proyectos: `~/.agents/agents` y `~/.tutti/agents` (si un nombre está en las dos, gana `.tutti`). */
 export function listGlobalRoles(home: string = homedir()): RoleSummary[] {
   const byName = new Map<string, RoleSummary>()
-  for (const dir of ['.agents', '.tutti']) for (const r of rolesIn(join(home, dir, 'roles'))) byName.set(r.name, r)
+  for (const dir of ['.agents', '.tutti']) for (const r of rolesIn(join(home, dir, ROLES_DIR))) byName.set(r.name, r)
   return [...byName.values()]
 }
 

@@ -2,6 +2,22 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.4
+
+### Cambios
+
+- **Claude reparte tareas a otros agentes:** el chat se conecta al servidor MCP de Tutti, así que Claude puede encargar trabajo a OpenCode, Codex y demás agentes abiertos, y leer sus avisos.
+- **Tus roles como subagentes:** los roles de `~/.agents/agents`, `~/.tutti/agents` y los del proyecto (si se repite un nombre, gana el del proyecto) están disponibles para Claude como subagentes. Los que piden otro agente se ignoran. En la lista de roles se ve cuál está trabajando.
+- **Progreso de los subagentes:** cada uno se muestra en su bloque, con sus herramientas, tokens y tiempo, y su estado (trabajando, terminado, falló, detenido).
+- **Plan de Claude:** en modo Plan, el plan se muestra completo y puedes **aprobarlo**, **aprobarlo y aceptar ediciones**, o **seguir planeando** con tus cambios.
+- **Razonamiento visible:** si el modelo lo permite, el chat muestra su razonamiento resumido en un bloque aparte.
+- **`/btw` pregunta:** una pregunta al margen que se responde sin interrumpir ni modificar la conversación, incluso mientras Claude trabaja.
+- **Siguiente mensaje sugerido:** al acabar cada respuesta, Claude propone un mensaje y aparece de sugerencia en la caja; **Tab** lo rellena.
+- **Tab** también elige el comando o archivo resaltado en las listas «/», «#» y «@».
+- **Retomar conversaciones completas:** al abrir una del historial se ven también el razonamiento, las herramientas con su resultado y lo que hizo cada subagente, no solo el texto.
+- **`/login` y `/logout` en el chat:** abren una terminal con `claude auth login` o `claude auth logout`, para iniciar o cerrar la sesión de Claude Code sin salir de Tutti.
+- **Copiar bloques de código:** al pasar el ratón por un bloque de código (en el chat, los planes, `/btw` y los subagentes) sale un botón para copiarlo.
+
 ## 1.5.3
 
 ### Cambios

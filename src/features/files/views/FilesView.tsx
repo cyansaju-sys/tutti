@@ -1,3 +1,4 @@
+import { ROLES_DIR } from '@/shared/rolesDir'
 import { clsx } from 'clsx'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdChevronRight, MdContentCopy, MdContentCut, MdContentPaste, MdCreateNewFolder, MdDeleteOutline, MdAccountTree, MdDriveFileRenameOutline, MdEdit, MdFolderOpen, MdLink, MdNoteAdd, MdRefresh, MdPlayArrow, MdSend, MdSmartToy, MdUnfoldLess } from 'react-icons/md'
@@ -65,7 +66,7 @@ export function FilesView() {
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
   const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
   const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
-  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/roles
+  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/agents
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -85,7 +86,7 @@ export function FilesView() {
   const loadRoles = useCallback(async () => {
     if (!project) return
     const dir = await window.api.context.dir(project)
-    const files = await window.api.fs.list(`${dir}/roles`).catch(() => [] as DirEntry[])
+    const files = await window.api.fs.list(`${dir}/${ROLES_DIR}`).catch(() => [] as DirEntry[])
     // el agente de cada rol está en su cabecera («agent: claude»): da su icono
     const list = await Promise.all(files.filter((f) => !f.isDir).map(async (f) => {
       const text = await window.api.fs.read(f.path).then((d) => d.text, () => '')

@@ -17,11 +17,22 @@ export interface FileIconInfo { url: string; plain: boolean }
 
 let theme: Theme | null = null
 
+/** Las carpetas y archivos de Tutti y de los agentes (`.tutti`, `.agents` y lo que llevan dentro), con íconos del mismo juego que el tema no asigna. */
+const OWN_FOLDERS: Record<string, string> = {
+  '.tutti': 'folder_core', '.agents': 'folder_agents',
+  agents: 'folder_agents', powers: 'folder_plugins', skills: 'folder_scripts', hooks: 'folder_hooks', specs: 'folder_tests', docs: 'folder_docs',
+  steering: 'folder_templates', mcp: 'folder_connection', roadmap: 'folder_routes'
+}
+const OWN_FILES: Record<string, string> = { 'agents.md': 'robots', 'claude.md': 'robots', 'roadmap.md': 'todo' }
+
 export const sidebarIcon = (name: string): string => `${base}icons/sidebar/${name}.svg`
 
 export async function loadIconTheme(): Promise<void> {
   if (theme) return
-  theme = (await (await fetch(`${base}icons/catppuccin/theme.json`)).json()) as Theme
+  const loaded = (await (await fetch(`${base}icons/catppuccin/theme.json`)).json()) as Theme
+  loaded.folderNames = { ...loaded.folderNames, ...OWN_FOLDERS }
+  loaded.fileNames = { ...loaded.fileNames, ...OWN_FILES }
+  theme = loaded
 }
 
 /** El ícono de un archivo o carpeta (`root` = la carpeta de un proyecto; `open` = carpeta desplegada). Sin paleta elegida: mocha en oscuro y latte en claro. */
