@@ -19,7 +19,7 @@ const guessKind = (m: string): ToastKind => {
 
 
 export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) => ({
-  newsSince: null, tab: 'files', sidebarOpen: true, chatOpen: true, chatWidth: 340, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
+  panelTab: 'terminal', problemsOpen: false, keys: {}, newsSince: null, tab: 'files', sidebarOpen: true, chatOpen: true, chatWidth: 340, sidebarSide: 'left', editorFont: DEFAULT_EDITOR_FONT, editorFull: false, chatSplit: false, sidebarWidth: 300, editorWidth: 720, shellHeight: 240, editEnabled: true, theme: cachedTheme(), themeMode: resolveTheme(cachedTheme()), sysAccent: cachedAccent().on, accent: cachedAccent().color, iconFlavor: 'auto', iconPreview: null, langPref: cachedLangPref(), lang: resolveLangPref(cachedLangPref()),
   searchReplace: false, searchToken: 0, focus: 'tree', paneFocus: 0, modal: null, toasts: [], notices: [], maximized: false, agents: [], update: { status: 'idle' },
 
   toast: (message, kind) => {
@@ -52,7 +52,14 @@ export const createUiSlice: StateCreator<State, [], [], UiSlice> = (set, get) =>
     set({ langPref: pref, lang: resolveLangPref(pref) })
     void window.api.settings.set('language', pref)
   },
+  setEditorFull: (on) => { set({ editorFull: on }); void window.api.settings.set('editor_full', on) },
   setEditorFont: (font) => { set({ editorFont: font }); void window.api.settings.set('editor_font', font) },
   setSidebarSide: (side) => { set({ sidebarSide: side }); void window.api.settings.set('sidebar_side', side) },
+  setKey: (id, combo) => {
+    const keys = { ...get().keys }
+    if (combo) keys[id] = combo; else delete keys[id]
+    set({ keys })
+    void window.api.settings.set('keybindings', keys)
+  },
   setEdit: (enabled) => { set({ editEnabled: enabled }); void window.api.settings.set('edit_enabled', enabled) }
 })

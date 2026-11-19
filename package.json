@@ -1,6 +1,6 @@
 {
   "name": "tutti",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Editor multi-agente para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
   "author": "cyansaju",
@@ -89,7 +89,8 @@
     "asarUnpack": [
       "node_modules/node-pty/**",
       "node_modules/better-sqlite3/**",
-      "node_modules/@anthropic-ai/claude-agent-sdk-*/**"
+      "node_modules/@anthropic-ai/claude-agent-sdk-*/**",
+      "node_modules/@openai/codex-*-*/**"
     ],
     "linux": {
       "target": [

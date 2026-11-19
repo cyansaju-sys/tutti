@@ -54,7 +54,7 @@ function describe(project: string, kind: string, name: string): string | null {
     case 'steering': { const d = loadSteering(project, { globalDir: globalSteeringDir() }).find((x) => x.base === name); return d ? `Steering «${d.base}»: lee ${rel(d.file)} y sigue sus indicaciones.` : null }
     case 'power': { const p = listPowers(project).find((x) => x.name === name); return p ? `Power «${p.name}»: está en ${rel(p.dir)}; revisa lo que trae y úsalo.` : null }
     case 'skill': {
-      const dirs = [join(tuttiDir(project), 'skills'), join(homedir(), '.claude', 'skills'), join(homedir(), '.agents', 'skills')]
+      const dirs = [join(tuttiDir(project), 'skills'), join(homedir(), '.claude', 'skills'), join(homedir(), '.codex', 'skills'), join(homedir(), '.agents', 'skills')]
       const dir = dirs.map((d) => join(d, name)).find((d) => existsSync(d))
       return dir ? `Skill «${name}»: está en ${rel(dir)}; léela (SKILL.md) y aplícala.` : null
     }

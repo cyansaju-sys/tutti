@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { MdAccountTree, MdClose, MdNewReleases, MdTune } from 'react-icons/md'
+import { MdAccountTree, MdClose, MdKeyboard, MdNewReleases, MdTune } from 'react-icons/md'
 import { VscCode, VscOpenPreview, VscPreview } from 'react-icons/vsc'
 import type { GitBlame, GitMarks } from '@/shared/types'
 import { refreshGit } from '@/features/git/lib/gitSync'
@@ -20,6 +20,7 @@ import { ImageViewer } from './ImageViewer'
 import { Markdown, splitFrontMatter } from './Markdown'
 import { GitGraph } from '@/features/git/components/GitGraph'
 import { NewsView } from './NewsView'
+import { ShortcutsView } from './ShortcutsView'
 import { HookFormView } from '@/features/tutti/components/HookFormView'
 import { RoleGraphView } from '@/features/tutti/components/RoleGraphView'
 import { RoleFormView } from '@/features/tutti/components/RoleFormView'
@@ -59,11 +60,11 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
   const set = useStore((s) => s.set)
   return (
     <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
-      className={clsx('group flex min-w-[110px] max-w-[210px] shrink-0 cursor-pointer h-7 items-center gap-1 rounded-tr-lg border-b border-r border-t-2 border-r-line px-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
-      {d.kind === 'graph' ? <MdAccountTree size={14} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={14} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(d.kind) ? <MdTune size={14} className="text-accent" /> : <FileIcon name={d.title} className="size-3" />}
-      <span className="min-w-0 flex-1 truncate text-[10.5px]">{d.title}</span>
+      className={clsx('group flex min-w-[130px] max-w-[240px] shrink-0 cursor-pointer h-8 items-center gap-1.5 rounded-tr-lg border-b border-r border-t-2 border-r-line px-2 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
+      {d.kind === 'graph' ? <MdAccountTree size={16} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={16} className="text-accent" /> : d.kind === 'shortcuts' ? <MdKeyboard size={16} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news', 'shortcuts'].includes(d.kind) ? <MdTune size={16} className="text-accent" /> : <FileIcon name={d.title} className="size-3.5" />}
+      <span className="min-w-0 flex-1 truncate text-[12px]">{d.title}</span>
       {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
-      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-3.5 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={10} /></button>
+      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
     </div>
   )
 }
@@ -186,7 +187,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
         {docs.map((d) => <DocTab key={d.path} doc={d} active={d.path === activePath} />)}
         <div className="min-w-0 flex-1 border-b border-line" />
       </div>}
-      {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news'].includes(doc.kind) && (
+      {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news', 'shortcuts'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">
             {crumbs(project, doc.diffOf ?? doc.path).map((c, i, all) => (
@@ -282,6 +283,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
       {doc?.kind === 'rolegraph' && <RoleGraphView />}
       {doc?.kind === 'roleform' && <RoleFormView key={doc.path} path={doc.path} />}
       {doc?.kind === 'news' && <NewsView />}
+      {doc?.kind === 'shortcuts' && <ShortcutsView />}
       {doc?.kind === 'diff' && <DiffView before={doc.original ?? ''} after={doc.text} label={doc.diffLabel} />}
       {doc?.kind === 'image' && <ImageViewer src={doc.dataUrl ?? ''} alt={doc.title} />}
       {doc?.kind === 'binary' && <div className="grid flex-1 place-items-center text-[12px] text-muted">{t('ed.binary')}</div>}

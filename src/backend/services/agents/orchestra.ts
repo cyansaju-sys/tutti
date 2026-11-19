@@ -84,7 +84,8 @@ export const TOOLS = [
         model: { type: 'string', description: 'Modelo concreto con el que debe trabajar el agente (uno de available_models de list_agents). Si el agente ya abierto usa otro, la app abre una instancia nueva con ese modelo. No todos los agentes lo permiten: la app te lo dice.' },
         force: { type: 'boolean', description: 'Mantener el agente pedido aunque no tenga capacidad suficiente.' },
         task: { type: 'string', description: 'Instrucción completa y autosuficiente.' },
-        new_instance: { type: 'boolean', description: 'Abrir uno nuevo aunque ya haya uno libre.' }
+        new_instance: { type: 'boolean', description: 'Abrir uno nuevo aunque ya haya uno libre.' },
+        same_chat: { type: 'boolean', description: 'Solo si quien te escribe es un chat y el agente tiene chat (Claude o Codex): sigue en la misma conversación que ya tenía ese agente, con su contexto, en vez de abrir otra nueva. Úsalo solo si el usuario lo pidió (p. ej. «sigue con el mismo Codex»).' }
       },
       required: ['task']
     }
@@ -180,7 +181,7 @@ export interface AgentOutput {
 /** Lo que la app ofrece al servidor. */
 export interface Host {
   listAgents(caller: string): unknown | Promise<unknown>
-  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string }): Promise<{ ok: boolean; info: unknown }>
+  delegate(caller: string, target: string, task: string, newInstance: boolean, opts?: { difficulty?: string; force?: boolean; model?: string; sameChat?: boolean }): Promise<{ ok: boolean; info: unknown }>
   report(caller: string, report: TaskReport): { ok: boolean; info: unknown }
   listRoles(caller: string): { ok: boolean; info: unknown }
   assignRoles(caller: string, tasks: Array<{ role: string; task: string }>): Promise<{ ok: boolean; info: unknown }>
@@ -304,7 +305,7 @@ export class Orchestra {
       const difficulty = args.difficulty === undefined ? undefined : String(args.difficulty)
       if (!task || (!args.agent && !difficulty)) return text('Faltan `task` y `agent` (o `difficulty` para que la app elija).', true)
       if (difficulty && !['easy', 'medium', 'hard'].includes(difficulty)) return text('`difficulty` debe ser easy, medium o hard.', true)
-      return reply(await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force), model: args.model === undefined ? undefined : String(args.model).trim() || undefined }))
+      return reply(await this.host.delegate(caller, String(args.agent ?? 'auto'), task, Boolean(args.new_instance), { difficulty, force: Boolean(args.force), ...(args.same_chat ? { sameChat: true } : {}), model: args.model === undefined ? undefined : String(args.model).trim() || undefined }))
     },
     report_done: (args, caller) => {
       const summary = String(args.summary ?? '').trim()

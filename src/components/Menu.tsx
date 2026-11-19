@@ -20,7 +20,9 @@ const MARGIN = 14      // separación mínima del borde de la ventana
  * Menú desplegable anclado a un botón (`anchor` = su rectángulo en pantalla): se abre debajo, alineado a su borde derecho, y
  * pasa arriba si abajo no cabe (con `scroll`, una lista larga se desplaza en lugar de salirse; no vale con submenús, que se recortarían). Se cierra con Esc, al pulsar fuera o al elegir algo. ↑↓ y Enter funcionan; → abre un submenú y ← lo cierra.
  */
-export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void; width?: number; scroll?: boolean }) {
+export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false, flat = true, alignLeft = false, beside }: { anchor: DOMRect; items: MenuItem[]; onClose: () => void; width?: number; scroll?: boolean; flat?: boolean; alignLeft?: boolean
+  beside?: 'left' | 'right'          // a un lado del botón (no debajo ni encima), con el borde de abajo a la par del suyo: como el del engranaje de VSCode
+}) {
   const box = useRef<HTMLDivElement>(null)
   const shown = items.filter((i) => !i.hidden)
   const [index, setIndex] = useState(-1)          // nada resaltado hasta pasar el ratón o usar las flechas
@@ -35,8 +37,8 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
     const h = box.current?.offsetHeight ?? shown.length * 34 + 12
     const below = anchor.bottom + GAP + h <= window.innerHeight - MARGIN
     const wanted = below ? anchor.bottom + GAP : anchor.top - GAP - h
-    const top = Math.max(MARGIN, Math.min(wanted, window.innerHeight - h - MARGIN))      // siempre dentro de la ventana
-    const left = Math.min(Math.max(MARGIN, anchor.right - width), window.innerWidth - width - MARGIN)
+    const top = Math.max(MARGIN, Math.min(beside ? anchor.bottom - h : wanted, window.innerHeight - h - MARGIN))      // siempre dentro de la ventana
+    const left = beside ? Math.min(Math.max(MARGIN, beside === 'right' ? anchor.right + GAP : anchor.left - width - GAP), window.innerWidth - width - MARGIN) : Math.min(Math.max(MARGIN, alignLeft ? anchor.left : anchor.right - width), window.innerWidth - width - MARGIN)      // `left`: alineado al borde izquierdo del botón (los de la barra de título), no al derecho
     setPos({ top, left })
   }, [anchor, shown.length])
 
@@ -83,8 +85,9 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
     return () => item.onPreview?.(false)
   }, [sub, subIndex, index])
   const row = (item: MenuItem, active: boolean): string =>
-    clsx('flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12px] transition-colors',
-      item.danger ? 'text-danger' : 'text-text', active && (item.danger ? 'bg-danger/10' : 'bg-accent/[0.16]'))
+    clsx('flex w-full items-center text-left text-[12px] transition-colors',
+      flat ? 'gap-2 rounded-[3px] px-3 py-[3px] font-light' : 'gap-2.5 rounded-lg px-2.5 py-1.5',
+      item.danger ? 'text-danger' : 'text-text', active && (item.danger ? 'bg-danger/10' : flat ? 'bg-accent/30' : 'bg-accent/[0.16]'))
   /** Sube el submenú lo justo para que no se salga por abajo de la ventana. */
   const fitSub = (el: HTMLDivElement | null): void => {
     if (!el) return
@@ -100,7 +103,7 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
       <div
         ref={box} role="menu" onMouseDown={(e) => e.stopPropagation()}
         style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width }}
-        className={clsx('absolute animate-pop-in rounded-xl border border-ov/[0.08] bg-pop p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]', scroll && 'sect-scroll max-h-[60vh] overflow-y-auto')}
+        className={clsx('absolute animate-pop-in border border-ov/[0.08] bg-pop/85 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]', flat ? 'rounded-md py-1 px-[3px]' : 'rounded-xl p-1', scroll && 'sect-scroll max-h-[60vh] overflow-y-auto')}
       >
         {shown.map((item, i) => (
           <div key={item.label}>
@@ -116,14 +119,14 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false }: 
               className={row(item, i === index || sub === i)}
             >
               {item.icon && <span className={clsx('grid size-4 place-items-center', item.danger ? '' : 'text-muted')}>{item.icon}</span>}
-              <span className="flex-1">{item.label}</span>
-              {item.detail && <span className="text-[11px] text-muted">{item.detail}</span>}
+              <span className="shrink-0 flex-1">{item.label}</span>
+              {item.detail && <span className="min-w-0 truncate text-[11px] text-muted">{item.detail}</span>}
               {item.checked && <MdCheck size={15} className="text-accent" />}
               {item.submenu && <MdChevronRight size={15} className="text-muted" />}
             </button>
             {item.submenu && sub === i && (
               <div role="menu" style={{ left: subLeft, width: SUB_WIDTH }} ref={fitSub} onMouseEnter={() => { clearTimeout(closeTimer.current); closeTimer.current = undefined }}
-                className="absolute top-0 animate-pop-in rounded-xl border border-ov/[0.08] bg-pop p-1 shadow-[0_16px_44px_-8px_rgba(0,0,0,0.85)]">
+                className={clsx('absolute top-0 animate-pop-in border border-ov/[0.08] bg-pop/85 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]', flat ? 'rounded-md px-[3px] py-1' : 'rounded-xl p-1')}>
                 {item.submenu.map((child, j) => (
                   <button key={child.label} role="menuitem" onMouseMove={() => setSubIndex(j)} onClick={() => { onClose(); child.onClick?.() }} className={row(child, j === subIndex)}>
                     {child.icon && <span className="grid size-4 place-items-center text-muted">{child.icon}</span>}

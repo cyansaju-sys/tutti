@@ -122,7 +122,7 @@ const theme = EditorView.theme({
   '.tutti-find-btn:disabled': { opacity: 0.35, cursor: 'default' },
   '.tutti-find-text': { fontSize: '10px', padding: '0 6px' },
   '.cm-git-gutter': { width: '4px' },
-  '.cm-blame': { marginLeft: '3em', color: 'var(--color-muted)', opacity: 0.7, fontStyle: 'italic', fontSize: '0.92em', pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap' }
+  '.cm-blame': { position: 'relative', left: '3em', color: 'var(--color-muted)', opacity: 0.7, fontStyle: 'italic', fontSize: '0.92em', pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap' }
 }, { dark: true })
 
 // --- marcas de git en el margen -------------------------------------------------------------------------------------
@@ -334,6 +334,14 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
   const ro = useRef(new Compartment())
   const font = useStore((s) => s.editorFont)
   useEffect(() => { document.documentElement.style.setProperty('--ed-font', font.trim() || DEFAULT_EDITOR_FONT) }, [font])
+  // al cambiar de fuente o terminar de cargarla, CodeMirror vuelve a medir las letras; si no, el cursor se queda con la medida de la fuente provisional y a final de línea se dibuja separado del texto
+  useEffect(() => {
+    const remeasure = (): void => view.current?.requestMeasure()
+    remeasure()
+    void document.fonts?.ready.then(remeasure)
+    document.fonts?.addEventListener('loadingdone', remeasure)
+    return () => document.fonts?.removeEventListener('loadingdone', remeasure)
+  }, [font])
   const handlers = useRef({ onChange, onSave, onSend, onResolve, onSelect })
   handlers.current = { onChange, onSave, onSend, onResolve, onSelect }
 
@@ -356,6 +364,7 @@ export function CodeEditor({ path, text, readOnly, marks, blame = null, changes 
     if (next === zoom.current) return true
     zoom.current = next
     v.dom.style.setProperty('--cm-zoom', String(next))
+    v.requestMeasure()          // el cursor se dibuja aparte: sin volver a medir se queda con el tamaño de letra anterior
     return true
   }
 

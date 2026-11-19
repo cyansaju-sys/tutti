@@ -91,7 +91,7 @@ With no agents open, the central area is the **start screen**: the *Choose agent
 
 | Area | What it contains |
 |---|---|
-| Title bar | Terminal, current branch, edit permission, commits, version, update button, new window and shortcuts |
+| Title bar | File menu (new window, open, recent, save, revert, close), terminal, current branch, edit permission, commits, version, update button and shortcuts |
 | Sidebar | Files, Search, Agents, Git, Context, MCP and Usage; at the bottom, the settings gear |
 | Center | Tabbed editor on the left and the agents in a grid on the right |
 | Bottom panel | The terminals, with their list on the right when there are several |
@@ -565,6 +565,12 @@ The interface texts live in `src/shared/locales/es.json` and `en.json`; if a key
 | `Ctrl`+`C` / `V` | In terminals and agents: copy (with text selected) / paste. Also `Ctrl`+`Shift`+`C`, `Ctrl`+`Shift`+`V` and `Shift`+`Insert` |
 | `Ctrl`+`Q` | Close the application |
 | `F1` | This help inside the app |
+
+**Changing a shortcut:** in the shortcuts view (`F1`), click the shortcut, press the new keys (with `Ctrl` or `Alt`) and done. Tutti warns if the shortcut is invalid, used by the editor or the system, or already taken by another action; the row's arrow restores the default.
+
+**Problems panel:** next to the terminal, it lists unresolved merge conflicts and unsaved changes.
+
+**Chat with Claude and Codex:** the chat supports both agents, with their models and session. *Split chat in 2* opens a second column; a chat can hand tasks to the chat of the other agent. *Accounts* shows the email of each session. `/init` creates an `AGENTS.md`; with Codex you also get `/review`, `/new` and `/clear`. The editor's *Take the full width* setting splits the width into chat | editor when you open a file.
 
 In dropdown menus: `↑` `↓` move, `→` opens a submenu, `←` closes it, `Enter` picks and `Esc` closes.
 

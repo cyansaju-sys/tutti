@@ -8,8 +8,9 @@ const subscribe = <T extends unknown[]>(channel: string, cb: (...args: T) => voi
 }
 
 const api: Api = {
-  chat: { models: () => ipcRenderer.invoke('chat:models'), history: (id, dir) => ipcRenderer.invoke('chat:history', id, dir), commands: (cwd) => ipcRenderer.invoke('chat:commands', cwd), items: (project) => ipcRenderer.invoke('chat:items', project), mcpStatus: (project) => ipcRenderer.invoke('chat:mcp-status', project),
-    send: (req) => ipcRenderer.invoke('chat:send', req), btw: (req) => ipcRenderer.invoke('chat:btw', req), btwCancel: (id) => ipcRenderer.invoke('chat:btw-cancel', id), planReply: (id, d) => ipcRenderer.invoke('chat:plan-reply', id, d), cancel: () => ipcRenderer.invoke('chat:cancel'), answer: (id, allow, always) => ipcRenderer.invoke('chat:answer', id, allow, always), reply: (id, answers) => ipcRenderer.invoke('chat:reply', id, answers), onEvent: (cb) => subscribe<[ChatEvent]>('chat:event', cb) },
+  accounts: { get: () => ipcRenderer.invoke('accounts:get') },
+  chat: { models: (agent) => ipcRenderer.invoke('chat:models', agent), history: (id, dir) => ipcRenderer.invoke('chat:history', id, dir), commands: (cwd, agent) => ipcRenderer.invoke('chat:commands', cwd, agent), items: (project, agent) => ipcRenderer.invoke('chat:items', project, agent), mcpStatus: (project, agent) => ipcRenderer.invoke('chat:mcp-status', project, agent),
+    send: (req) => ipcRenderer.invoke('chat:send', req), btw: (req) => ipcRenderer.invoke('chat:btw', req), btwCancel: (id) => ipcRenderer.invoke('chat:btw-cancel', id), planReply: (id, d, slot) => ipcRenderer.invoke('chat:plan-reply', id, d, slot), cancel: (slot) => ipcRenderer.invoke('chat:cancel', slot), answer: (id, allow, always, slot) => ipcRenderer.invoke('chat:answer', id, allow, always, slot), reply: (id, answers, slot) => ipcRenderer.invoke('chat:reply', id, answers, slot), onEvent: (cb) => subscribe<[ChatEvent & { slot?: number }]>('chat:event', cb) },
   settings: { get: (k) => ipcRenderer.invoke('settings:get', k), set: (k, v) => ipcRenderer.invoke('settings:set', k, v) },
   theme: { accent: () => ipcRenderer.invoke('theme:accent'), onAccent: (cb) => subscribe<[string | null]>('theme:accent', cb) },
   dialog: { chooseFolder: (start) => ipcRenderer.invoke('dialog:chooseFolder', start) },
@@ -65,6 +66,7 @@ const api: Api = {
     tasks: () => ipcRenderer.invoke('orchestra:tasks'),
     clearTasks: () => ipcRenderer.invoke('orchestra:tasks-clear'),
     onOpenPane: (cb) => subscribe<[OpenPane]>('orchestra:open-pane', cb),
+    onChatDelegate: (cb) => subscribe<[{ agent: 'claude' | 'codex'; task: string; from: number; same?: boolean }]>('chat:delegate', cb),
     onAttention: (cb) => subscribe<[{ id: string; name: string }]>('orchestra:attention', cb),
     onToast: (cb) => subscribe<[string, 'ok' | 'error' | 'info']>('orchestra:toast', cb),
     paneState: () => ipcRenderer.invoke('orchestra:pane-state'),

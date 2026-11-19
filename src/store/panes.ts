@@ -39,11 +39,11 @@ export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, g
     const command = await window.api.agents.shell()
     const id = `s${paneId++}`
     const title = command.split(/[\\/]/).pop()?.replace(/\.exe$/i, '') || 'terminal'
-    set((s) => ({ shells: [...s.shells, { id, kind: 'shell', title, command, args: [], cwd: project ?? '' }], shellActive: id, activePane: id, focus: 'pane' }))
+    set((s) => ({ shells: [...s.shells, { id, kind: 'shell', title, command, args: [], cwd: project ?? '' }], shellActive: id, activePane: id, focus: 'pane', panelTab: 'terminal' }))
   },
   closeShells: () => {
     get().shells.forEach((sh) => window.api.pty.kill(sh.id))
-    set({ shells: [], shellActive: null, shellMax: false, activePane: get().panes.at(-1)?.id ?? null })
+    set({ shells: [], shellActive: null, shellMax: false, problemsOpen: false, activePane: get().panes.at(-1)?.id ?? null })
   },
   closePane: (id) => set((s) => {
     window.api.pty.kill(id)

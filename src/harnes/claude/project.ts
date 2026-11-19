@@ -2,7 +2,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import type { ChatItem, ChatProjectItems } from '@/shared/types'
+import type { ChatAgent, ChatItem, ChatProjectItems } from '@/shared/types'
 import { tuttiDir } from '@/backend/services/context/context'
 import { loadHooks } from '@/backend/services/hooks'
 import { listServers } from '@/backend/services/mcp/mcp'
@@ -13,6 +13,7 @@ import { listRoles } from '@/backend/services/context/roles'
 import { globalSteeringDir } from '@/backend/services/context/context'
 import { status as gitStatus } from '@/backend/services/git/git'
 import { loadSteering } from '@/backend/services/context/steering'
+import { codexMcp } from '@/harnes/codex/project'
 
 /** La descripción del frontmatter de un SKILL.md (`description: ...`), o '' si no la tiene. */
 const describeSkill = (file: string): string => {
@@ -35,9 +36,9 @@ function skillsIn(root: string, scope: ChatItem['scope']): ChatItem[] {
 }
 
 /** Las del proyecto (.tutti o .agents) y, aparte, las globales del usuario. */
-const skillsOf = (project: string): ChatItem[] => [
+const skillsOf = (project: string, agent: ChatAgent = 'claude'): ChatItem[] => [
   ...skillsIn(join(tuttiDir(project), 'skills'), 'local'),
-  ...skillsIn(join(homedir(), '.claude', 'skills'), 'global'),
+  ...skillsIn(agent === 'codex' ? join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'skills') : join(homedir(), '.claude', 'skills'), 'global'),
   ...skillsIn(join(homedir(), '.agents', 'skills'), 'global')
 ]
 
@@ -87,9 +88,10 @@ function docsOf(project: string): ChatItem[] {
   return out
 }
 
-export function projectItems(project: string | null): ChatProjectItems {
+/** Con `agent: 'codex'`, las skills y los MCP son los de Codex; lo de Tutti (roles, specs, steering, hooks…) es igual para los dos. */
+export function projectItems(project: string | null, agent: ChatAgent = 'claude'): ChatProjectItems {
   if (!project || !existsSync(project)) return { skills: [], hooks: [], mcp: [], roles: [], steering: [], powers: [], specs: [], roadmap: [], docs: [], changes: [] }
-  return { skills: skillsOf(project), hooks: hooksOf(project), mcp: mcpOf(project), roles: rolesOf(project), steering: steeringOf(project), powers: powersOf(project), specs: specsOf(project), roadmap: roadmapOf(project), docs: docsOf(project), changes: [] }
+  return { skills: skillsOf(project, agent), hooks: hooksOf(project), mcp: agent === 'codex' ? [...codexMcp(project), ...mcpOf(project).filter((i) => i.scope === 'local' && listPowers(project).some((p) => p.name === i.description))] : mcpOf(project), roles: rolesOf(project), steering: steeringOf(project), powers: powersOf(project), specs: specsOf(project), roadmap: roadmapOf(project), docs: docsOf(project), changes: [] }
 }
 
 /** Los cambios sin confirmar del repositorio (git status): «todos» y cada archivo con su estado. */

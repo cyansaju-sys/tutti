@@ -30,7 +30,7 @@ export function ModelPicker({ anchor, models, model, effort, onModel, onEffort, 
 
   return createPortal(
     <div ref={box} style={{ left: anchor.left, width: anchor.width, bottom: window.innerHeight - anchor.top + 4, maxHeight: Math.min(300, Math.max(160, anchor.top - 14)) }}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
+      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel/85 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]">
       <div className="shrink-0 px-3 pb-1 pt-2 text-[11px] text-muted">{t('chat.selectModel')}</div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
         {models ? models.map((m) => (

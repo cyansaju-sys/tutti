@@ -115,21 +115,22 @@ export function CommandPicker({ anchor, trigger, commands, items, files = null, 
     body = rows(fileRows('@', null))
   } else if (!commands || !items) body = empty(t('chat.loadingModels'))
   else if (query) {
-    const groups = GROUPS[trigger].filter((g) => g.startsWith(query)).map(groupRow)      // «#stee» propone el grupo #steering
+    const groups = GROUPS[trigger].filter((g) => g.startsWith(query) && (g !== 'powers' || items.powers.length > 0)).map(groupRow)          // «#powers» solo si hay Powers (en .tutti o .agents)      // «#stee» propone el grupo #steering
     const all = trigger === '/'
       ? [...groups, ...commands.filter((c) => c.name.toLowerCase().includes(query)).map(cmdRow)]
       : [...groups, ...(GROUPS['#'].filter((g) => g !== 'file' && g !== 'dir') as ItemGroup[]).flatMap((g) => items[g].filter((i) => i.name.toLowerCase().includes(query)).map((i) => itemRow(g, i)))]
     body = rows(all)
   } else if (group) body = rows(inGroup(group))
   else {
-    const entries = MAIN[trigger].map(groupRow)
+    const main = trigger === '#' && items.powers.length > 0 ? ([...MAIN['#'].slice(0, 2), 'powers', ...MAIN['#'].slice(2)] as Group[]) : MAIN[trigger]          // los Powers salen en la lista solo si el proyecto (o el usuario) tiene alguno
+    const entries = main.map(groupRow)
     const top = trigger === '/' ? ['clear', 'btw'].map((n) => commands.find((c) => c.name === n)).filter((c): c is ChatCommand => !!c) : []          // los dos comandos de Tutti arriba
     body = [...top.map(cmdRow), ...entries]
   }
 
   return createPortal(
     <div ref={box} style={{ left: anchor.left, width: anchor.width, bottom: window.innerHeight - anchor.top + 4, maxHeight: Math.min(300, Math.max(160, anchor.top - 14)) }}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
+      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel/85 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]">
       {trigger !== '@' && <div className="shrink-0 px-3 pb-1 pt-2 text-[11px] text-muted">{group && !query ? `${trigger}${group}` : trigger === '#' ? 'Tutti' : t('chat.commandsTitle')}</div>}
       <div className={`min-h-0 flex-1 overflow-y-auto px-1 pb-1${trigger === '@' ? ' pt-1' : ''}`}>{body}</div>
     </div>, document.body

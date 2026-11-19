@@ -43,6 +43,7 @@ export interface DocsSlice {
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
+  openShortcuts: () => void                             // los atajos de teclado como pestaña del editor, en una tabla
   openNews: (since: string | null) => void              // las novedades como pestaña del editor: desde `since` (tras actualizar) o solo las de la versión instalada
   openRoleGraph: () => void                            // el grafo de dependencias entre roles
   openRoleForm: (edit?: { file: string; name: string }) => void                            // el formulario de un rol nuevo (solo el nombre)
@@ -96,6 +97,8 @@ export interface UiSlice {
   chatOpen: boolean                                     // panel de chat, al lado opuesto de la barra lateral (abierto por defecto; se recuerda si se cierra)
   chatWidth: number                                     // su ancho, que el usuario arrastra
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
+  chatSplit: boolean                                    // el chat partido en 2 columnas (dos conversaciones a la vez)
+  editorFull: boolean                                   // «Ocupar todo»: con un archivo abierto, chat y editor se reparten el ancho a medias
   editorFont: string                                    // font-family del editor de código, tal como lo escribe el usuario
   sidebarWidth: number
   editorWidth: number
@@ -128,5 +131,10 @@ export interface UiSlice {
   setLang: (pref: LangPref) => void
   setSidebarSide: (side: 'left' | 'right') => void
   setEditorFont: (font: string) => void
+  setEditorFull: (on: boolean) => void
+  panelTab: 'terminal' | 'problems'                     // pestaña del panel de abajo
+  problemsOpen: boolean                                 // el panel está abierto aunque no haya terminales (para ver los problemas)
+  keys: Record<string, string>                          // atajos que el usuario cambió (id del comando → combinación); el resto son los de fábrica
+  setKey: (id: string, combo: string | null) => void   // null: vuelve al de fábrica
   setEdit: (enabled: boolean) => void
 }
