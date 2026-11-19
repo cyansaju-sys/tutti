@@ -119,8 +119,8 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false, fl
               className={row(item, i === index || sub === i)}
             >
               {item.icon && <span className={clsx('grid size-4 place-items-center', item.danger ? '' : 'text-muted')}>{item.icon}</span>}
-              <span className="flex-1">{item.label}</span>
-              {item.detail && <span className="text-[11px] text-muted">{item.detail}</span>}
+              <span className="shrink-0 flex-1">{item.label}</span>
+              {item.detail && <span className="min-w-0 truncate text-[11px] text-muted">{item.detail}</span>}
               {item.checked && <MdCheck size={15} className="text-accent" />}
               {item.submenu && <MdChevronRight size={15} className="text-muted" />}
             </button>

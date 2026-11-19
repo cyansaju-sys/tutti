@@ -17,7 +17,7 @@ import { codexConfig } from '@/backend/services/mcp/mcp'
 import { dropCodexBridgeCopy } from '@/backend/services/mcp/mirror'
 import { launchServers } from '@/backend/services/mcp/sync'
 import { agyBridgeStatus, ensureAgyBridge } from './agyBridge'
-import { chatId, chatMeta, registerChat, unregisterChat } from './chatCaller'
+import { chatId, chatMeta, isChat, registerChat, slotOf, unregisterChat } from './chatCaller'
 import { trackRecord } from './history'
 import { deliverNotices, noticeCounts, notify, takeNotices } from './inbox'
 import { askingIds, checkAttention } from './attention'
@@ -270,6 +270,15 @@ const host: Host = {
         else { target = command; newInstance = true }
       } else newInstance = true
     }
+    // de un chat a otro agente que también tiene chat (Claude ↔ Codex): en vez de abrir su CLI en un panel, se le da la tarea en el otro chat (el chat se parte en 2)
+    const chatAgent = detectAgents().find((a) => a.command.toLowerCase() === target.toLowerCase() || a.name.toLowerCase() === target.toLowerCase())?.command
+    if (isChat(caller) && !open.some((m) => m.id === target) && (chatAgent === 'codex' || chatAgent === 'claude') && chatAgent !== self.command) {
+      const win = appWindow()
+      if (!win) return { ok: false, info: 'No se pudo enviar la tarea: la ventana no está disponible.' }
+      win.webContents.send('chat:delegate', { agent: chatAgent, task, from: slotOf(caller), same: !!opts.sameChat })
+      toast(tm('m.hub.delegated', { leader: label(self.name), agent: label(chatAgent === 'codex' ? 'Codex' : 'Claude') }))
+      return { ok: true, info: { message: `${assigned} Tarea enviada al chat de ${chatAgent === 'codex' ? 'Codex' : 'Claude'}, que se abre al lado: el usuario verá allí su respuesta. Este chat no puede esperar su resultado con wait_agent ni leerlo con read_agent_output: sigue con lo tuyo o dile al usuario que lo mire en el otro chat.`.trim() } }
+    }
     const leader = currentLeader()
     let pane = open.find((m) => m.id === target)
     if (!pane) {
@@ -416,10 +425,10 @@ function opencodeMajor(): number {
  * El servidor MCP de Tutti para el chat de una ventana: así Claude puede repartir tareas a los demás agentes (OpenCode, Codex…).
  * `release` quita al chat como llamador al acabar; null si el servidor no está en marcha.
  */
-export function chatMcp(windowId: number, cwd: string): { servers: Record<string, McpEntry>; tools: string[]; release: () => void } | null {
+export function chatMcp(windowId: number, cwd: string, command = 'claude'): { servers: Record<string, McpEntry>; tools: string[]; release: () => void } | null {
   if (!orchestra) return null
   const id = chatId(windowId)
-  registerChat(id, cwd)
+  registerChat(id, cwd, command)
   return { servers: { tutti: orchestra.configFor(id) }, tools: TUTTI_TOOLS, release: () => unregisterChat(id) }
 }
 

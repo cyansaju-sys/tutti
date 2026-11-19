@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell, systemPreferences } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell, systemPreferences, type WebContents } from 'electron'
 import { execFile, spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
@@ -18,6 +18,11 @@ import { loadSteering } from './services/context/steering'
 import { createPower, installPower, listPowers, powerSources, removePower } from './services/powers'
 import { importSkill } from './services/skills'
 import { isTrusted, loadHooks, setTrusted, startHooks, stopHooks } from './services/hooks'
+import { claudeEmail } from '@/harnes/claude/account'
+import { codexEmail } from '@/harnes/codex/account'
+import { listCodexCommands } from '@/harnes/codex/project'
+import { listCodexModels } from '@/harnes/codex/models'
+import { cancelCodex, sendCodex } from '@/harnes/codex/chat'
 import { answerPermission, answerPlan, cancelChat, sendChat, answerQuestion } from '@/harnes/claude/chat'
 import { askBtw, cancelBtw } from '@/harnes/claude/btw'
 import { listCommands, mcpStatus } from '@/harnes/claude/commands'
@@ -27,7 +32,7 @@ import { projectItems, changesOf } from '@/harnes/claude/project'
 import { tm } from './utils/i18n'
 import { getSetting, migrateLegacyConfig, setSetting } from './services/settings'
 import { replaceInFiles, searchFiles } from './services/search'
-import type { ChatBtwRequest, ChatPlanDecision, ChatSendRequest, GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
+import type { ChatAgent, ChatBtwRequest, ChatPlanDecision, ChatSendRequest, GitOp, PowerDraft, PowerScope, PtyOptions, SearchOptions, StartProject } from '@/shared/types'
 import { runCapture } from '../../test/capture'
 import { checkForUpdates, installUpdate, setupUpdater, stopUpdater, updateState } from './services/updater'
 import * as mcp from './services/mcp/mcp'
@@ -136,21 +141,41 @@ async function systemAccent(): Promise<string | null> {
   return process.platform === 'linux' ? portalAccent() : null
 }
 
+/**
+ * El chat de la segunda columna (`slot` 1) comparte ventana con el primero: se le da otra «ventana» a medida que responde con su propio id (así sus respuestas, permisos y llamadas al MCP de Tutti no se mezclan con las del otro)
+ * y que marca cada evento con su `slot` para que el renderer lo lleve a su columna.
+ */
+function forSlot(sender: WebContents, slot = 0): WebContents {
+  if (!slot) return sender
+  return new Proxy({} as WebContents, {          // la base es un objeto vacío: un Proxy no puede dar otro valor para una propiedad de solo lectura (`id`) del objeto original
+    get(_target, prop) {
+      if (prop === 'id') return sender.id + slot * 100_000
+      if (prop === 'send') return (channel: string, event: unknown) => sender.send(channel, event && typeof event === 'object' ? { ...event, slot } : event)
+      const value = Reflect.get(sender, prop, sender) as unknown
+      return typeof value === 'function' ? value.bind(sender) : value
+    }
+  })
+}
+
 function registerIpc(): void {
   ipcMain.handle('theme:accent', () => systemAccent())
   try { (systemPreferences as unknown as NodeJS.EventEmitter).on('accent-color-changed', () => void systemAccent().then((c) => win?.webContents.send('theme:accent', c))) } catch { /* sin aviso de cambios: se vuelve a leer al enfocar la ventana */ }
-  ipcMain.handle('chat:models', () => listModels())
+  ipcMain.handle('accounts:get', async () => ({ claude: await claudeEmail(), codex: codexEmail() }))
+  ipcMain.handle('chat:models', (_e, agent?: ChatAgent) => (agent === 'codex' ? listCodexModels() : listModels()))
   ipcMain.handle('chat:history', (_e, id: string, dir?: string) => sessionHistory(id, dir))
-  ipcMain.handle('chat:send', (e, req: ChatSendRequest) => sendChat(e.sender, req))
-  ipcMain.handle('chat:btw', (e, req: ChatBtwRequest) => askBtw(e.sender, req))
+  ipcMain.handle('chat:send', (e, req: ChatSendRequest) => { const to = forSlot(e.sender, req.slot); return (req.agent === 'codex' ? sendCodex(to, req) : sendChat(to, req)).catch((err: unknown) => {          // si algo falla antes de empezar, el chat no se queda en «Pensando…»
+    to.send('chat:event', { kind: 'error', message: err instanceof Error ? err.message : String(err) })
+    to.send('chat:event', { kind: 'done' })
+  }) })
+  ipcMain.handle('chat:btw', (e, req: ChatBtwRequest) => askBtw(forSlot(e.sender, req.slot), req))
   ipcMain.handle('chat:btw-cancel', (_e, id: string) => cancelBtw(id))
-  ipcMain.handle('chat:plan-reply', (e, id: string, d: ChatPlanDecision) => answerPlan(e.sender, id, d))
-  ipcMain.handle('chat:cancel', (e) => cancelChat(e.sender))
-  ipcMain.handle('chat:reply', (e, id: string, answers: Record<string, string> | null) => answerQuestion(e.sender, id, answers))
-  ipcMain.handle('chat:answer', (e, id: string, allow: boolean, always?: boolean) => answerPermission(e.sender, id, allow, always))
-  ipcMain.handle('chat:items', async (_e, project: string | null) => ({ ...projectItems(project), changes: await changesOf(project) }))
-  ipcMain.handle('chat:mcp-status', (_e, project: string | null) => mcpStatus(project))
-  ipcMain.handle('chat:commands', (_e, cwd?: string) => listCommands(cwd))
+  ipcMain.handle('chat:plan-reply', (e, id: string, d: ChatPlanDecision, slot?: number) => answerPlan(forSlot(e.sender, slot), id, d))
+  ipcMain.handle('chat:cancel', (e, slot?: number) => { const to = forSlot(e.sender, slot); cancelChat(to); cancelCodex(to) })
+  ipcMain.handle('chat:reply', (e, id: string, answers: Record<string, string> | null, slot?: number) => answerQuestion(forSlot(e.sender, slot), id, answers))
+  ipcMain.handle('chat:answer', (e, id: string, allow: boolean, always?: boolean, slot?: number) => answerPermission(forSlot(e.sender, slot), id, allow, always))
+  ipcMain.handle('chat:items', async (_e, project: string | null, agent?: ChatAgent) => ({ ...projectItems(project, agent), changes: await changesOf(project) }))
+  ipcMain.handle('chat:mcp-status', (_e, project: string | null, agent?: ChatAgent) => (agent === 'codex' ? {} : mcpStatus(project)))
+  ipcMain.handle('chat:commands', (_e, cwd?: string, agent?: ChatAgent) => (agent === 'codex' ? listCodexCommands() : listCommands(cwd)))
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: unknown) => setSetting(key, value))
   ipcMain.handle('dialog:chooseFolder', async (_e, start?: string) => {

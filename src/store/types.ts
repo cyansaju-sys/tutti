@@ -97,6 +97,8 @@ export interface UiSlice {
   chatOpen: boolean                                     // panel de chat, al lado opuesto de la barra lateral (abierto por defecto; se recuerda si se cierra)
   chatWidth: number                                     // su ancho, que el usuario arrastra
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
+  chatSplit: boolean                                    // el chat partido en 2 columnas (dos conversaciones a la vez)
+  editorFull: boolean                                   // «Ocupar todo»: con un archivo abierto, chat y editor se reparten el ancho a medias
   editorFont: string                                    // font-family del editor de código, tal como lo escribe el usuario
   sidebarWidth: number
   editorWidth: number
@@ -129,6 +131,7 @@ export interface UiSlice {
   setLang: (pref: LangPref) => void
   setSidebarSide: (side: 'left' | 'right') => void
   setEditorFont: (font: string) => void
+  setEditorFull: (on: boolean) => void
   panelTab: 'terminal' | 'problems'                     // pestaña del panel de abajo
   problemsOpen: boolean                                 // el panel está abierto aunque no haya terminales (para ver los problemas)
   keys: Record<string, string>                          // atajos que el usuario cambió (id del comando → combinación); el resto son los de fábrica

@@ -2,6 +2,22 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.5
+
+### Cambios
+
+- **Chat con Codex:** el chat de Tutti ahora también habla con Codex (OpenAI), no solo con Claude. Usa los modelos y la sesión de tu cuenta de Codex y respeta tus comandos, MCP y menciones («@», «#»). En Codex, los modos Plan y Explorador solo leen; el resto puede escribir en el proyecto.
+- **Dos chats a la vez:** el botón **Partir el chat en 2** abre una segunda columna, y cada chat puede ir con Claude o con Codex. Cada uno tiene su conversación, sus permisos y sus preguntas.
+- **Pasarse tareas entre chats:** un chat puede encargarle una tarea al del otro agente (Claude ↔ Codex) y avisa cuando este termina o falla.
+- **Cuentas:** un apartado **Cuentas** muestra el correo con el que tienes la sesión iniciada en Claude y en Codex.
+- **`/init`:** crea un `AGENTS.md` para el repositorio (el estándar que leen los dos agentes) en lugar de un `CLAUDE.md`. Con Codex también tienes `/review` (revisa los cambios sin confirmar), `/new` y `/clear`.
+- **Menú «+» del chat:** subir un archivo desde el equipo, añadir contexto y navegar por la web.
+- **Ocupar todo:** nuevo ajuste del editor. Con la casilla marcada, al abrir un archivo el ancho se divide en chat | editor; sin marcar, el chat queda como un panel pequeño al lado.
+- **Panel de Problemas:** avisa de conflictos de fusión sin resolver y de cambios sin guardar en el área de trabajo.
+- **Atajos personalizables:** en la vista de atajos puedes cambiar cualquier atajo con un clic (avisa si es inválido, está reservado o ya lo usa otra acción) y volver al de fábrica.
+- **Menú Archivo en la barra de título:** nueva ventana, abrir archivo o carpeta, abrir reciente, guardar, guardar todo, revertir archivo, cerrar editor, carpeta o ventana, y salir.
+- **Crear .tutti:** si el proyecto no tiene carpeta `.tutti` ni `.agents`, la pestaña Tutti ofrece crearla.
+
 ## 1.5.4
 
 ### Cambios

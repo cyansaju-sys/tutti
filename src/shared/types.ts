@@ -165,10 +165,11 @@ export type Settings = Record<string, unknown>
 export type ChatEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 export interface ChatModel { value: string; displayName: string; description: string; efforts?: ChatEffort[]; /** puede mostrar su razonamiento (thinking adaptativo) */ thinking?: boolean }
 
+export type ChatAgent = 'claude' | 'codex'
 /** Lo que se envía al SDK con cada mensaje del chat. */
-export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; images?: ChatImage[]; /** pedir el razonamiento resumido (el modelo lo admite) */ thinking?: boolean }
+export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; /** a qué chat va (0 = el primero, 1 = el de la segunda columna) */ slot?: number; /** quién responde: Claude (por defecto) o Codex */ agent?: ChatAgent; images?: ChatImage[]; /** pedir el razonamiento resumido (el modelo lo admite) */ thinking?: boolean }
 /** «/btw»: una pregunta al margen, sin tocar la conversación ni interrumpir la respuesta en curso. */
-export interface ChatBtwRequest { id: string; question: string; project: string | null; session: string | null; model: string }
+export interface ChatBtwRequest { slot?: number; id: string; question: string; project: string | null; session: string | null; model: string }
 /** Lo que el usuario decide ante el plan de Claude: aprobarlo (con o sin aceptar las ediciones solas) o pedir cambios. */
 export type ChatPlanDecision = { decision: 'approve' | 'approve-edits' } | { decision: 'revise'; feedback?: string }
 /** Una imagen adjunta al mensaje (base64, sin el prefijo `data:`). */
@@ -205,8 +206,9 @@ export interface ChatHistoryMessage {
 export interface ChatCommand { name: string; description: string; hint: string; builtin: boolean }
 
 export interface Api {
-  chat: { models(): Promise<ChatModel[]>; history(id: string, dir?: string): Promise<ChatHistoryMessage[]>; commands(cwd?: string): Promise<ChatCommand[]>; items(project: string | null): Promise<ChatProjectItems>; mcpStatus(project: string | null): Promise<Record<string, NonNullable<ChatItem['status']>>>
-    send(req: ChatSendRequest): Promise<void>; btw(req: ChatBtwRequest): Promise<void>; btwCancel(id: string): Promise<void>; planReply(id: string, d: ChatPlanDecision): Promise<void>; cancel(): Promise<void>; answer(id: string, allow: boolean, always?: boolean): Promise<void>; reply(id: string, answers: Record<string, string> | null): Promise<void>; onEvent(cb: (e: ChatEvent) => void): () => void }
+  accounts: { get(): Promise<{ claude: string | null; codex: string | null }> }          // el correo de cada cuenta con sesión iniciada
+  chat: { models(agent?: ChatAgent): Promise<ChatModel[]>; history(id: string, dir?: string): Promise<ChatHistoryMessage[]>; commands(cwd?: string, agent?: ChatAgent): Promise<ChatCommand[]>; items(project: string | null, agent?: ChatAgent): Promise<ChatProjectItems>; mcpStatus(project: string | null, agent?: ChatAgent): Promise<Record<string, NonNullable<ChatItem['status']>>>
+    send(req: ChatSendRequest): Promise<void>; btw(req: ChatBtwRequest): Promise<void>; btwCancel(id: string): Promise<void>; planReply(id: string, d: ChatPlanDecision, slot?: number): Promise<void>; cancel(slot?: number): Promise<void>; answer(id: string, allow: boolean, always?: boolean, slot?: number): Promise<void>; reply(id: string, answers: Record<string, string> | null, slot?: number): Promise<void>; onEvent(cb: (e: ChatEvent & { slot?: number }) => void): () => void }
   settings: { get(key: string): Promise<unknown>; set(key: string, value: unknown): Promise<void> }
   theme: { accent(): Promise<string | null>; onAccent(cb: (color: string | null) => void): () => void }          // el color de acento del sistema (#rrggbb)
   dialog: { chooseFolder(start?: string): Promise<string | null> }
@@ -329,6 +331,7 @@ export interface Api {
   orchestra: {
     newId(): Promise<string>
     onOpenPane(cb: (pane: OpenPane) => void): () => void
+    onChatDelegate(cb: (task: { agent: ChatAgent; task: string; from: number; same?: boolean }) => void): () => void          // un chat le pasa una tarea al del otro agente (Claude ↔ Codex)
     /** Un agente se quedó parado esperando un permiso o una respuesta en su panel. */
     onAttention(cb: (agent: { id: string; name: string }) => void): () => void
     tasks(): Promise<TaskInfo[]>

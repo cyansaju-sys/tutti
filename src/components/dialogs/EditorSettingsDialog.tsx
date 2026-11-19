@@ -15,6 +15,7 @@ const SETTINGS: Setting[] = [
   { id: 'fontSize', group: 'font', title: 'ed.fontSize.t', help: 'ed.fontSize.h', control: { kind: 'number', value: '14' } },
   { id: 'fontFamily', group: 'font', title: 'ed.fontFamily.t', help: 'ed.fontFamily.h', control: { kind: 'text', value: DEFAULT_EDITOR_FONT } },
   { id: 'ligatures', group: 'font', title: 'ed.ligatures.t', help: 'ed.ligatures.h', control: { kind: 'check', value: true } },
+  { id: 'fullWidth', group: 'text', title: 'ed.fullWidth.t', help: 'ed.fullWidth.h', control: { kind: 'check', value: false } },
   { id: 'wordWrap', group: 'text', title: 'ed.wordWrap.t', help: 'ed.wordWrap.h', control: { kind: 'select', value: 'off', options: ['off', 'on'] } },
   { id: 'lineNumbers', group: 'text', title: 'ed.lineNumbers.t', help: 'ed.lineNumbers.h', control: { kind: 'check', value: true } },
   { id: 'formatOnSave', group: 'files', title: 'ed.formatOnSave.t', help: 'ed.formatOnSave.h', control: { kind: 'check', value: false } },
@@ -28,9 +29,11 @@ export function EditorSettingsDialog() {
   const set = useStore((s) => s.set)
   const editorFont = useStore((s) => s.editorFont)
   const setEditorFont = useStore((s) => s.setEditorFont)
+  const editorFull = useStore((s) => s.editorFull)
+  const setEditorFull = useStore((s) => s.setEditorFull)
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState<(typeof GROUPS)[number]>('all')
-  const [values, setValues] = useState<Record<string, Control['value']>>(() => ({ ...Object.fromEntries(SETTINGS.map((x) => [x.id, x.control.value])), fontFamily: editorFont }))
+  const [values, setValues] = useState<Record<string, Control['value']>>(() => ({ ...Object.fromEntries(SETTINGS.map((x) => [x.id, x.control.value])), fontFamily: editorFont, fullWidth: editorFull }))
   // la pizarra de notas entre agentes vive en los ajustes de la app (la lee el servidor MCP)
   useEffect(() => { void window.api.settings.get('agent_notes').then((v) => setValues((p) => ({ ...p, agentNotes: v === true }))) }, [])
   const shown = useMemo(() => {
@@ -58,7 +61,7 @@ export function EditorSettingsDialog() {
             {shown.length === 0 && <p className="px-2 text-[12px] font-light text-muted">{t('editor.none')}</p>}
             {shown.map((x) => {
               const v = values[x.id]
-              const change = (n: Control['value']): void => { setValues((p) => ({ ...p, [x.id]: n })); if (x.id === 'fontFamily') setEditorFont(n as string); if (x.id === 'agentNotes') void window.api.settings.set('agent_notes', n) }
+              const change = (n: Control['value']): void => { setValues((p) => ({ ...p, [x.id]: n })); if (x.id === 'fontFamily') setEditorFont(n as string); if (x.id === 'fullWidth') setEditorFull(n as boolean); if (x.id === 'agentNotes') void window.api.settings.set('agent_notes', n) }
               const check = x.control.kind === 'check'
               return (
                 <div key={x.id} className="flex flex-col gap-1 border-l-2 border-transparent px-2 py-1.5 transition-colors hover:border-accent hover:bg-ov/[0.03]">

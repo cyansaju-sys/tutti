@@ -2,6 +2,22 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.5
+
+### Changes
+
+- **Chat with Codex:** Tutti's chat now also talks to Codex (OpenAI), not just Claude. It uses the models and session of your Codex account and respects your commands, MCP servers and mentions ("@", "#"). With Codex, the Plan and Explorer modes only read; the others can write to the project.
+- **Two chats at once:** the **Split chat in 2** button opens a second column, and each chat can run on Claude or on Codex. Each has its own conversation, permissions and questions.
+- **Handing tasks between chats:** a chat can assign a task to the chat of the other agent (Claude ↔ Codex) and tells you when it finishes or fails.
+- **Accounts:** a new **Accounts** section shows the email you are signed in with on Claude and on Codex.
+- **`/init`:** creates an `AGENTS.md` for the repository (the standard both agents read) instead of a `CLAUDE.md`. With Codex you also get `/review` (reviews the uncommitted changes), `/new` and `/clear`.
+- **Chat "+" menu:** upload a file from your computer, add context and browse the web.
+- **Take the full width:** new editor setting. When on, opening a file splits the width into chat | editor; when off, the chat stays a small panel on the side.
+- **Problems panel:** warns about unresolved merge conflicts and unsaved changes in the workspace.
+- **Customizable shortcuts:** in the shortcuts view you can change any shortcut with a click (it warns if it is invalid, reserved or already used by another action) and go back to the default.
+- **File menu in the title bar:** new window, open file or folder, open recent, save, save all, revert file, close editor, folder or window, and exit.
+- **Create .tutti:** if the project has no `.tutti` or `.agents` folder, the Tutti tab offers to create it.
+
 ## 1.5.4
 
 ### Changes

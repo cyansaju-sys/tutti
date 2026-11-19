@@ -16,6 +16,7 @@ const RULES: Record<string, Rule> = {
   system_accent: (v) => (typeof v === 'boolean' ? { sysAccent: v } : undefined),
   icon_flavor: (v) => (isIconFlavor(v) ? { iconFlavor: v } : undefined),
   sidebar_side: (v) => (v === 'left' || v === 'right' ? { sidebarSide: v } : undefined),
+  editor_full: (v) => (typeof v === 'boolean' ? { editorFull: v } : undefined),
   editor_font: (v) => (typeof v === 'string' && v.trim() ? { editorFont: v } : undefined),
   sidebar_width: (v) => (isNumber(v) ? { sidebarWidth: clamp(v, 220, 520) } : undefined),     // global: vale para todos los proyectos
   chat_open: (v) => (typeof v === 'boolean' ? { chatOpen: v } : undefined),                   // el chat se abre con el proyecto; si se cerró, así se queda

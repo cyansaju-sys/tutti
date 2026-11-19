@@ -91,7 +91,7 @@ Sin agentes abiertos, el espacio central es la **pantalla de inicio**: el botón
 
 | Zona | Qué contiene |
 |---|---|
-| Barra de título | Terminal, rama actual, permiso de edición, commits, versión, botón de actualización, nueva ventana y atajos |
+| Barra de título | Menú Archivo (nueva ventana, abrir, recientes, guardar, revertir, cerrar), terminal, rama actual, permiso de edición, commits, versión, botón de actualización y atajos |
 | Barra lateral | Archivos, Buscar, Agentes, Git, Contexto, MCP y Consumo; abajo, la tuerca de ajustes |
 | Centro | Editor con pestañas a la izquierda y los agentes en cuadrícula a la derecha |
 | Panel inferior | Las terminales, con su lista a la derecha cuando hay varias |
@@ -565,6 +565,12 @@ Los textos de la interfaz están en `src/shared/locales/es.json` y `en.json`; si
 | `Ctrl`+`C` / `V` | En terminales y agentes: copiar (con texto seleccionado) / pegar. También `Ctrl`+`Shift`+`C`, `Ctrl`+`Shift`+`V` y `Shift`+`Insert` |
 | `Ctrl`+`Q` | Cerrar la aplicación |
 | `F1` | Esta ayuda dentro de la app |
+
+**Cambiar un atajo:** en la vista de atajos (`F1`), clic en el atajo, pulsa las teclas nuevas (con `Ctrl` o `Alt`) y listo. Tutti avisa si el atajo es inválido, lo usa el editor o el sistema, o ya lo tiene otra acción; la flecha de la fila vuelve al de fábrica.
+
+**Panel de Problemas:** junto a la terminal, lista los conflictos de fusión sin resolver y los cambios sin guardar.
+
+**Chat con Claude y Codex:** el chat admite los dos agentes, con sus modelos y su sesión. *Partir el chat en 2* abre una segunda columna; un chat puede pasarle tareas al del otro agente. *Cuentas* muestra el correo de cada sesión. `/init` crea un `AGENTS.md`; con Codex también `/review`, `/new` y `/clear`. El ajuste *Ocupar todo* del editor divide el ancho en chat | editor al abrir un archivo.
 
 En los menús desplegables: `↑` `↓` mueven, `→` abre un submenú, `←` lo cierra, `Enter` elige y `Esc` cierra.
 

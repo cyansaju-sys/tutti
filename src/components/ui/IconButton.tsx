@@ -1,9 +1,9 @@
 import { clsx } from 'clsx'
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 
 /** Botón de ícono sin borde: el estilo base de toda la barra. */
 export function IconButton({ title, onClick, children, className, danger }: {
-  title?: string; onClick?: () => void; children: ReactNode; className?: string; danger?: boolean
+  title?: string; onClick?: (e: MouseEvent<HTMLButtonElement>) => void; children: ReactNode; className?: string; danger?: boolean
 }) {
   return (
     <button

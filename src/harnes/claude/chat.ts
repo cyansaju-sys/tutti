@@ -10,7 +10,8 @@ import { childEnv } from '@/backend/services/agents/env'
 import { chatMcp } from '@/backend/services/agents/hub'
 import { roleSubagents } from '@/backend/services/context/roles'
 import { expandMentions } from './mentions'
-import { TUTTI_FORMATS } from './formats'
+import { tuttiPrompt } from './formats'
+import { expandInit } from '../init'
 import { claudeExecutable } from './probe'
 import { getSetting, setSetting } from '@/backend/services/settings'
 
@@ -115,7 +116,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
   const finished = new Promise<void>((resolve) => { finish = resolve })
 
   // con permisos por herramienta el SDK pide una entrada en streaming: se entrega el mensaje y se mantiene abierta hasta el resultado
-  const expanded = expandMentions(req.project, req.text)
+  const expanded = expandMentions(req.project, expandInit(req.text))
   if (expanded.length > req.text.length && expanded.startsWith(req.text)) send(target, { kind: 'context', text: expanded.slice(req.text.length).trim() })          // lo que se añadió al mensaje (diffs, rutas…): el usuario lo ve
   const prompt = (async function* (): AsyncGenerator<SDKUserMessage> {
     const images = (req.images ?? []).map((i) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: i.mediaType, data: i.data } }))
@@ -135,7 +136,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     settingSources: req.project ? ['user', 'project', 'local'] : ['user'],
     systemPrompt: {
       type: 'preset', preset: 'claude_code',
-      append: req.project ? `${agentsMd(req.project)}${TUTTI_FORMATS}\n\nEl terminal ya está en la carpeta del proyecto (${req.project}) y ahí se queda entre comandos. No empieces los comandos con «cd» ni con rutas absolutas del proyecto: usa rutas relativas. Haz «cd» solo si de verdad necesitas otra carpeta.` : undefined
+      append: req.project ? `${agentsMd(req.project)}${tuttiPrompt(req.project)}` : undefined
     },
     agents: roleSubagents(req.project),          // los roles (~/.agents, ~/.tutti y los del proyecto) como subagentes
     abortController: run.abort,
