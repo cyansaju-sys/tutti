@@ -43,6 +43,7 @@ export interface DocsSlice {
   closeDoc: (path: string) => void
   openDiff: (file: string, staged: boolean) => Promise<void>
   openGraph: () => void
+  openShortcuts: () => void                             // los atajos de teclado como pestaña del editor, en una tabla
   openNews: (since: string | null) => void              // las novedades como pestaña del editor: desde `since` (tras actualizar) o solo las de la versión instalada
   openRoleGraph: () => void                            // el grafo de dependencias entre roles
   openRoleForm: (edit?: { file: string; name: string }) => void                            // el formulario de un rol nuevo (solo el nombre)
@@ -128,5 +129,9 @@ export interface UiSlice {
   setLang: (pref: LangPref) => void
   setSidebarSide: (side: 'left' | 'right') => void
   setEditorFont: (font: string) => void
+  panelTab: 'terminal' | 'problems'                     // pestaña del panel de abajo
+  problemsOpen: boolean                                 // el panel está abierto aunque no haya terminales (para ver los problemas)
+  keys: Record<string, string>                          // atajos que el usuario cambió (id del comando → combinación); el resto son los de fábrica
+  setKey: (id: string, combo: string | null) => void   // null: vuelve al de fábrica
   setEdit: (enabled: boolean) => void
 }

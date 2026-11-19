@@ -83,6 +83,7 @@ export function TuttiView() {
   const [name, setName] = useState('')
   const [docCat, setDocCat] = useState<(typeof DOC_CATEGORIES)[number]>('how-to')   // categoría del documento que se está creando
 
+  const [hasDir, setHasDir] = useState<boolean | null>(null)          // ¿existe ya .tutti (o .agents)? hasta saberlo no se pinta nada
   const [root, setRoot] = useState('')                // .tutti (o .agents si el proyecto ya lo usa); no se crea hasta que se añade algo
 
   /** Lo de estructura fija (hooks, steering, skills, docs, specs, MCP…): se lee al abrir y cuando algo lo cambia, no a cada rato. */
@@ -90,6 +91,7 @@ export function TuttiView() {
     if (!project) return
     const dir = await window.api.context.dir(project)
     setRoot(dir)
+    setHasDir((await window.api.fs.mtime(dir)) > 0)
     const read = (k: Kind): Promise<DirEntry[]> => window.api.fs.list(`${dir}/${k}`).catch(() => [])
     const [hooks, steering, skills, docs] = await Promise.all([read('hooks'), read('steering'), read('skills'), read('docs')])
     const next = { hooks, steering, skills, docs }
@@ -316,6 +318,17 @@ export function TuttiView() {
         </div>
       )}
     </Fold>
+    )
+  }
+
+  if (project && hasDir === null) return <div className="h-full" />
+  // sin .tutti ni .agents no hay nada que enseñar: se ofrece crearlo, en medio
+  if (project && hasDir === false) {
+    return (
+      <div className="grid h-full place-items-center px-4">
+        <button onClick={() => void window.api.context.init(project).then(() => readFixed())}
+          className="w-full max-w-[220px] rounded-[4px] bg-accent px-6 py-1.5 text-[12px] font-medium text-bg transition-[filter] hover:brightness-110">{t('tutti.createDir')}</button>
+      </div>
     )
   }
 

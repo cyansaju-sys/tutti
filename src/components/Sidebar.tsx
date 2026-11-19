@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import type { MsgKey } from '@/shared/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MdAdd, MdLanguage, MdSwapHoriz, MdOutlineEditNote, MdOutlineSettings, MdPalette, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdOutlineSettings } from 'react-icons/md'
 import { Menu } from '@/components/Menu'
 import { useT } from '@/lib/i18n'
 import { sidebarIcon } from '@/lib/icons'
@@ -14,6 +14,7 @@ import { GitView } from '@/features/git/views/GitView'
 import { SearchView } from '@/features/search/views/SearchView'
 import { TuttiView } from '@/features/tutti/views/TuttiView'
 import { UsageView } from '@/features/usage/views/UsageView'
+import { bindingOf, formatCombo } from '@/lib/keybindings'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
   { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
@@ -44,6 +45,7 @@ export function Sidebar() {
   const langPref = useStore((s) => s.langPref)
   const setLang = useStore((s) => s.setLang)
   const side = useStore((s) => s.sidebarSide)
+  const keys = useStore((s) => s.keys)
   const setSide = useStore((s) => s.setSidebarSide)
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
@@ -76,7 +78,7 @@ export function Sidebar() {
             onDragOver={(e) => { if (dragged) { e.preventDefault(); setOver(tab_.id) } }}
             onDrop={(e) => { e.preventDefault(); drop(tab_.id) }}
             onDragEnd={() => { setDragged(null); setOver(null) }}
-            title={`${t(tab_.titleKey)} (Ctrl+Shift+${tab_.key})`}
+            title={`${t(tab_.titleKey)} (${formatCombo(bindingOf(`tab:${tab_.id}`, keys))})`}
             onClick={() => set(tab === tab_.id && open ? { sidebarOpen: false } : { tab: tab_.id, sidebarOpen: true })}
             onDoubleClick={() => set({ tab: tab_.id, sidebarOpen: !open })}
             className={clsx('relative grid size-9 place-items-center rounded-md transition-colors hover:bg-accent-bg', tab === tab_.id && 'bg-accent-bg', dragged === tab_.id && 'opacity-40', over === tab_.id && dragged !== tab_.id && 'ring-1 ring-accent')}
@@ -98,20 +100,21 @@ export function Sidebar() {
         </button>
       </div>
       {menu && (
-        <Menu width={230} anchor={menu} onClose={() => setMenu(null)} items={[
-          { heading: t('settings.title'), label: t('theme.group'), icon: <MdPalette size={15} />, submenu: [
+        <Menu beside={side === 'left' ? 'right' : 'left'} width={230} anchor={menu} onClose={() => setMenu(null)} items={[
+          { label: t('theme.group'), submenu: [
             { label: t('theme.color'), onClick: () => set({ modal: 'theme' }) },
             { label: t('icons.title'), onClick: () => set({ modal: 'iconTheme' }) },
             { label: t('theme.accent'), checked: sysAccent, onClick: () => void setSysAccent(!sysAccent) }
           ] },
-          { label: t('lang.title'), icon: <MdLanguage size={15} />, detail: t(`lang.s.${langPref}`), submenu: [
+          { label: t('lang.title'), detail: t(`lang.s.${langPref}`), submenu: [
             { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },
             { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
             { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
           ] },
-          { label: t('editor.title'), icon: <MdOutlineEditNote size={15} />, onClick: () => set({ modal: 'editorSettings' }) },
-          { label: t('shell.title'), icon: <MdTerminal size={15} />, onClick: () => set({ modal: 'shell' }) },
-          { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), icon: <MdSwapHoriz size={15} />, onClick: () => setSide(side === 'left' ? 'right' : 'left') }
+          { label: t('editor.title'), onClick: () => set({ modal: 'editorSettings' }) },
+          { label: t('shell.title'), onClick: () => set({ modal: 'shell' }) },
+          { label: t('title.shortcuts'), onClick: () => useStore.getState().openShortcuts() },
+          { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), onClick: () => setSide(side === 'left' ? 'right' : 'left') }
         ]} />
       )}
       {open && <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-1.5">

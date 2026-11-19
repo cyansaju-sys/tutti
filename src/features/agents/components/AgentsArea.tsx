@@ -9,6 +9,8 @@ import { useStore, type Pane } from '@/store'
 import { Kbd } from '@/components/ui'
 import { useT } from '@/lib/i18n'
 import { TerminalPane } from './TerminalPane'
+import { ProblemsPanel } from './ProblemsPanel'
+import { useProblems } from '../lib/problems'
 import { EditorArea, DocTab } from '@/features/files/components/EditorArea'
 
 /** Pestaña de un agente en la barra superior: solo se ve el cuerpo del activo (los demás siguen vivos, ocultos). */
@@ -26,9 +28,9 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   return (
     <>
       {/* preventDefault: si no, al pulsar la pestaña el navegador quita el foco a la terminal justo después de dárselo */}
-      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[110px] max-w-[210px] shrink-0 cursor-pointer h-7 items-center gap-1 rounded-tr-lg border-b border-r border-t-2 border-r-line px-1.5 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar', role?.working && !active && 'border-t-ok bg-ok/10')}>
-        {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={13} /> : <MdTerminal size={13} className="text-accent" />}
-        <span className={clsx('min-w-0 flex-1 truncate text-[10.5px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[130px] max-w-[240px] shrink-0 cursor-pointer h-8 items-center gap-1 rounded-tr-lg border-b border-r border-t-2 border-r-line px-2 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar', role?.working && !active && 'border-t-ok bg-ok/10')}>
+        {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={15} /> : <MdTerminal size={15} className="text-accent" />}
+        <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
         {role && (
           <span title={t(role.working ? 'pane.roleWorking' : 'pane.roleIdle', { role: role.title })}
             className={clsx('flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium', role.working ? 'bg-ok/20 text-ok' : 'bg-ov/[0.07] text-muted')}>
@@ -208,6 +210,9 @@ export function TerminalSection() {
   const addShell = useStore((s) => s.addShell)
   const closePane = useStore((s) => s.closePane)
   const closeShells = useStore((s) => s.closeShells)
+  const panelTab = useStore((s) => s.panelTab)
+  const problems = useProblems()
+  const tab = shells.length ? panelTab : 'problems'          // sin terminales solo hay problemas que ver
   const [menu, setMenu] = useState<{ anchor: DOMRect; kind: 'new' | 'more' } | null>(null)
   const open = (kind: 'new' | 'more') => (e: React.MouseEvent<HTMLButtonElement>): void => {
     const r = e.currentTarget.getBoundingClientRect()
@@ -229,28 +234,37 @@ export function TerminalSection() {
     <div style={max ? undefined : { height }} className={clsx('flex min-h-[140px] overflow-hidden rounded-lg border border-line bg-surface', max ? 'absolute inset-0 z-10' : 'shrink-0')}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between px-2.5 py-1">
-          <span className="text-[11px] font-medium text-muted">{t('term.title')}</span>
+          <div className="flex items-center gap-1">
+            {(['problems', 'terminal'] as const).map((k) => (
+              <button key={k} onClick={() => (k === 'terminal' && !shells.length ? void addShell() : set({ panelTab: k }))}
+                className={clsx('flex items-center gap-1.5 border-b-2 px-2 py-0.5 text-[12px] font-light transition-colors', tab === k ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text')}>
+                {k === 'problems' ? t('pb.title') : t('term.title')}
+                {k === 'problems' && problems.length > 0 && <span className="rounded-full bg-ov/[0.1] px-1.5 text-[10px] leading-4">{problems.length}</span>}
+              </button>
+            ))}
+          </div>
           <div className="flex items-center gap-0.5">
-            <span className="flex min-w-0 items-center gap-1.5 mr-1 max-w-[140px] text-[11px] font-medium text-muted"><MdTerminal size={14} className="shrink-0" /><span className="truncate">{(() => { const sh = shells.find((x) => x.id === active) ?? shells[0]; return sh ? label(sh) : t('term.title') })()}</span></span>
+            {tab === 'terminal' && <><span className="flex min-w-0 items-center gap-1.5 mr-1 max-w-[140px] text-[11px] font-medium text-muted"><MdTerminal size={14} className="shrink-0" /><span className="truncate">{(() => { const sh = shells.find((x) => x.id === active) ?? shells[0]; return sh ? label(sh) : t('term.title') })()}</span></span>
             <button title={t('term.new')} onClick={() => void addShell()} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdAdd size={16} /></button>
             <button title={t('term.newOptions')} onClick={open('new')} className="grid h-6 w-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdKeyboardArrowDown size={14} /></button>
-            <button title={t('term.moreActions')} onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button>
+            <button title={t('term.moreActions')} onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button></>}
             <button title={max ? t('term.restore') : t('term.maximize')} onClick={() => set({ shellMax: !max })} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
               {max ? <MdFullscreenExit size={15} /> : <MdFullscreen size={15} />}
             </button>
-            <button title={t('term.closePanel')} onClick={closeShells} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={15} /></button>
+            <button title={t('term.closePanel')} onClick={() => { closeShells(); set({ problemsOpen: false }) }} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={15} /></button>
           </div>
         </div>
         <div className="relative min-h-0 flex-1">
+          {tab === 'problems' && <div className="absolute inset-0 z-10 bg-surface"><ProblemsPanel /></div>}
           {shells.map((p) => (
-            <div key={p.id} className={clsx('absolute inset-0 flex flex-col', p.id !== active && 'invisible pointer-events-none')}
+            <div key={p.id} className={clsx('absolute inset-0 flex flex-col', (p.id !== active || tab === 'problems') && 'invisible pointer-events-none')}
               onMouseDown={() => useStore.getState().focusPane(p.id)}>
               <TerminalPane pane={p} active={p.id === active && activePane === p.id} />
             </div>
           ))}
         </div>
       </div>
-      {shells.length > 1 && (
+      {shells.length > 1 && tab === 'terminal' && (
         <div className="flex w-[140px] shrink-0 flex-col gap-px border-l border-line p-1 pt-2">
           {shells.map((p) => (
             <div key={p.id} onClick={() => useStore.getState().focusPane(p.id)}

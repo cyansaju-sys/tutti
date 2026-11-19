@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useT } from '@/lib/i18n'
 import { Menu } from '@/components/Menu'
 import { t as tr } from '@/lib/i18n'
-import { isGlobalShortcut } from '@/lib/shortcuts'
+import { isAppShortcut } from '@/lib/keybindings'
 import { terminalTheme } from '@/lib/theme'
 import { useStore, type Pane } from '@/store'
 
@@ -75,7 +75,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
       const key = e.key.toUpperCase()
       if (e.ctrlKey && !e.altKey && key === 'C' && (e.shiftKey || t.hasSelection())) { e.preventDefault(); copySelection(t); return false }      // Ctrl+C copia si hay texto seleccionado; si no, sigue siendo «interrumpir»
       if ((e.ctrlKey && !e.altKey && key === 'V') || (e.shiftKey && e.key === 'Insert')) { e.preventDefault(); void pasteInto(pane.id, t); return false }      // preventDefault: si no, el navegador pega también por su cuenta y sale doble
-      return !isGlobalShortcut(e)                  // los atajos globales los atiende la app, no el shell
+      return !isAppShortcut(e, useStore.getState().keys)                  // los atajos globales los atiende la app, no el shell
     })
     // el tamaño se avisa al proceso con una pausa: si cambia varias veces seguidas, zsh redibuja el prompt en cada una
     let timer: ReturnType<typeof setTimeout> | undefined

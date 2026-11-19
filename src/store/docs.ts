@@ -31,6 +31,11 @@ export const createDocsSlice: StateCreator<State, [], [], DocsSlice> = (set, get
     const doc: Doc = { kind: 'graph', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: 'Commits' }
     set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
   },
+  openShortcuts: () => {
+    const path = 'shortcuts:list'
+    const doc: Doc = { kind: 'shortcuts', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'dlg.shortcuts') }
+    set((s) => ({ docs: s.docs.some((d) => d.path === path) ? s.docs : [...s.docs, doc], activeDoc: path, focus: 'editor' }))
+  },
   openNews: (since) => {
     const path = 'news:changelog'
     const doc: Doc = { kind: 'news', text: '', savedText: '', crlf: false, truncated: false, readOnly: true, mtimeMs: 0, path, title: tr(get, 'dlg.news') }

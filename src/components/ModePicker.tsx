@@ -32,7 +32,7 @@ export function ModePicker({ anchor, mode, onMode, onClose }: { anchor: DOMRect;
 
   return createPortal(
     <div ref={box} style={{ left: anchor.left, width: anchor.width, bottom: window.innerHeight - anchor.top + 4 }}
-      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
+      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-line bg-panel/85 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]">
       <div className="flex shrink-0 items-center justify-between px-3 pb-1 pt-2 text-[11px] text-muted">
         <span>{t('chat.modes')}</span>
         <span className="flex items-center gap-1"><kbd className="rounded bg-line/60 px-1">⇧</kbd>+<kbd className="rounded bg-line/60 px-1">tab</kbd>{t('chat.mode.switch')}</span>

@@ -3,7 +3,7 @@
 export interface DirEntry { name: string; path: string; isDir: boolean }
 
 export interface FileData {
-  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform' | 'roleform' | 'rolegraph' | 'news'
+  kind: 'text' | 'image' | 'binary' | 'diff' | 'graph' | 'hookform' | 'steeringform' | 'skillform' | 'roleform' | 'rolegraph' | 'news' | 'shortcuts'
   text: string
   crlf: boolean
   truncated: boolean

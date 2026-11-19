@@ -11,7 +11,7 @@ import { Resizer } from '@/components/ui'
 import { Tooltips } from '@/components/Tooltip'
 import { refreshGit } from '@/features/git/lib/gitSync'
 import { t } from '@/lib/i18n'
-import { isGlobalShortcut } from '@/lib/shortcuts'
+import { comboOf, isCapturing, matchCommand } from '@/lib/keybindings'
 import { cacheAccent, resolveTheme, paintAccent, paintTheme } from '@/lib/theme'
 import { loadIconTheme } from '@/lib/icons'
 import { loadSettings } from '@/functions/loadSettings'
@@ -150,50 +150,50 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const st = useStore.getState()
-      if (st.modal || useConfirm.getState().ask) return
-      const key = e.key.toUpperCase()
+      if (st.modal || useConfirm.getState().ask || isCapturing()) return
       const doc = st.docs.find((d) => d.path === st.activeDoc)
-      const plain = e.ctrlKey && !e.shiftKey && !e.altKey
-      if (plain) {
-        const consume = (): void => { e.preventDefault(); e.stopPropagation() }
-        if (key === 'W' && st.focus === 'editor' && doc) {
-          consume()
+      const combo = comboOf(e)
+      if (!combo) return
+      // los atajos que se pueden cambiar: cada acción dice si se encargó de la tecla (cerrar un hueco puede no hacer nada) o si solo se evita el gesto del navegador
+      const run: Record<string, () => boolean | 'soft' | void> = {
+        save: () => (doc ? (void saveDoc(doc), 'soft') : false),
+        closeTab: () => {
+          if (st.focus !== 'editor' || !doc) return st.closeSlot()
           if (!isDirty(doc)) st.closeDoc(doc.path)
           else void confirmAsk(t('app.unsaved', { title: doc.title }), t('app.closeAnyway')).then((yes) => { if (yes) useStore.getState().closeDoc(doc.path) })
-          return
-        }
-        // cada acción dice si se encargó de la tecla (cerrar un hueco puede no hacer nada)
-        const actions: Record<string, (() => boolean) | undefined> = {
-          W: () => st.closeSlot(),
-          P: () => { st.set({ modal: 'quickOpen' }); return true },
-          G: () => { st.set({ modal: 'goLine' }); return true },
-          Q: () => { window.api.window.close(); return true },
-          ...(st.panes.length && /^[1-6]$/.test(key) ? { [key]: () => { st.splitPanes(Number(key)); return true } } : {})
-        }
-        if (actions[key]?.()) { consume(); return }
+          return true
+        },
+        quickOpen: () => { st.set({ modal: 'quickOpen' }); return true },
+        quickOpenAlt: () => { st.set({ modal: 'quickOpen' }); return true },
+        goLine: () => { st.set({ modal: 'goLine' }); return true },
+        quit: () => { window.api.window.close(); return true },
+        openAgent: () => st.set({ modal: 'agents' }),
+        toggleTerminal: () => { void st.toggleShell() },
+        toggleSidebar: () => st.set({ sidebarOpen: !st.sidebarOpen }),
+        toggleEdit: () => st.setEdit(!st.editEnabled),
+        closePanel: () => { if (st.activePane) st.closePane(st.activePane) },
+        replaceProject: () => st.set({ tab: 'search', sidebarOpen: true, searchReplace: true, searchToken: st.searchToken + 1 })
       }
-      if (e.ctrlKey && !e.shiftKey && key === 'S' && doc) { e.preventDefault(); void saveDoc(doc); return }
-      if (!isGlobalShortcut(e)) return
-      e.preventDefault(); e.stopPropagation()
-      if (e.key === 'F1') { st.set({ modal: 'shortcuts' }); return }
-      if (e.key === 'PageUp' || e.key === 'PageDown') {
+      for (const tab of TABS) run[`tab:${tab.id}`] = () => st.set({ tab: tab.id, sidebarOpen: true, ...(tab.id === 'search' && { searchToken: st.searchToken + 1, searchReplace: false }) })
+      const cmd = matchCommand(combo, st.keys)
+      if (cmd) {
+        const done = run[cmd.id]?.()
+        if (done === false) return
+        e.preventDefault()
+        if (done !== 'soft') e.stopPropagation()
+        return
+      }
+      // los fijos: F1, cambiar de panel y repartir la vista en huecos
+      if (e.key === 'F1') { e.preventDefault(); e.stopPropagation(); st.openShortcuts(); return }
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
+        e.preventDefault(); e.stopPropagation()
         const all = [...st.panes, ...st.shells]
         if (!all.length) return
         const i = all.findIndex((p) => p.id === st.activePane)
         st.focusPane(all[(i + (e.key === 'PageDown' ? 1 : -1) + all.length) % all.length].id)
         return
       }
-      if (key === 'H') { st.set({ tab: 'search', sidebarOpen: true, searchReplace: true, searchToken: st.searchToken + 1 }); return }
-      const tab = TABS.find((t) => t.key === key)
-      if (tab) { st.set({ tab: tab.id, sidebarOpen: true, ...(tab.id === 'search' && { searchToken: st.searchToken + 1, searchReplace: false }) }); return }
-      const shortcuts: Record<string, () => void> = {
-        N: () => st.set({ modal: 'agents' }),
-        T: () => { void st.toggleShell() },
-        B: () => st.set({ sidebarOpen: !st.sidebarOpen }),
-        L: () => st.setEdit(!st.editEnabled),
-        W: () => { if (st.activePane) st.closePane(st.activePane) }
-      }
-      shortcuts[key]?.()
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && st.panes.length && /^[1-6]$/.test(e.key)) { e.preventDefault(); e.stopPropagation(); st.splitPanes(Number(e.key)) }
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
@@ -223,7 +223,7 @@ export function App() {
               </>
             )}
           </div>
-          {s.shells.length > 0 && (
+          {(s.shells.length > 0 || s.problemsOpen) && (
             <>
               {!s.shellMax && <Resizer direction="y" onDrag={dragShell} />}
               <TerminalSection />

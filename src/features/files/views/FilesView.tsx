@@ -385,7 +385,7 @@ export function FilesView() {
               }}
               style={{ paddingLeft: 14 + depth * 12 }}
               className={clsx(
-                'flex w-full items-center gap-1.5 rounded-[4px] py-[3px] pr-1.5 text-left text-[12px] transition-colors hover:bg-accent-bg',
+                'flex w-full items-center gap-1.5 rounded-[4px] py-[3px] pr-1.5 text-left text-[12px] transition-colors',          // sin :hover propio: el resaltado es el de la fila marcada, que sigue al ratón y a las flechas
                 cursor === entry.path && 'bg-accent-bg ring-1 ring-inset ring-accent/40',
                 selected.has(entry.path) && 'bg-accent/25',
                 dropOn === (entry.isDir ? entry.path : dirname(entry.path)) && dropOn !== project && (entry.isDir ? 'bg-accent/30 ring-1 ring-inset ring-accent' : 'bg-accent/10'),

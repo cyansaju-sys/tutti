@@ -20,6 +20,7 @@ const RULES: Record<string, Rule> = {
   sidebar_width: (v) => (isNumber(v) ? { sidebarWidth: clamp(v, 220, 520) } : undefined),     // global: vale para todos los proyectos
   chat_open: (v) => (typeof v === 'boolean' ? { chatOpen: v } : undefined),                   // el chat se abre con el proyecto; si se cerró, así se queda
   chat_width: (v) => (isNumber(v) ? { chatWidth: clamp(v, 280, 720) } : undefined),
+  keybindings: (v) => (v && typeof v === 'object' ? { keys: Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, c]) => typeof c === 'string')) as Record<string, string> } : undefined),
   language: (v, st) => { if (isLangPref(v) && v !== st.langPref) st.setLang(v) }
 }
 
