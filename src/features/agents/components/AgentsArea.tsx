@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useState } from 'react'
 import { Menu } from '@/components/Menu'
-import { MdAdd, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdSearch, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdDeleteOutline, MdFilterList, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdSearch, MdTerminal } from 'react-icons/md'
 import { AppIcon } from '@/components/AppIcon'
 import { FileIcon } from '@/components/FileIcon'
 import { AgentIcon } from './AgentIcon'
@@ -97,7 +97,7 @@ export function AgentsArea() {
   const cell = (id: string): { col: string; row: number } => { const i = visible.indexOf(id); return i < 0 ? { col: '1', row: 0 } : at(i) }
 
   return (
-    <div className="min-h-0 min-w-[260px] flex-1 overflow-hidden rounded-lg border border-line bg-surface">
+    <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-line bg-surface">
       {panes.length === 0 ? (
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-center justify-center gap-x-12 gap-y-8">
@@ -135,7 +135,7 @@ export function AgentsArea() {
                     </div>
                   ))}
                   {recent.length > SHOWN_PROJECTS && (
-                    <button onClick={() => setAllProjects((v) => !v)} className="mt-0.5 self-start rounded-md px-2.5 py-1 text-[11px] text-accent transition-colors hover:bg-accent-bg">
+                    <button onClick={() => setAllProjects((v) => !v)} className="mt-0.5 self-start rounded-md px-2.5 py-0.5 text-[11px] text-accent transition-colors hover:bg-accent-bg">
                       {allProjects ? t('pane.showLess') : t('pane.showMore', { n: recent.length - SHOWN_PROJECTS })}
                     </button>
                   )}
@@ -214,6 +214,7 @@ export function TerminalSection() {
   const problems = useProblems()
   const tab = shells.length ? panelTab : 'problems'          // sin terminales solo hay problemas que ver
   const [menu, setMenu] = useState<{ anchor: DOMRect; kind: 'new' | 'more' } | null>(null)
+  const [filter, setFilter] = useState('')
   const open = (kind: 'new' | 'more') => (e: React.MouseEvent<HTMLButtonElement>): void => {
     const r = e.currentTarget.getBoundingClientRect()
     setMenu({ kind, anchor: new DOMRect(r.left, r.bottom, 200, 0) })
@@ -231,31 +232,39 @@ export function TerminalSection() {
   }, [shells])
   const label = (p: { id: string; title: string }): string => { const r = running[p.id]?.split(/[\\/]/).pop()?.replace(/\.exe$/i, ''); return r || p.title }
   return (
-    <div style={max ? undefined : { height }} className={clsx('flex min-h-[140px] overflow-hidden rounded-lg border border-line bg-surface', max ? 'absolute inset-0 z-10' : 'shrink-0')}>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between px-2.5 py-1">
-          <div className="flex items-center gap-1">
+    <div style={max ? undefined : { height }} className={clsx('flex min-h-[140px] flex-col overflow-hidden rounded-lg border border-line bg-surface', max ? 'absolute inset-0 z-10' : 'shrink-0')}>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-2 py-1">
+          <div className="flex items-center divide-x divide-line overflow-hidden rounded-lg border border-line bg-ov/[0.04]">
             {(['problems', 'terminal'] as const).map((k) => (
               <button key={k} onClick={() => (k === 'terminal' && !shells.length ? void addShell() : set({ panelTab: k }))}
-                className={clsx('flex items-center gap-1.5 border-b-2 px-2 py-0.5 text-[12px] font-light transition-colors', tab === k ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text')}>
+                className={clsx('flex items-center gap-1.5 px-2.5 py-[3px] text-[11px] transition-colors', tab === k ? 'bg-accent/20 font-medium text-accent' : 'font-light text-muted hover:bg-ov/[0.06] hover:text-text')}>
                 {k === 'problems' ? t('pb.title') : t('term.title')}
-                {k === 'problems' && problems.length > 0 && <span className="rounded-full bg-ov/[0.1] px-1.5 text-[10px] leading-4">{problems.length}</span>}
+                {k === 'problems' && problems.length > 0 && <span className={clsx('rounded-full px-1.5 text-[10px] leading-4', tab === k ? 'bg-accent/30' : 'bg-ov/[0.1]')}>{problems.length}</span>}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-0.5">
+            {tab === 'problems' && (
+              <div className="relative mr-1">
+                <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('pb.filter')} spellCheck={false}
+                  className="h-6 w-[300px] rounded-md border border-line bg-transparent pl-2 pr-7 text-[11px] font-light text-text outline-none placeholder:text-muted/70 focus:border-accent" />
+                <MdFilterList size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-muted" />
+              </div>
+            )}
             {tab === 'terminal' && <><span className="flex min-w-0 items-center gap-1.5 mr-1 max-w-[140px] text-[11px] font-medium text-muted"><MdTerminal size={14} className="shrink-0" /><span className="truncate">{(() => { const sh = shells.find((x) => x.id === active) ?? shells[0]; return sh ? label(sh) : t('term.title') })()}</span></span>
             <button title={t('term.new')} onClick={() => void addShell()} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdAdd size={16} /></button>
             <button title={t('term.newOptions')} onClick={open('new')} className="grid h-6 w-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdKeyboardArrowDown size={14} /></button>
             <button title={t('term.moreActions')} onClick={open('more')} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdMoreHoriz size={16} /></button></>}
+            <span className="mx-1 h-4 w-px bg-line" />
             <button title={max ? t('term.restore') : t('term.maximize')} onClick={() => set({ shellMax: !max })} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text">
               {max ? <MdFullscreenExit size={15} /> : <MdFullscreen size={15} />}
             </button>
             <button title={t('term.closePanel')} onClick={() => { closeShells(); set({ problemsOpen: false }) }} className="grid size-6 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={15} /></button>
           </div>
         </div>
-        <div className="relative min-h-0 flex-1">
-          {tab === 'problems' && <div className="absolute inset-0 z-10 bg-surface"><ProblemsPanel /></div>}
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-h-0 min-w-0 flex-1">
+          {tab === 'problems' && <div className="absolute inset-0 z-10 bg-surface"><ProblemsPanel filter={filter} /></div>}
           {shells.map((p) => (
             <div key={p.id} className={clsx('absolute inset-0 flex flex-col', (p.id !== active || tab === 'problems') && 'invisible pointer-events-none')}
               onMouseDown={() => useStore.getState().focusPane(p.id)}>
@@ -263,20 +272,20 @@ export function TerminalSection() {
             </div>
           ))}
         </div>
-      </div>
       {shells.length > 1 && tab === 'terminal' && (
-        <div className="flex w-[140px] shrink-0 flex-col gap-px border-l border-line p-1 pt-2">
+        <div className="flex w-[110px] shrink-0 flex-col border-l border-line">
           {shells.map((p) => (
             <div key={p.id} onClick={() => useStore.getState().focusPane(p.id)}
-              className={clsx('group flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[12px] transition-colors', p.id === active ? 'bg-accent-bg text-text' : 'text-muted hover:bg-accent-bg')}>
-              <MdTerminal size={14} className="shrink-0" />
+              className={clsx('group relative flex cursor-pointer items-center gap-1.5 py-1 pl-3 pr-1.5 text-[11px] transition-colors before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:rounded-full', p.id === active ? 'bg-ov/[0.06] text-text before:bg-accent' : 'text-muted before:bg-transparent hover:bg-ov/[0.04] hover:text-text')}>
+              <MdTerminal size={13} className={clsx('shrink-0', p.id === active && 'text-accent')} />
               <span className="min-w-0 flex-1 truncate" title={label(p)}>{label(p)}</span>
               <button title={t('term.closeThis')} onClick={(e) => { e.stopPropagation(); closePane(p.id) }}
-                className="grid size-4 shrink-0 place-items-center rounded opacity-0 transition-colors hover:bg-line group-hover:opacity-100"><MdClose size={12} /></button>
+                className="grid size-4 shrink-0 place-items-center rounded opacity-0 transition-colors hover:bg-line group-hover:opacity-100"><MdDeleteOutline size={13} /></button>
             </div>
           ))}
         </div>
       )}
+      </div>
       {menu && (
         <Menu width={200} anchor={menu.anchor} onClose={() => setMenu(null)} items={menu.kind === 'new'
           ? [{ label: t('term.new'), icon: <MdAdd size={15} />, onClick: () => void addShell() }]

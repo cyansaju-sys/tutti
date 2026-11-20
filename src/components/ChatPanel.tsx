@@ -9,6 +9,7 @@ import { useStore } from '@/store'
 import { useChat, useChat2 } from '@/store/chat'
 import { Markdown } from '@/features/files/components/Markdown'
 import type { ChatCommand, ChatEffort, ChatImage, ChatModel, ChatProjectItems } from '@/shared/types'
+import { ImageChip } from './ImageChip'
 import { CommandPicker, GROUPS, type Group, type Trigger } from './CommandPicker'
 import { effortLabel, ModelPicker } from './ModelPicker'
 import { ModePicker, MODES, type ChatMode } from './ModePicker'
@@ -103,6 +104,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
   }
   /** Al escribir «/» o «#» (sin espacio todavía) se abre la lista y se va filtrando con lo escrito; al pasar de ahí, se cierra. */
   const onType = (value: string): void => {
+    hist.current.i = -1          // al escribir se deja de recorrer el historial
     setText(value)
     const mention = /(?:^|\s)@(\S*)$/.test(value)          // «@» en cualquier parte del texto: menciona un archivo
     if (mention) { if (!slash || trigger !== '@') openCommands(null, '@'); return }
@@ -131,7 +133,34 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
     const sel = chat.selection && project && !hideSel ? chat.selection : null
     const body = sel ? selectionMessage('claude', toPosix(relative(project!, sel.path)), sel.startLine, sel.endLine, sel.text) + text.trim() : fileRef + text.trim()
     chat.send(body, { project, model: current?.value ?? model, effort, mode, thinking: current?.thinking, images: images.length ? images : undefined, shown: sel ? `${selectionRef('claude', toPosix(relative(project!, sel.path)), sel.startLine, sel.endLine)}\n${text.trim()}` : fileRef ? fileRef + text.trim() : undefined })
+    hist.current.i = -1
     setText(''); setImages([])
+  }
+  // ↑↓ en la caja: recorre los mensajes que ya enviaste en esta conversación (como el historial de una terminal); lo que estabas escribiendo se guarda y vuelve al bajar del todo
+  const hist = useRef<{ i: number; draft: string }>({ i: -1, draft: '' })
+  const recall = (e: React.KeyboardEvent<HTMLTextAreaElement>): boolean => {
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || slash) return false
+    const sent = chat.messages.filter((m) => m.role === 'user' && m.text.trim()).map((m) => m.text)
+    const el = e.currentTarget
+    const h = hist.current
+    const browsing = h.i >= 0
+    const firstLine = !el.value.slice(0, el.selectionStart).includes('\n')
+    const lastLine = !el.value.slice(el.selectionEnd).includes('\n')
+    let next: number
+    if (e.key === 'ArrowUp') {
+      if (!sent.length || !(browsing ? firstLine : !el.value)) return false          // sin recorrer, solo con la caja vacía: si no, la flecha mueve el cursor
+      next = browsing ? Math.max(0, h.i - 1) : sent.length - 1
+      if (!browsing) h.draft = el.value
+    } else {
+      if (!browsing || !lastLine) return false
+      next = h.i + 1
+    }
+    e.preventDefault()
+    h.i = next >= sent.length ? -1 : next
+    const value = h.i === -1 ? h.draft : sent[h.i]
+    setText(value)
+    requestAnimationFrame(() => input.current?.setSelectionRange(value.length, value.length))
+    return true
   }
   const pick = (value: string): void => {
     if (trigger === '@' && value[0] === '@') { setText(text.replace(/@\S*$/, value)); setSlash(null); input.current?.focus(); return }
@@ -140,6 +169,16 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
     setText(value); setSlash(null); input.current?.focus()
   }
   const current = models?.find((m) => m.value === model) ?? models?.[0]
+
+  // lo que se manda desde el árbol de archivos o el editor («Enviar al agente») entra en la caja de este chat, sin enviarse
+  useEffect(() => {
+    if (chat.insert === null) return
+    const add = chat.insert
+    store.setState({ insert: null })
+    if (add) setText((cur) => (cur && !/\s$/.test(cur) ? `${cur} ` : cur) + add)
+    setDismissed('')
+    requestAnimationFrame(() => input.current?.focus())
+  }, [chat.insert])      // eslint-disable-line react-hooks/exhaustive-deps
 
   // lo que se le pide desde la pestaña Tutti se envía aquí, con el modelo, el esfuerzo y el modo elegidos; si está respondiendo, espera su turno
   useEffect(() => {
@@ -214,7 +253,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
         )}
         {chat.messages.filter((m) => !m.parent).map((m) => isSubagentTool(m) ? <ChatSubagent key={m.id} m={m} all={chat.messages} live={chat.running} /> : m.role === 'thinking' ? <ChatThinking key={m.id} text={m.text} live={m.liveThink} /> : m.role === 'user' ? (
           <div key={m.id} className="min-w-0 max-w-full self-stretch whitespace-pre-wrap rounded-xl border border-line bg-line/25 px-3 py-2 text-[12px] text-text [overflow-wrap:anywhere]">
-            {m.images && <div className="mb-1 flex flex-wrap gap-1">{m.images.map((src, i) => <img key={i} src={src} alt="" className="max-h-24 max-w-full rounded-md" />)}</div>}{(() => {
+            {m.images && <div className="mb-1.5 flex flex-wrap gap-1">{m.images.map((src, i) => <ImageChip key={i} src={src} />)}</div>}{(() => {
               const ref = /^@(\S+?)(:\d+(?:-\d+)?)?\n([\s\S]*)$/.exec(m.text)          // el archivo (o las líneas) que se mandó con el mensaje: va como una pastilla encima del texto
               return ref ? <><span className="mb-1.5 flex w-fit max-w-full items-center gap-1.5 text-[12px] text-text" title={ref[1] + (ref[2] ?? '')}><FileIcon name={basename(ref[1])} /><span className="truncate">{basename(ref[1])}</span>{ref[2] && <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-accent/30 px-1 text-[10px] leading-none">{(() => { const [a, b] = ref[2].slice(1).split('-').map(Number); return (b ?? a) - a + 1 })()}</span>}</span>{ref[3]}</> : m.text
             })()}
@@ -270,12 +309,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
           <input ref={fileInput} type="file" accept={IMAGE_TYPES.join(',')} multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = '' }} />
           {images.length > 0 && (
             <div className="flex flex-wrap gap-1.5 border-b border-line px-3 py-2">
-              {images.map((img, i) => (
-                <div key={i} className="group relative">
-                  <img src={`data:${img.mediaType};base64,${img.data}`} alt="" className="size-12 rounded-md border border-line object-cover" />
-                  <button title={t('chat.dropSelection')} onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))} className="no-drag absolute -right-1 -top-1 hidden size-4 place-items-center rounded-full bg-panel text-text shadow group-hover:grid"><MdClose size={11} /></button>
-                </div>
-              ))}
+              {images.map((img, i) => <ImageChip key={i} src={`data:${img.mediaType};base64,${img.data}`} removeTitle={t('chat.dropSelection')} onRemove={() => setImages((prev) => prev.filter((_, j) => j !== i))} />)}
             </div>
           )}
           {!hideSel && chat.selection && (
@@ -294,7 +328,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
           )}
           <div className="relative">
             <div ref={marks} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-transparent [scrollbar-gutter:stable]">{mentions(text)}</div>
-          <textarea ref={input} rows={1} onPaste={(e) => { const files = [...e.clipboardData.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter((f): f is File => !!f); if (files.length) { e.preventDefault(); void attach(files) } }} onScroll={(e) => { if (marks.current) marks.current.scrollTop = e.currentTarget.scrollTop }} value={text} onChange={(e) => onType(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } else if (e.key === 'Tab' && !e.shiftKey && !text && chat.suggestion) { e.preventDefault(); const s = chat.takeSuggestion(); if (s) onType(s) } else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); setMode(MODES[(MODES.findIndex((m) => m.id === mode) + 1) % MODES.length].id) } }} placeholder={chat.suggestion ? `${chat.suggestion}   ⇥ Tab` : t('chat.placeholder')}
+          <textarea ref={input} rows={1} onPaste={(e) => { const files = [...e.clipboardData.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter((f): f is File => !!f); if (files.length) { e.preventDefault(); void attach(files) } }} onScroll={(e) => { if (marks.current) marks.current.scrollTop = e.currentTarget.scrollTop }} value={text} onChange={(e) => onType(e.target.value)} onKeyDown={(e) => { if (recall(e)) return; if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } else if (e.key === 'Tab' && !e.shiftKey && !text && chat.suggestion) { e.preventDefault(); const s = chat.takeSuggestion(); if (s) onType(s) } else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); setMode(MODES[(MODES.findIndex((m) => m.id === mode) + 1) % MODES.length].id) } }} placeholder={chat.suggestion ? `${chat.suggestion}   ⇥ Tab` : t('chat.placeholder')}
             className="relative block max-h-[140px] w-full resize-none bg-transparent px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-text outline-none [scrollbar-gutter:stable] placeholder:text-muted" />
           </div>
           <div className="flex items-center py-1 pl-0.5 pr-1">

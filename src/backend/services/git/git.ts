@@ -65,7 +65,8 @@ export const unstage = async (root: string, paths: string[]): Promise<string> =>
 export const discardTracked = async (root: string, paths: string[]): Promise<string> =>
   paths.length ? flat(await run(root, ['restore', '--worktree', '--', ...paths])) : ''
 
-export async function commit(root: string, message: string): Promise<string> {
+export async function commit(root: string, message: string, amend = false): Promise<string> {
+  if (amend) return flat(await run(root, ['commit', '--amend', ...(message.trim() ? ['-m', message] : ['--no-edit'])], undefined, 60000))          // modifica el último commit: sin mensaje nuevo, conserva el que tenía
   const staged = await run(root, ['diff', '--cached', '--name-only'])
   if (staged.ok && !staged.out.trim()) {
     const all = await run(root, ['add', '-A'])                       // sin nada preparado se prepara todo, como hacía la app

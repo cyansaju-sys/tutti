@@ -161,7 +161,9 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
 
   /** Escribe en el prompt del agente activo la referencia al trozo (y el código si es corto), sin enviarla. */
   const sendSelection = (path: string, sel: { startLine: number; endLine: number; text: string }): void => {
-    const { panes, activePane, toast } = useStore.getState()
+    const { panes, activePane, toast, chatOpen } = useStore.getState()
+    // con el chat abierto, el trozo se ofrece como contexto del chat y la caja recibe el foco
+    if (chatOpen && project) { useChat.getState().setSelection({ path, ...sel }); useChat.getState().insertText(''); return }
     const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
     if (!pane || !project) { toast(t('ed.noAgent'), 'error'); return }
     const rel = toPosix(relative(project, path))

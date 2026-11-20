@@ -267,7 +267,7 @@ export interface Api {
     stage(root: string, paths: string[]): Promise<string>
     unstage(root: string, paths: string[]): Promise<string>
     discard(root: string, tracked: string[], untracked: string[]): Promise<string>      // devuelve el error, o '' si salió bien
-    commit(root: string, message: string): Promise<string>
+    commit(root: string, message: string, amend?: boolean): Promise<string>
     push(root: string): Promise<string>
     branches(root: string): Promise<GitBranch[]>
     checkoutDetached(root: string, ref: string): Promise<string>

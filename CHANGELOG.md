@@ -2,6 +2,21 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.6
+
+### Cambios
+
+- **Se retoma lo que dejaste en cada proyecto:** al volver a un proyecto, o al abrir Tutti, vuelven sus terminales, la pestaña activa del panel de abajo (Terminal o Problemas), su alto y la terminal que usabas. Los chats abiertos con Claude o Codex también vuelven (sus pestañas y los últimos mensajes), y tu próximo mensaje continúa esa conversación. Se guarda solo, al cambiar algo.
+- **Historial en la caja del chat:** con la caja vacía, **↑** y **↓** recorren los mensajes que ya enviaste en esa conversación, como en una terminal; al bajar del todo vuelve lo que estabas escribiendo.
+- **«Enviar al agente» con el chat abierto:** si tienes el chat abierto, la ruta del archivo (o el trozo seleccionado del editor) va a su caja en vez de a un agente de la terminal.
+- **Confirmar con más opciones:** el botón de la pestaña Git tiene ahora una flecha con **Confirmar**, **Confirmar (modificar el último)**, **Confirmar y subir** y **Confirmar y sincronizar**. Mientras un agente redacta el mensaje del commit, una barra de carga recorre la caja.
+- **Rama y sincronizar en el pie:** la rama muestra un `*` si hay cambios sin confirmar y, a su lado, un botón para sincronizar (baja, sube o consulta el remoto) con los commits pendientes (`↓` y `↑`).
+- **Panel de Problemas:** ahora avisa también de **errores de sintaxis en archivos JSON abiertos** (con su línea), se agrupa por archivo, tiene un **filtro** (texto, patrones como `**/*.ts` y `!` para excluir) y ya no cuenta los cambios sin guardar como problemas.
+- **Panel de abajo renovado:** pestañas unidas, lista de terminales a un lado con una barrita de acento en la activa, y papelera para cerrar cada una.
+- **Imágenes del chat:** se ven como etiquetas con miniatura, nombre y tamaño, tanto al adjuntarlas como en el mensaje enviado.
+- **Menú de archivos:** «Renombrar» y «Borrar» van juntos, y las opciones de copiar forman una sola sección.
+- **Arreglo:** en ventanas estrechas el editor ya no se sale de su columna ni tapa la barra lateral.
+
 ## 1.5.5
 
 ### Cambios

@@ -15,7 +15,9 @@ export interface Pane {
   name?: string; prompt?: string; parentId?: string      // agente que lo abrió y su tarea inicial (reparto de tareas)
 }
 /** Lo que se recuerda de cada proyecto al dejarlo: pestaña de la barra lateral, archivos abiertos y terminales. */
-export interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null; shells?: number }
+export interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null; shells?: number
+  panel?: { tab: 'terminal' | 'problems'; problems: boolean; height: number; max: boolean; active: number }          // el panel de abajo: pestaña, si estaba abierto, alto y terminal activa
+}
 /** Lo que trae una spec nueva que se crea desde un ítem del roadmap. */
 export interface SpecPrefill { name: string; description: string }
 export interface Toast { id: number; kind: ToastKind; message: string }

@@ -1,12 +1,12 @@
 import { clsx } from 'clsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdOpenInNew, MdRemove } from 'react-icons/md'
+import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdKeyboardArrowDown, MdOpenInNew, MdRemove } from 'react-icons/md'
 import type { GitFile } from '@/shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { FileIcon } from '@/components/FileIcon'
 import { basename, dirname } from '@/lib/paths'
-import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { useT } from '@/lib/i18n'
+import { Menu } from '@/components/Menu'
 import { Modal } from '@/components/ui'
 import { useStore } from '@/store'
 
@@ -108,6 +108,20 @@ export function GitView() {
     } else toast(t('git.writeMessage'), 'error')
   }
   const commit = sync
+  const [more, setMore] = useState<DOMRect | null>(null)          // el menú de la flecha del botón
+  /** Las variantes del menú: confirmar, modificar el último, confirmar y subir, confirmar y sincronizar (bajar lo que falte y subir). */
+  const commitWith = async (mode: 'commit' | 'amend' | 'push' | 'sync'): Promise<void> => {
+    if (busy) return
+    const text = message.trim()
+    if (!text && mode !== 'amend') { toast(t('git.writeMessage'), 'error'); return }
+    if (!git.hasRemote && (mode === 'push' || mode === 'sync')) { toast(t('git.noRemote'), 'error'); return }
+    setPhase('commit')
+    if (!(await run('Commit', () => window.api.git.commit(project, text, mode === 'amend')))) { setPhase('idle'); return }
+    setMessage(''); setAuthor('')
+    if (mode === 'sync' && git.hasUpstream) { setPhase('pull'); if (!(await run('Pull', () => window.api.git.pull(project)))) { setPhase('idle'); return } }
+    if (mode === 'push' || mode === 'sync') { setPhase('push'); if (!(await run('Push', () => window.api.git.push(project)))) { setPhase('idle'); return } }
+    flash()
+  }
 
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
     <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
@@ -138,12 +152,14 @@ export function GitView() {
   return (
     <div className="flex h-full flex-col gap-2 px-2">
       <div className="relative">
+        {/* mientras un agente redacta el commit: una barra de carga sobre la caja */}
+        {writing && <div title={t('git.writingMsg', { agent: writing })} className="absolute inset-x-0 -top-1.5 h-[3px] overflow-hidden rounded-full bg-accent/20"><div className="h-full w-full animate-sweep bg-gradient-to-r from-transparent via-accent to-transparent" /></div>}
         <textarea
-          ref={area} value={message} rows={1}
+          ref={area} value={message} rows={1} title={author ? `${t('git.writtenBy')} ${author}` : undefined}
           onChange={(e) => { setMessage(e.target.value); setAuthor('') }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void commit() } }}
           placeholder={writing ? t('git.writingMsg', { agent: writing }) : t('git.messagePlaceholder')}
-          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md bg-ov/[0.04] py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none placeholder:text-muted/70"
+          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md border border-line bg-transparent py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none transition-colors placeholder:text-muted/70 focus:border-accent/60"
         />
         <button
           title={t('git.generateTip')} disabled={!!writing || busy} onClick={() => void suggest()}
@@ -152,18 +168,10 @@ export function GitView() {
           <MdAutoAwesome size={15} />
         </button>
       </div>
-      {(writing || author) && (
-        <div className="flex items-center gap-2 rounded-md bg-accent-bg px-2 py-1.5 text-[11px]">
-          <AgentIcon name={writing || author} size={16} className={writing ? 'animate-pulse' : ''} />
-          <span className="min-w-0 flex-1 leading-snug">
-            <span className="text-muted">{writing ? t('git.writingCommit') : t('git.writtenBy')}</span>
-            <span className="block break-words font-medium text-text">{writing || author}</span>
-          </span>
-        </div>
-      )}
-      <button disabled={busy} onClick={() => void sync()} title={action.hint}
-        className={clsx('relative flex items-center justify-center gap-2 overflow-hidden rounded-md py-2 text-[12px] font-medium transition-colors disabled:cursor-default',
-          phase === 'done' ? 'bg-ok/20 text-ok' : action.ready ? 'bg-accent text-bg hover:brightness-110' : 'bg-raised text-muted hover:bg-accent-bg')}>
+      <div className="flex items-stretch">
+        <button disabled={busy} onClick={() => void sync()} title={action.hint}
+          className={clsx('relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-l-md border py-1.5 text-[12px] font-medium transition-colors disabled:cursor-default',
+            phase === 'done' ? 'border-ok/40 bg-ok/20 text-ok' : action.ready ? 'border-accent/60 bg-accent/60 text-text hover:bg-accent/70' : 'border-accent/30 bg-accent/15 text-text/80 hover:bg-accent/25')}>
         {busy && <span className="pointer-events-none absolute inset-0 animate-sweep bg-gradient-to-r from-transparent via-white/25 to-transparent" />}
         <span className="relative flex items-center gap-2">
           {/* el icono se vuelve a montar al cambiar (key), así entra con su animación */}
@@ -175,9 +183,19 @@ export function GitView() {
               : <MdCheck size={16} />}
           </span>
           {phase === 'commit' ? t('git.committing') : phase === 'push' ? t('git.pushing') : phase === 'pull' ? t('git.pulling') : phase === 'done' ? t('git.done') : action.label}
-          {phase === 'idle' && action.count > 0 && <span className="rounded-full bg-black/20 px-1.5 text-[10px]">{action.count}</span>}
+          {phase === 'idle' && action.count > 0 && <span className="rounded-full bg-accent/40 px-1.5 text-[10px]">{action.count}</span>}
         </span>
-      </button>
+        </button>
+        <button disabled={busy} title={t('git.cmMore')} onClick={(e) => setMore(e.currentTarget.getBoundingClientRect())}
+          className={clsx('grid w-7 shrink-0 place-items-center rounded-r-md border border-l-0 transition-colors disabled:cursor-default',
+            phase === 'done' ? 'border-ok/40 bg-ok/20 text-ok' : action.ready ? 'border-accent/60 bg-accent/60 text-text hover:bg-accent/70' : 'border-accent/30 bg-accent/15 text-text/80 hover:bg-accent/25')}><MdKeyboardArrowDown size={16} /></button>
+      </div>
+      {more && <Menu anchor={more} width={230} alignLeft onClose={() => setMore(null)} items={[
+        { label: t('git.cmCommit'), onClick: () => void commitWith('commit') },
+        { label: t('git.cmAmend'), onClick: () => void commitWith('amend') },
+        { label: t('git.cmPush'), separator: true, onClick: () => void commitWith('push') },
+        { label: t('git.cmSync'), onClick: () => void commitWith('sync') }
+      ]} />}
       {!git.hasRemote && <p className="-mt-1 px-1 text-center text-[10px] text-muted">{t('git.noRemote')}</p>}
       <button onClick={() => set({ modal: 'branches' })} className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-accent-bg">
         <MdCallSplit size={15} className="text-accent" />
@@ -211,6 +229,7 @@ export function GitView() {
 }
 
 function Group({ id, title, children, actions }: { id: string; title: string; children: React.ReactNode; actions?: Array<{ title: string; run: () => void; icon: React.ReactNode; danger?: boolean }> }) {
+  const [label, count] = title.split(' · ')          // «cambios · 13»: el nombre y, aparte, el número en una píldora
   const key = `tutti.git.${id}.collapsed`
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(key) === '1' } catch { return false } })
   const toggle = (): void => {
@@ -221,7 +240,8 @@ function Group({ id, title, children, actions }: { id: string; title: string; ch
       <div className="flex items-center justify-between pb-1 pt-1 pr-2">
         <button onClick={toggle} aria-expanded={!collapsed} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-1 text-left text-muted transition-colors hover:text-text">
           <MdChevronRight size={15} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
-          <h4 className="truncate text-[11px] font-semibold tracking-wide">{title}</h4>
+          <h4 className="truncate text-[11px] font-semibold tracking-wide">{label}</h4>
+          {count && <span className="shrink-0 rounded-full bg-accent/40 px-1.5 text-[10px] font-medium leading-4 text-text">{count}</span>}
         </button>
         {actions?.map((a) => <button key={a.title} title={a.title} onClick={a.run} className={clsx('grid size-5 place-items-center rounded text-muted transition-colors', a.danger ? 'hover:text-danger' : 'hover:text-accent')}>{a.icon}</button>)}
       </div>
