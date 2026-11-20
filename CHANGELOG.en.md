@@ -2,6 +2,21 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.6
+
+### Changes
+
+- **What you left in each project is picked up again:** when you go back to a project, or open Tutti, its terminals come back, along with the active tab of the bottom panel (Terminal or Problems), its height and the terminal you were using. Open Claude and Codex chats come back too (their tabs and the latest messages), and your next message continues that conversation. It saves by itself whenever something changes.
+- **History in the chat box:** with the box empty, **↑** and **↓** go through the messages you already sent in that conversation, like in a terminal; going all the way down brings back what you were typing.
+- **"Send to agent" with the chat open:** if the chat is open, the file path (or the selected part of the editor) goes to its box instead of to a terminal agent.
+- **Commit with more options:** the Git tab button now has an arrow with **Commit**, **Commit (amend last)**, **Commit and push** and **Commit and sync**. While an agent writes the commit message, a loading bar runs over the box.
+- **Branch and sync in the footer:** the branch shows a `*` when there are uncommitted changes and, next to it, a button to sync (pull, push or check the remote) with the pending commits (`↓` and `↑`).
+- **Problems panel:** it now also reports **syntax errors in open JSON files** (with their line), groups by file, has a **filter** (text, patterns like `**/*.ts` and `!` to exclude) and no longer counts unsaved changes as problems.
+- **Bottom panel redesigned:** joined tabs, a terminal list on one side with an accent bar on the active one, and a trash button to close each.
+- **Chat images:** they show as tags with a thumbnail, name and size, both when attaching them and in the sent message.
+- **File menu:** "Rename" and "Delete" sit together, and the copy options form a single section.
+- **Fix:** on narrow windows the editor no longer spills out of its column or covers the sidebar.
+
 ## 1.5.5
 
 ### Changes
