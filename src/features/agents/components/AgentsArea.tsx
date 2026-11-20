@@ -97,7 +97,7 @@ export function AgentsArea() {
   const cell = (id: string): { col: string; row: number } => { const i = visible.indexOf(id); return i < 0 ? { col: '1', row: 0 } : at(i) }
 
   return (
-    <div className="min-h-0 min-w-[260px] flex-1 overflow-hidden rounded-lg border border-line bg-surface">
+    <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-line bg-surface">
       {panes.length === 0 ? (
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-center justify-center gap-x-12 gap-y-8">

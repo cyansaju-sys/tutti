@@ -43,6 +43,8 @@ interface ChatState {
   queued: string | null              // una petición hecha desde fuera del panel (la pestaña Tutti): el panel la envía con su modelo, esfuerzo y modo
   queuedShown: string | null         // lo que se ve en la conversación de la petición en cola, si no es todo el texto
   queue: (text: string, shown?: string) => void
+  insert: string | null              // texto que otra parte de la app quiere dejar en la caja del chat (una ruta de archivo, por ejemplo): el panel lo añade y enfoca la caja
+  insertText: (text: string) => void
   note: (text: string) => void      // una línea tenue en la conversación (un aviso, como «Codex ya terminó»)
   load: (session: string, project: string | null, history: ChatHistoryMessage[]) => void      // retoma una conversación guardada: la muestra y los próximos mensajes la continúan
   reply: (id: string, answers: Record<string, string> | null) => void
@@ -83,6 +85,8 @@ const createChat = (slot: number) => create<ChatState>((set, get) => ({
   },
   messages: [], running: false, session: null, project: null, permissions: [], selection: null, asks: [], plans: [], btw: null, suggestion: null, queued: null, queuedShown: null,
   queue: (text, shown) => set({ queued: text, queuedShown: shown ?? null }),
+  insert: null,
+  insertText: (text) => set((s) => ({ insert: (s.insert ?? '') + text })),
   note: (text) => set((s) => ({ messages: add(s.messages, { role: 'note', text }) })),
   load: (session, project, history) => {
     const s = get()

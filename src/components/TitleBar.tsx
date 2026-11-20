@@ -100,9 +100,9 @@ export function TitleBar() {
       )}
       <div className="flex items-center gap-0.5">
         <UpdateButton />
-        <IconButton title={t('title.minimize')} onClick={() => window.api.window.minimize()}><MdRemove size={16} /></IconButton>
-        <IconButton title={t('title.maximize')} onClick={() => window.api.window.toggleMaximize()}><MdCropSquare size={15} /></IconButton>
-        <IconButton title={t('title.close')} danger onClick={() => window.api.window.close()}><MdClose size={16} /></IconButton>
+        <IconButton className="!h-[20px]" title={t('title.minimize')} onClick={() => window.api.window.minimize()}><MdRemove size={16} className="translate-y-[3px]" /></IconButton>
+        <IconButton className="!h-[20px]" title={t('title.maximize')} onClick={() => window.api.window.toggleMaximize()}><MdCropSquare size={15} /></IconButton>
+        <IconButton className="!h-[20px]" title={t('title.close')} danger onClick={() => window.api.window.close()}><MdClose size={16} /></IconButton>
       </div>
       {fileMenu && createPortal(<Menu alignLeft width={260} anchor={fileMenu} onClose={() => setFileMenu(null)} items={fileItems(t)} />, document.body)}
       {termMenu && createPortal(      // fuera de la barra: dentro de ella el menú heredaría la región de arrastre y la ventana entera se tragaría los clics

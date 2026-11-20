@@ -232,7 +232,9 @@ export function FilesView() {
 
   /** Escribe la ruta en el agente activo (sin Enter, para que el usuario siga escribiendo). */
   const sendToAgent = (entries: DirEntry[]): void => {
-    const { panes, activePane } = useStore.getState()
+    const { panes, activePane, chatOpen } = useStore.getState()
+    // con el chat abierto, la referencia va a su caja (@ruta) en vez de a un agente de terminal
+    if (chatOpen && project) { useChat.getState().insertText(entries.map((e) => `@${toPosix(relative(project, e.path))}${e.isDir ? '/' : ''}`).join(' ') + ' '); return }
     const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
     if (!pane) { toast(t('fs.noAgent'), 'error'); return }
     window.api.pty.write(pane.id, entries.map((e) => agentRef(pane.command, toPosix(relative(project!, e.path)))).join(' ') + ' ')
@@ -456,10 +458,10 @@ export function FilesView() {
           { label: t('fs.cut'), separator: true, icon: <MdContentCut size={14} />, onClick: () => clipEntries([menu.entry], true) },
           { label: t('fs.copyEntry'), icon: <MdContentCopy size={14} />, onClick: () => clipEntries([menu.entry], false) },
           { label: t('fs.paste'), icon: <MdContentPaste size={14} />, hidden: !clip, onClick: () => void pasteInto(pasteDirOf(menu.entry)) },
-          { label: t('fs.rename'), separator: true, icon: <MdDriveFileRenameOutline size={14} />, onClick: () => setAsk({ kind: 'rename', entry: menu.entry }) },
           { label: t('fs.copyPath'), icon: <MdContentCopy size={14} />, onClick: () => copy(menu.entry.path) },
           { label: t('fs.copyRelative'), icon: <MdLink size={14} />, onClick: () => copy(toPosix(relative(project, menu.entry.path))) },
-          { label: t('fs.delete'), separator: true, icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: [menu.entry] }) }
+          { label: t('fs.rename'), separator: true, icon: <MdDriveFileRenameOutline size={14} />, onClick: () => setAsk({ kind: 'rename', entry: menu.entry }) },
+          { label: t('fs.delete'), icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: [menu.entry] }) }
         ]} />
       )}
       {playing && project && <PlayRolesDialog project={project} onClose={() => setPlaying(false)} />}

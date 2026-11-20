@@ -170,6 +170,16 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
   }
   const current = models?.find((m) => m.value === model) ?? models?.[0]
 
+  // lo que se manda desde el árbol de archivos o el editor («Enviar al agente») entra en la caja de este chat, sin enviarse
+  useEffect(() => {
+    if (chat.insert === null) return
+    const add = chat.insert
+    store.setState({ insert: null })
+    if (add) setText((cur) => (cur && !/\s$/.test(cur) ? `${cur} ` : cur) + add)
+    setDismissed('')
+    requestAnimationFrame(() => input.current?.focus())
+  }, [chat.insert])      // eslint-disable-line react-hooks/exhaustive-deps
+
   // lo que se le pide desde la pestaña Tutti se envía aquí, con el modelo, el esfuerzo y el modo elegidos; si está respondiendo, espera su turno
   useEffect(() => {
     if (!chat.queued || chat.running || !project) return

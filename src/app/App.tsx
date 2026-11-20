@@ -298,11 +298,11 @@ export function App() {
           <Sidebar />
           {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
         </div>
-        <div style={full ? undefined : { order: 3 }} className={full ? 'contents' : 'relative flex min-w-0 flex-1 flex-col'}>
+        <div style={full ? undefined : { order: 3 }} className={full ? 'contents' : 'relative flex min-w-0 flex-1 flex-col overflow-hidden'}>
           <div style={topAt} className={`min-h-0 min-w-0 flex-1 ${alone ? 'hidden' : 'flex'}`}>
             {s.docs.length > 0 && s.panes.length === 0 ? (
               // sin agentes abiertos, el editor ocupa el espacio de «Elegir agente»
-              <div className="flex min-w-[260px] flex-1 flex-col"><EditorArea /></div>
+              <div className="flex min-w-0 flex-1 flex-col"><EditorArea /></div>
             ) : (
               <>
                 <AgentsArea />

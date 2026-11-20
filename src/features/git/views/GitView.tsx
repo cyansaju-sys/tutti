@@ -5,7 +5,6 @@ import type { GitFile } from '@/shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { FileIcon } from '@/components/FileIcon'
 import { basename, dirname } from '@/lib/paths'
-import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { useT } from '@/lib/i18n'
 import { Menu } from '@/components/Menu'
 import { Modal } from '@/components/ui'
@@ -153,8 +152,10 @@ export function GitView() {
   return (
     <div className="flex h-full flex-col gap-2 px-2">
       <div className="relative">
+        {/* mientras un agente redacta el commit: una barra de carga sobre la caja */}
+        {writing && <div title={t('git.writingMsg', { agent: writing })} className="absolute inset-x-0 -top-1.5 h-[3px] overflow-hidden rounded-full bg-accent/20"><div className="h-full w-full animate-sweep bg-gradient-to-r from-transparent via-accent to-transparent" /></div>}
         <textarea
-          ref={area} value={message} rows={1}
+          ref={area} value={message} rows={1} title={author ? `${t('git.writtenBy')} ${author}` : undefined}
           onChange={(e) => { setMessage(e.target.value); setAuthor('') }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void commit() } }}
           placeholder={writing ? t('git.writingMsg', { agent: writing }) : t('git.messagePlaceholder')}
@@ -167,15 +168,6 @@ export function GitView() {
           <MdAutoAwesome size={15} />
         </button>
       </div>
-      {(writing || author) && (
-        <div className="flex items-center gap-2 rounded-md bg-accent-bg px-2 py-1.5 text-[11px]">
-          <AgentIcon name={writing || author} size={16} className={writing ? 'animate-pulse' : ''} />
-          <span className="min-w-0 flex-1 leading-snug">
-            <span className="text-muted">{writing ? t('git.writingCommit') : t('git.writtenBy')}</span>
-            <span className="block break-words font-medium text-text">{writing || author}</span>
-          </span>
-        </div>
-      )}
       <div className="flex items-stretch">
         <button disabled={busy} onClick={() => void sync()} title={action.hint}
           className={clsx('relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-l-md border py-1.5 text-[12px] font-medium transition-colors disabled:cursor-default',
