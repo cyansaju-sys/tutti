@@ -5,13 +5,28 @@ import { isDirty } from './docs'
 import type { ProjectConfig } from './types'
 import type { State, ProjectSlice } from './types'
 
+const NO_FILE = ['graph', 'hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news', 'shortcuts']
+/** Lo que se recuerda del proyecto abierto: pestaña de la barra lateral, archivos abiertos y el panel de abajo (terminales y problemas). */
+export const configOf = (state: State): ProjectConfig => ({
+  tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !NO_FILE.includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc, shells: state.shells.length,
+  panel: { tab: state.panelTab, problems: state.problemsOpen, height: state.shellHeight, max: state.shellMax, active: Math.max(0, state.shells.findIndex((x) => x.id === state.shellActive)) }
+})
+
+/** Guarda la configuración del proyecto abierto (se llama al cambiar algo, para no perderla si la ventana se cierra). */
+export async function saveProjectConfig(state: State): Promise<void> {
+  if (!state.project) return
+  const configs = { ...(((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}) }
+  configs[state.project] = configOf(state)
+  await window.api.settings.set('project_configs', configs)
+}
+
 export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (set, get) => {
   /** Cierra lo del proyecto actual y abre `path`, recordando la configuración del que se deja; `open` es un archivo que se abre al final. */
   const switchProject = (path: string | null, open?: string, reload = true): void => {
     const prev = get().project
     // la configuración del proyecto que se deja: pestaña de la barra lateral y archivos abiertos
     const state = get()
-    const leaving: ProjectConfig = { tab: state.tab, docs: state.docs.filter((d) => !d.diffOf && d.original === undefined && !['graph', 'hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news', 'shortcuts'].includes(d.kind)).map((d) => d.path), activeDoc: state.activeDoc, shells: state.shells.length }
+    const leaving = configOf(state)
     // se cierra todo: agentes, terminales y archivos
     ;[...state.panes, ...state.shells].forEach((p) => window.api.pty.kill(p.id))
     // al recargar, la pantalla no cambia antes: el estado nuevo solo se pone aquí si no hay recarga (arranque con `tutti .`)
@@ -46,6 +61,11 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
         for (const f of known.docs) await get().openDoc(f)
         if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
         for (let i = 0; i < Math.min(known.shells ?? 0, 5); i++) await get().addShell()          // las terminales que se dejaron abiertas
+        const panel = known.panel
+        if (panel) {
+          const shells = get().shells
+          set({ panelTab: shells.length ? panel.tab : 'problems', problemsOpen: panel.problems, shellHeight: panel.height, shellMax: shells.length ? panel.max : false, shellActive: shells[panel.active]?.id ?? shells.at(-1)?.id ?? null })
+        }
         set({ focus: 'tree' })
       }
       if (open && get().project === path) { await get().openDoc(open); set({ activeDoc: open, focus: 'editor' }) }       // `tutti archivo`: queda delante

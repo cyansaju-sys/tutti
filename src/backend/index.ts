@@ -246,7 +246,7 @@ function registerIpc(): void {
     }
     return ''
   })
-  ipcMain.handle('git:commit', (_e, root: string, message: string) => git.commit(root, message))
+  ipcMain.handle('git:commit', (_e, root: string, message: string, amend?: boolean) => git.commit(root, message, amend))
   ipcMain.handle('git:push', (_e, root: string) => git.push(root))
   ipcMain.handle('git:branches', (_e, root: string) => git.branches(root))
   ipcMain.handle('git:checkout-detached', (_e, root: string, ref: string) => git.checkoutDetached(root, ref))

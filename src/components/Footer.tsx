@@ -1,10 +1,12 @@
 import { clsx } from 'clsx'
 import { useEffect, useRef, useState } from 'react'
-import { MdWarningAmber, MdAccountTree, MdCallSplit, MdCheckCircle, MdErrorOutline, MdInfoOutline, MdNewReleases, MdNotificationsNone, MdPlaylistRemove } from 'react-icons/md'
+import { MdWarningAmber, MdAccountTree, MdSync, MdCheckCircle, MdErrorOutline, MdInfoOutline, MdNewReleases, MdNotificationsNone, MdPlaylistRemove } from 'react-icons/md'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
 import { Chip } from './ui'
+import { VscSourceControl } from 'react-icons/vsc'
 import { useProblems } from '@/features/agents/lib/problems'
+import { refreshGit } from '@/features/git/lib/gitSync'
 
 const ICON = {
   ok: <MdCheckCircle size={17} className="text-ok" />,
@@ -17,6 +19,7 @@ export function Footer() {
   const t = useT()
   const git = useStore((s) => s.git)
   const set = useStore((s) => s.set)
+  const modal = useStore((s) => s.modal)
   const openGraph = useStore((s) => s.openGraph)
   const openNews = useStore((s) => s.openNews)
   const notices = useStore((s) => s.notices)
@@ -34,6 +37,23 @@ export function Footer() {
     set({ problemsOpen: true, panelTab: 'problems' })
   }
   const box = useRef<HTMLDivElement>(null)
+  const project = useStore((s) => s.project)
+  const toast = useStore((s) => s.toast)
+  const repo = project?.split(/[\\/]/).filter(Boolean).pop() ?? ''
+  const [syncing, setSyncing] = useState(false)
+  /** Sincroniza la rama: baja lo que falte del remoto, sube lo que esté por subir y, si no hay nada, solo consulta el remoto. */
+  const sync = async (): Promise<void> => {
+    if (!project || !git || syncing) return
+    if (!git.hasRemote) { toast(t('git.noRemote'), 'error'); return }
+    setSyncing(true)
+    let error = ''
+    if (git.hasUpstream && git.behind > 0) error = await window.api.git.pull(project)
+    if (!error && (git.ahead > 0 || !git.hasUpstream)) error = await window.api.git.push(project)
+    if (!error && git.hasUpstream && git.behind === 0 && git.ahead === 0) error = await window.api.git.fetch(project)
+    await refreshGit()
+    setSyncing(false)
+    if (error) toast(error, 'error')
+  }
 
   useEffect(() => {
     if (!open) return
@@ -52,7 +72,15 @@ export function Footer() {
         </button>
         {git?.isRepo && (
           <>
-            <Chip icon={<MdCallSplit size={14} />} label={git.branch} onClick={() => set({ modal: 'branches' })} title={t('title.changeBranch')} />
+            <div className="flex items-stretch [&:has([data-sync]:hover)_[data-branch]]:border-ov/[0.06] [&:has([data-sync]:hover)_[data-branch]]:bg-ov/[0.04] [&:has([data-sync]:hover)_[data-branch]]:text-text [&:has([data-branch]:hover)_[data-sync]]:border-accent/20 [&:has([data-branch]:hover)_[data-sync]]:bg-accent/10 [&:has([data-branch]:hover)_[data-sync]]:text-accent">
+              <button data-branch onClick={() => set({ modal: 'branches' })} title={`${repo} (Git) - ${git.branch}`} className={clsx('flex items-center gap-1.5 rounded-l-[5px] border pl-1.5 pr-1 text-[12px] font-light transition-colors hover:border-ov/[0.12] hover:bg-ov/[0.16] hover:text-text', modal === 'branches' ? 'border-ov/[0.12] bg-ov/[0.16] text-text' : 'border-transparent text-muted')}>
+                <VscSourceControl size={14} className="text-accent" />{git.branch}{git.files.length > 0 && '*'}
+              </button>
+              <button data-sync onClick={() => void sync()} title={`${repo} (Git) - ${t('title.syncBranch')}`} className="flex items-center gap-1 rounded-r-[5px] border border-transparent pl-0 pr-0.5 text-[11px] font-light text-muted transition-colors hover:border-accent/40 hover:bg-accent/50 hover:text-accent">
+                <MdSync size={14} className={syncing ? 'animate-spin' : ''} />
+                {(git.behind > 0 || git.ahead > 0) && <span className="tabular-nums">{git.behind > 0 && `↓${git.behind}`}{git.behind > 0 && git.ahead > 0 && ' '}{git.ahead > 0 && `↑${git.ahead}`}</span>}
+              </button>
+            </div>
             <Chip icon={<MdAccountTree size={14} />} label={t('title.commits')} onClick={() => openGraph()} title={t('title.commitsTip')} />
           </>
         )}

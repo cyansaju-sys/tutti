@@ -23,7 +23,7 @@ const api: Api = {
   git: {
     status: (r) => ipcRenderer.invoke('git:status', r), ignored: (r, p) => ipcRenderer.invoke('git:ignored', r, p),
     stage: (r, p) => ipcRenderer.invoke('git:stage', r, p), unstage: (r, p) => ipcRenderer.invoke('git:unstage', r, p), discard: (r, t, u) => ipcRenderer.invoke('git:discard', r, t, u),
-    commit: (r, m) => ipcRenderer.invoke('git:commit', r, m), push: (r) => ipcRenderer.invoke('git:push', r),
+    commit: (r, m, a) => ipcRenderer.invoke('git:commit', r, m, a), push: (r) => ipcRenderer.invoke('git:push', r),
     branches: (r) => ipcRenderer.invoke('git:branches', r), checkoutDetached: (r, ref) => ipcRenderer.invoke('git:checkout-detached', r, ref), checkout: (r, n, rem) => ipcRenderer.invoke('git:checkout', r, n, rem),
     createBranch: (r, n, b, s) => ipcRenderer.invoke('git:createBranch', r, n, b, s), marks: (f) => ipcRenderer.invoke('git:marks', f), worktrees: (r) => ipcRenderer.invoke('git:worktrees', r), addWorktree: (r, b, c, base) => ipcRenderer.invoke('git:addWorktree', r, b, c, base), removeWorktree: (r, p, f) => ipcRenderer.invoke('git:removeWorktree', r, p, f), blame: (f) => ipcRenderer.invoke('git:blame', f), op: (r, o, h, a, m) => ipcRenderer.invoke('git:op', r, o, h, a, m), abortOp: (r) => ipcRenderer.invoke('git:abortOp', r), commitFiles: (r, h, p) => ipcRenderer.invoke('git:commitFiles', r, h, p), log: (r, n) => ipcRenderer.invoke('git:log', r, n), pull: (r) => ipcRenderer.invoke('git:pull', r), fetch: (r) => ipcRenderer.invoke('git:fetch', r), suggestCommit: (r) => ipcRenderer.invoke('git:suggestCommit', r), onCommitAgent: (cb) => subscribe<[string]>('git:commitAgent', cb), show: (r, rev, p) => ipcRenderer.invoke('git:show', r, rev, p)
   },

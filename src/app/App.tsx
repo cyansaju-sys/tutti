@@ -16,8 +16,9 @@ import { cacheAccent, resolveTheme, paintAccent, paintTheme } from '@/lib/theme'
 import { loadIconTheme } from '@/lib/icons'
 import { loadSettings } from '@/functions/loadSettings'
 import { ChatPanel } from '@/components/ChatPanel'
-import { useChat, useChat2 } from '@/store/chat'
+import { restoreChats, saveChats, useChat, useChat2 } from '@/store/chat'
 import { isDirty, useStore } from '@/store'
+import { saveProjectConfig } from '@/store/project'
 
 /** Diálogo que se abre con cada valor de `modal`. */
 const MODALS: Record<string, ComponentType | undefined> = {
@@ -59,7 +60,8 @@ export function App() {
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
       if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined, false)            // lo guarda como último proyecto y en los recientes
-      if (reloaded && project) await useStore.getState().restoreProject(project, reloaded.open ?? undefined)
+      if (project && !fromArgs) await useStore.getState().restoreProject(project, reloaded?.open ?? undefined)          // recarga o arranque normal: se retoma lo que se dejó en este proyecto
+      if (project) { try { if (await restoreChats(project)) useStore.setState({ chatOpen: true, chatSplit: true }) } catch { /* sin conversaciones guardadas */ } }          // los chats abiertos (Claude o Codex) vuelven como se dejaron
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
       const current = await window.api.update.version()
       const seen = (await window.api.settings.get('last_seen_version')) as string | undefined
@@ -73,6 +75,24 @@ export function App() {
   // abrir un proyecto no crea .tutti: la carpeta (y sus subcarpetas: specs, docs…) aparece al añadir el primer elemento
   const project = useStore((s) => s.project)
   useEffect(() => { void window.api.hooks.watch(project) }, [project])
+  // las conversaciones del chat se guardan al cambiar (con una pausa), igual que la configuración del proyecto
+  useEffect(() => {
+    if (!ready || !project) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const later = (): void => { clearTimeout(timer); timer = setTimeout(() => { void saveChats(project) }, 800) }
+    const offs = [useChat.subscribe(later), useChat2.subscribe(later)]
+    return () => { offs.forEach((off) => off()); clearTimeout(timer) }
+  }, [ready, project])
+  // la configuración del proyecto se guarda al cambiar (con una pausa): así sobrevive aunque la ventana se cierre sin pasar por «cambiar de proyecto»
+  useEffect(() => {
+    if (!ready) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const off = useStore.subscribe((st, prev) => {
+      if (st.tab === prev.tab && st.docs === prev.docs && st.activeDoc === prev.activeDoc && st.shells === prev.shells && st.shellActive === prev.shellActive && st.panelTab === prev.panelTab && st.problemsOpen === prev.problemsOpen && st.shellHeight === prev.shellHeight && st.shellMax === prev.shellMax) return
+      clearTimeout(timer); timer = setTimeout(() => { void saveProjectConfig(useStore.getState()) }, 600)
+    })
+    return () => { off(); clearTimeout(timer) }
+  }, [ready])
   useEffect(() => { const name = project?.split(/[\\/]/).filter(Boolean).pop(); document.title = name ? `Tutti - ${name}` : 'Tutti' }, [project])          // el título de la ventana
   // los archivos abiertos en el editor (relativos al proyecto): los steering por archivos (`fileMatch`) también los tienen en cuenta
   const openPaths = useStore((s) => s.docs.filter((d) => d.kind === 'text').map((d) => d.path).join('\n'))
