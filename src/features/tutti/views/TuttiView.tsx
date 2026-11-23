@@ -97,12 +97,12 @@ export function TuttiView() {
     const next = { hooks, steering, skills, docs }
     setLists((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
     const info: typeof specInfo = {}
-    for (const sp of docs.filter((e) => e.isDir)) {
+    await Promise.all(docs.filter((e) => e.isDir).map(async (sp) => {
       const files = await window.api.fs.list(sp.path).catch(() => [])
       const tasks = files.find((f) => f.name === 'tasks.md')
       const text = tasks ? await window.api.fs.read(tasks.path).then((d) => d.text, () => '') : ''
       info[sp.path] = { files, ...taskProgress(text) }
-    }
+    }))
     setSpecs((prev) => (JSON.stringify(prev) === JSON.stringify(info) ? prev : info))
     const state = await window.api.specs.state(project).catch(() => null)
     setSp((prev) => (JSON.stringify(prev) === JSON.stringify(state) ? prev : state))
@@ -262,13 +262,13 @@ export function TuttiView() {
     )
   }
 
-  const Section = ({ kind, title }: { kind: Kind; title: string }) => {
+  const Section = ({ kind, title }: { kind: Kind; title: string }): React.JSX.Element => {
     // en la documentación solo se ven las categorías que ya tienen documentos; la categoría se elige al crear uno
     const globals: DirEntry[] = kind === 'steering' ? Object.values(steeringInfo).filter((x) => x.scope === 'global').map((x) => ({ name: x.base, path: x.file, isDir: false })) : []
     const items: DirEntry[] = kind === 'docs' ? lists.docs.filter((e) => !e.isDir || specInfo[e.path]?.files.length) : lists[kind]
     const nothingYet = kind === 'docs' || items.length === 0
     return (
-    <Fold id={kind} title={title} count={kind === 'docs' ? undefined : items.length} onAdd={() => (kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
+    <Fold id={kind} title={title} count={kind === 'docs' ? items.reduce((n, e) => n + (e.isDir ? specInfo[e.path]?.files.length ?? 0 : 1), 0) || undefined : items.length} onAdd={() => (kind === 'steering' ? openSteeringForm() : kind === 'skills' ? openSkillForm() : start(kind))} addTip={t(`tutti.add.${kind}` as MsgKey)}>
       {creating === kind && !target && NameInput(kind)}
       {creating === 'docs' && kind === 'docs' && !target && (
         <div className="mx-1 mb-1.5 flex flex-wrap gap-1" role="radiogroup" aria-label={t('tutti.category')}>
@@ -335,7 +335,7 @@ export function TuttiView() {
   return (
     <Accordion.Provider value={{ open: openSection, setOpen }}>
     <div className="flex h-full flex-col px-2 pb-2">
-      <Section kind="docs" title={t('tutti.docs')} />
+      {Section({ kind: 'docs', title: t('tutti.docs') })}
       <Fold id="roadmap" title={t('tutti.roadmap')} onAdd={roadmap && !roadmap.exists ? () => void createRoadmap(project, lang, openDoc).then((e) => { if (e) toast(e, 'error'); void refresh() }) : undefined} addTip={t('tutti.add.roadmap')}>
         <RoadmapBody state={roadmap} project={project} onChanged={() => void refresh()} />
       </Fold>
@@ -356,8 +356,8 @@ export function TuttiView() {
           </div>
         </Modal>
       )}
-      <Section kind="steering" title={t('tutti.steering')} />
-      <Section kind="skills" title={t('tutti.skills')} />
+      {Section({ kind: 'steering', title: t('tutti.steering') })}
+      {Section({ kind: 'skills', title: t('tutti.skills') })}
       <Fold id="mcp" title={t('tutti.mcp')} onAdd={() => setAddMcp((n) => n + 1)} addTip={t('mcp.addTip')}>
         <McpView compact addSignal={addMcp} />
       </Fold>

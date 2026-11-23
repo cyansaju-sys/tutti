@@ -48,29 +48,36 @@ export const createProjectSlice: StateCreator<State, [], [], ProjectSlice> = (se
     })()
   }
 
+  let restoring: Promise<void> | null = null
+  const restore = async (path: string | null, open?: string): Promise<void> => {
+    const configs = ((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}
+    const known = path ? configs[path] : undefined
+    if (!path || get().project !== path) return
+    if (known) {
+      set({ tab: ['mcp', 'context'].includes(known.tab as string) ? 'tutti' : known.tab })       // las pestañas MCP y Contexto ya no existen: viven en Tutti
+      for (const f of known.docs) await get().openDoc(f)
+      if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
+      for (let i = get().shells.length; i < Math.min(known.shells ?? 0, 5); i++) await get().addShell()          // las terminales que se dejaron abiertas
+      const panel = known.panel
+      if (panel) {
+        const shells = get().shells
+        set({ panelTab: shells.length ? panel.tab : 'problems', problemsOpen: panel.problems, shellHeight: panel.height, shellMax: shells.length ? panel.max : false, shellActive: shells[panel.active]?.id ?? shells.at(-1)?.id ?? null })
+      }
+      set({ focus: 'tree' })
+    }
+    if (open && get().project === path) { await get().openDoc(open); set({ activeDoc: open, focus: 'editor' }) }       // `tutti archivo`: queda delante
+  }
+
   return {
     project: null, recentProjects: [], git: null,
 
     /** Recupera la configuración recordada de `path` (pestaña y archivos abiertos); uno nuevo se queda limpio. */
-    restoreProject: async (path, open) => {
-      const configs = ((await window.api.settings.get('project_configs')) as Record<string, ProjectConfig> | undefined) ?? {}
-      const known = path ? configs[path] : undefined
-      if (!path || get().project !== path) return
-      if (known) {
-        set({ tab: ['mcp', 'context'].includes(known.tab as string) ? 'tutti' : known.tab })       // las pestañas MCP y Contexto ya no existen: viven en Tutti
-        for (const f of known.docs) await get().openDoc(f)
-        if (known.activeDoc && get().docs.some((d) => d.path === known.activeDoc)) set({ activeDoc: known.activeDoc })
-        for (let i = 0; i < Math.min(known.shells ?? 0, 5); i++) await get().addShell()          // las terminales que se dejaron abiertas
-        const panel = known.panel
-        if (panel) {
-          const shells = get().shells
-          set({ panelTab: shells.length ? panel.tab : 'problems', problemsOpen: panel.problems, shellHeight: panel.height, shellMax: shells.length ? panel.max : false, shellActive: shells[panel.active]?.id ?? shells.at(-1)?.id ?? null })
-        }
-        set({ focus: 'tree' })
-      }
-      if (open && get().project === path) { await get().openDoc(open); set({ activeDoc: open, focus: 'editor' }) }       // `tutti archivo`: queda delante
+    restoreProject: (path, open) => {
+      // si se pide dos veces a la vez (p. ej. el arranque corre doble), la segunda espera a la primera: si no, las terminales se abren por duplicado
+      if (restoring) return restoring
+      restoring = restore(path, open).finally(() => { restoring = null })
+      return restoring
     },
-
     setProject: (path, open, reload = true) => {
       if (path === get().project) { if (open) void get().openDoc(open); return }
       const dirty = get().docs.filter((d) => !d.diffOf && isDirty(d))
