@@ -86,23 +86,32 @@ export function resolveRefs(text: string, project: string): string {          //
 
 export interface SteeringPart { doc: Steering; delivered: 'full' | 'index'; chars: number }
 
-/** Qué parte de cada archivo se entrega y el texto resultante: los completos, y debajo la lista de guías disponibles. */
-export function assembleSteering(project: string, docs: Steering[], changed: string[], globalDir = ''): { text: string; parts: SteeringPart[] } {
+/** Tope por defecto de lo que se entrega completo de steering en cada conversación (≈3.000 tokens; se cambia en los ajustes del editor); lo que no cabe pasa a la lista de guías y se lee cuando hace falta. */
+export const MAX_FULL_CHARS = 12_000
+
+/** Qué parte de cada archivo se entrega y el texto resultante: los completos (hasta el tope), y debajo la lista de guías disponibles. */
+export function assembleSteering(project: string, docs: Steering[], changed: string[], globalDir = '', maxChars = MAX_FULL_CHARS): { text: string; parts: SteeringPart[] } {
   const full: string[] = []
   const index: Array<{ doc: Steering; line: string }> = []
   const parts: SteeringPart[] = []
-  for (const doc of docs) {
-    const matched = doc.inclusion === 'fileMatch' && doc.patterns.length > 0 && globsToRegex(doc.patterns.join(',')).some((re) => changed.some((f) => re.test(f.split(sep).join('/'))))
-    if (doc.inclusion === 'always' || matched) {
+  let used = 0
+  const listed = (doc: Steering, capped: boolean): void => {
+    const where = doc.scope === 'global' ? doc.file : relative(project, doc.file).split(sep).join('/')
+    const note = doc.inclusion === 'fileMatch' ? ` [${doc.patterns.join(', ')}]` : ''
+    const line = `- ${doc.name}${doc.description ? `: ${doc.description}` : ''}${note} (${where})${capped ? ` ${tm('m.ctx.capped')}` : ''}`
+    index.push({ doc, line }); parts.push({ doc, delivered: 'index', chars: line.length })
+  }
+  const matches = (doc: Steering): boolean => doc.inclusion === 'fileMatch' && doc.patterns.length > 0 && globsToRegex(doc.patterns.join(',')).some((re) => changed.some((f) => re.test(f.split(sep).join('/'))))
+  // los «siempre» van antes que los que solo entran por los archivos con cambios: si falta sitio, se quedan fuera estos últimos
+  const order = [...docs.filter((d) => d.inclusion === 'always'), ...docs.filter((d) => d.inclusion !== 'always')]
+  for (const doc of order) {
+    if (doc.inclusion === 'always' || matches(doc)) {
       const body = resolveRefs(doc.body, doc.scope === 'global' && globalDir ? globalDir : project)
       if (!body) continue
+      if (used + body.length > maxChars) { listed(doc, true); continue }
+      used += body.length
       full.push(body); parts.push({ doc, delivered: 'full', chars: body.length })
-    } else {
-      const where = doc.scope === 'global' ? doc.file : relative(project, doc.file).split(sep).join('/')
-      const note = doc.inclusion === 'fileMatch' ? ` [${doc.patterns.join(', ')}]` : ''
-      const line = `- ${doc.name}${doc.description ? `: ${doc.description}` : ''}${note} (${where})`
-      index.push({ doc, line }); parts.push({ doc, delivered: 'index', chars: line.length })
-    }
+    } else listed(doc, false)
   }
   const guides = index.length ? `${tm('m.ctx.guides')}\n${index.map((i) => i.line).join('\n')}` : ''
   return { text: [...full, guides].filter(Boolean).join('\n\n'), parts }

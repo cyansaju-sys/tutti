@@ -148,7 +148,7 @@ export async function sendChat(target: WebContents, req: ChatSendRequest): Promi
     effort: req.effort,
     thinking: req.thinking ? { type: 'adaptive', display: 'summarized' } : undefined,          // el razonamiento resumido, para mostrarlo
     includePartialMessages: true,
-    promptSuggestions: true,          // al acabar cada turno llega un posible mensaje siguiente
+    promptSuggestions: getSetting('chat_suggestions') !== false,          // al acabar cada turno llega un posible mensaje siguiente (cuesta una llamada extra: se apaga en los ajustes del editor)
     settings: (own.settings ?? undefined) as Options['settings'],
     resume: req.session ?? undefined,
     canUseTool: (tool, input, { signal }) => new Promise((resolve) => {

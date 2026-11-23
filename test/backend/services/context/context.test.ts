@@ -198,16 +198,16 @@ describe('steering al estilo de Kiro', () => {
 
 describe('AGENTS.md apuntando a .tutti', () => {
   const agents = (): string => readFileSync(join(project, 'AGENTS.md'), 'utf8')
-  it('crea AGENTS.md solo con el bloque y lista lo que hay en .tutti', () => {
+  it('crea AGENTS.md solo con el bloque, que apunta a .tutti y a su README sin listar lo de dentro', () => {
     mkdirSync(join(project, '.tutti', 'steering'), { recursive: true })
     mkdirSync(join(project, '.tutti', 'skills', 'revisar'), { recursive: true })
     writeFileSync(join(project, '.tutti', 'steering', 'product.md'), '# p')
     expect(agentsPointerState(project)).toMatchObject({ exists: false, hasBlock: false })
     expect(writeAgentsPointer(project).ok).toBe(true)
-    expect(agents()).toContain('.tutti/steering/')
-    expect(agents()).toContain('product.md')
-    expect(agents()).toContain('revisar')
-    expect(agents()).not.toContain('specs/')                                   // solo lo que existe
+    expect(agents()).toContain('`.tutti/`')
+    expect(agents()).toContain('.tutti/README.md')
+    expect(agents()).not.toContain('product.md')                               // no lista el contenido
+    expect(agents()).not.toContain('revisar')
     expect(agentsPointerState(project)).toMatchObject({ exists: true, hasBlock: true, upToDate: true, ownContent: false })
   })
   it('un AGENTS.md que solo es el bloque no cuenta como contexto: el contexto va a .tutti', () => {
@@ -228,24 +228,22 @@ describe('AGENTS.md apuntando a .tutti', () => {
   it('actualizar reemplaza el bloque sin duplicarlo y detecta que está desactualizado', () => {
     writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n')
     writeAgentsPointer(project)
-    mkdirSync(join(project, '.tutti', 'specs', 'a'), { recursive: true })
+    writeFileSync(join(project, 'AGENTS.md'), agents().replace('Tutti)', 'Tutti) viejo'))      // un bloque distinto del actual
     expect(agentsPointerState(project).upToDate).toBe(false)
     writeAgentsPointer(project)
     expect(agents().match(/tutti:start/g)).toHaveLength(1)
-    expect(agents()).toContain('specs')
+    expect(agents()).not.toContain('viejo')
     expect(agentsPointerState(project).upToDate).toBe(true)
   })
-  it('apunta al roadmap, sea el de .tutti o el ROADMAP.md de la raíz', () => {
-    writeAgentsPointer(project)
-    expect(agents()).not.toContain('roadmap')
+  it('con .agents apunta a .agents/ y no lista nada más', () => {
+    mkdirSync(join(project, '.agents', 'steering'), { recursive: true })
+    writeFileSync(join(project, '.agents', 'steering', 'a.md'), '# a')
     writeFileSync(join(project, 'ROADMAP.md'), '## Fase 1\n')
-    expect(agentsPointerState(project).upToDate).toBe(false)
     writeAgentsPointer(project)
-    expect(agents()).toContain('`ROADMAP.md`')
-    mkdirSync(join(project, '.tutti'), { recursive: true })
-    writeFileSync(join(project, '.tutti', 'roadmap.md'), '## Fase 1\n')
-    writeAgentsPointer(project)
-    expect(agents()).toContain('`.tutti/roadmap.md`')
+    expect(agents()).toContain('`.agents/`')
+    expect(agents()).not.toContain('.tutti')
+    expect(agents()).not.toContain('a.md')
+    expect(agents()).not.toContain('ROADMAP')
   })
   it('quitar deja el texto propio, o borra el archivo si solo estaba el bloque', () => {
     writeFileSync(join(project, 'AGENTS.md'), '# Reglas\n')

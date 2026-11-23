@@ -1,43 +1,30 @@
 /**
- * AGENTS.md (el estándar que leen Codex, OpenCode, Cursor, Copilot y otros) apuntando a `.tutti/`: un bloque marcado que lista lo que
- * hay en la carpeta, para que cualquier agente —abierto desde Tutti o no— sepa dónde mirar. El bloque es lo único que Tutti toca; el resto
- * del archivo es del usuario. Es un puntero: no copia contenido, así que no hay nada que se desfase salvo la lista.
+ * AGENTS.md (el estándar que leen Codex, OpenCode, Cursor, Copilot y otros) apuntando a la carpeta de configuración (`.tutti` o `.agents`): un bloque
+ * marcado que solo la nombra y remite a su README, para que cualquier agente sepa dónde mirar. El bloque es lo único que Tutti toca; el resto
+ * del archivo es del usuario. Es un puntero: no copia ni lista contenido, así que no hay nada que se desfase.
  */
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { AgentsPointerState, McpResult } from '@/shared/types'
-import { tuttiDir } from './context'
+import { tuttiDirName } from './context'
 import { tm } from '@/backend/utils/i18n'
-import { roadmapFile } from '@/backend/services/roadmap'
 
 export const AGENTS_START = '<!-- tutti:start -->'
 export const AGENTS_END = '<!-- tutti:end -->'
 const BLOCK = new RegExp(`${AGENTS_START}[\\s\\S]*?${AGENTS_END}\\n?`)
-const MAX_LISTED = 8
 
 const agentsPath = (project: string): string => join(project, 'AGENTS.md')
 
 /** El texto sin el bloque de Tutti (lo demás es lo que el usuario escribió). */
 export const stripAgentsBlock = (text: string): string => text.replace(BLOCK, '')
 
-const ls = (dir: string): string[] => { try { return readdirSync(dir).sort() } catch { return [] } }
-const isDir = (p: string): boolean => { try { return statSync(p).isDirectory() } catch { return false } }
-const some = (names: string[]): string => (names.length > MAX_LISTED ? `${names.slice(0, MAX_LISTED).join(', ')}…` : names.join(', '))
-
-/** El bloque con lo que ahora hay en el proyecto: solo lista las carpetas que existen. */
+/** El bloque: solo apunta a la carpeta de configuración (`.tutti` o `.agents`, la que use el proyecto) y a su README, sin listar lo que hay dentro. */
 export function agentsBlock(project: string): string {
-  const tutti = tuttiDir(project)
-  const steering = ls(join(tutti, 'steering')).filter((f) => f.toLowerCase().endsWith('.md'))
-  const skills = ls(join(tutti, 'skills')).filter((d) => isDir(join(tutti, 'skills', d)))
+  const dir = tuttiDirName(project)
   const lines = [
     tm('m.ctx.agentsHead'), '',
-    tm('m.ctx.agentsLead'), '',
-    ...(steering.length ? [tm('m.ctx.agentsSteering', { files: some(steering) })] : []),
-    ...(existsSync(roadmapFile(project)) ? [tm('m.ctx.agentsRoadmap', { file: relative(project, roadmapFile(project)).split('\\').join('/') })] : []),
-    ...(ls(join(tutti, 'specs')).length ? [tm('m.ctx.agentsSpecs')] : []),
-    ...(ls(join(tutti, 'docs')).length ? [tm('m.ctx.agentsDocs')] : []),
-    ...(skills.length ? [tm('m.ctx.agentsSkills', { names: some(skills) })] : []),
-    tm('m.ctx.agentsReadme')
+    tm('m.ctx.agentsLead', { dir }),
+    '', tm('m.ctx.agentsReadme', { dir })
   ]
   return `${AGENTS_START}\n${lines.join('\n')}\n${AGENTS_END}\n`
 }

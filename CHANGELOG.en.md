@@ -2,6 +2,16 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.7
+
+### Changes
+
+- **Markdown in preview:** `.md` files open in preview (and in the editor if they are empty). Double-clicking no longer goes back to the source: use the toolbar button. You can turn it off with the new editor setting **Markdown preview**.
+- **Lower AI usage:** new steering limit in the editor settings (**Steering limit (tokens)**, 3000 by default): what does not fit goes to the guides list and the agent reads it when needed. You can also turn off **Suggest the next message**, which costs an extra call per reply, and the `.tutti` formats are no longer sent in projects that do not use it.
+- **Shorter AGENTS.md:** the Tutti block only points to the configuration folder (`.tutti` or `.agents`) and its README, without listing everything inside.
+- **Tutti tab:** Documentation shows how many documents it has, reads faster and the name field no longer loses focus while typing.
+- **Fix:** going back to a project no longer opens extra terminals.
+
 ## 1.5.6
 
 ### Changes

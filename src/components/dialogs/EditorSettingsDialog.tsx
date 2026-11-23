@@ -16,9 +16,12 @@ const SETTINGS: Setting[] = [
   { id: 'fontFamily', group: 'font', title: 'ed.fontFamily.t', help: 'ed.fontFamily.h', control: { kind: 'text', value: DEFAULT_EDITOR_FONT } },
   { id: 'ligatures', group: 'font', title: 'ed.ligatures.t', help: 'ed.ligatures.h', control: { kind: 'check', value: true } },
   { id: 'fullWidth', group: 'text', title: 'ed.fullWidth.t', help: 'ed.fullWidth.h', control: { kind: 'check', value: false } },
+  { id: 'mdPreview', group: 'text', title: 'ed.mdPreview.t', help: 'ed.mdPreview.h', control: { kind: 'check', value: true } },
   { id: 'wordWrap', group: 'text', title: 'ed.wordWrap.t', help: 'ed.wordWrap.h', control: { kind: 'select', value: 'off', options: ['off', 'on'] } },
   { id: 'lineNumbers', group: 'text', title: 'ed.lineNumbers.t', help: 'ed.lineNumbers.h', control: { kind: 'check', value: true } },
   { id: 'formatOnSave', group: 'files', title: 'ed.formatOnSave.t', help: 'ed.formatOnSave.h', control: { kind: 'check', value: false } },
+  { id: 'chatSuggestions', group: 'agents', title: 'ed.chatSuggestions.t', help: 'ed.chatSuggestions.h', control: { kind: 'check', value: true } },
+  { id: 'steeringMax', group: 'agents', title: 'ed.steeringMax.t', help: 'ed.steeringMax.h', control: { kind: 'number', value: '3000' } },
   { id: 'agentNotes', group: 'agents', title: 'ed.agentNotes.t', help: 'ed.agentNotes.h', control: { kind: 'check', value: false } },
   { id: 'autoSave', group: 'files', title: 'ed.autoSave.t', help: 'ed.autoSave.h', control: { kind: 'select', value: 'off', options: ['off', 'afterDelay', 'onFocusChange'] } }
 ]
@@ -31,11 +34,15 @@ export function EditorSettingsDialog() {
   const setEditorFont = useStore((s) => s.setEditorFont)
   const editorFull = useStore((s) => s.editorFull)
   const setEditorFull = useStore((s) => s.setEditorFull)
+  const editorMdPreview = useStore((s) => s.editorMdPreview)
+  const setEditorMdPreview = useStore((s) => s.setEditorMdPreview)
   const [query, setQuery] = useState('')
   const [group, setGroup] = useState<(typeof GROUPS)[number]>('all')
-  const [values, setValues] = useState<Record<string, Control['value']>>(() => ({ ...Object.fromEntries(SETTINGS.map((x) => [x.id, x.control.value])), fontFamily: editorFont, fullWidth: editorFull }))
+  const [values, setValues] = useState<Record<string, Control['value']>>(() => ({ ...Object.fromEntries(SETTINGS.map((x) => [x.id, x.control.value])), fontFamily: editorFont, fullWidth: editorFull, mdPreview: editorMdPreview }))
   // la pizarra de notas entre agentes vive en los ajustes de la app (la lee el servidor MCP)
   useEffect(() => { void window.api.settings.get('agent_notes').then((v) => setValues((p) => ({ ...p, agentNotes: v === true }))) }, [])
+  useEffect(() => { void window.api.settings.get('steering_max_tokens').then((v) => { if (typeof v === 'number') setValues((p) => ({ ...p, steeringMax: String(v) })) }) }, [])
+  useEffect(() => { void window.api.settings.get('chat_suggestions').then((v) => setValues((p) => ({ ...p, chatSuggestions: v !== false }))) }, [])
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
     return SETTINGS.filter((x) => (group === 'all' || x.group === group) && (!q || `${t(x.title as MsgKey)} ${t(x.help as MsgKey)}`.toLowerCase().includes(q)))
@@ -61,7 +68,7 @@ export function EditorSettingsDialog() {
             {shown.length === 0 && <p className="px-2 text-[12px] font-light text-muted">{t('editor.none')}</p>}
             {shown.map((x) => {
               const v = values[x.id]
-              const change = (n: Control['value']): void => { setValues((p) => ({ ...p, [x.id]: n })); if (x.id === 'fontFamily') setEditorFont(n as string); if (x.id === 'fullWidth') setEditorFull(n as boolean); if (x.id === 'agentNotes') void window.api.settings.set('agent_notes', n) }
+              const change = (n: Control['value']): void => { setValues((p) => ({ ...p, [x.id]: n })); if (x.id === 'fontFamily') setEditorFont(n as string); if (x.id === 'mdPreview') setEditorMdPreview(n as boolean); if (x.id === 'fullWidth') setEditorFull(n as boolean); if (x.id === 'steeringMax') { const v = Math.floor(Number(n)); if (Number.isFinite(v) && v >= 500) void window.api.settings.set('steering_max_tokens', v) }; if (x.id === 'chatSuggestions') void window.api.settings.set('chat_suggestions', n); if (x.id === 'agentNotes') void window.api.settings.set('agent_notes', n) }
               const check = x.control.kind === 'check'
               return (
                 <div key={x.id} className="flex flex-col gap-1 border-l-2 border-transparent px-2 py-1.5 transition-colors hover:border-accent hover:bg-ov/[0.03]">

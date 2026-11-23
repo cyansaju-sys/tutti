@@ -14,7 +14,8 @@ import { translate, type Lang } from '@/shared/i18n'
 import type { ContextSource } from '@/shared/types'
 import { tm } from '@/backend/utils/i18n'
 import { AGENTS_START, stripAgentsBlock } from './agentsPointer'
-import { assembleSteering, changedFiles, loadSteering } from './steering'
+import { assembleSteering, changedFiles, loadSteering, MAX_FULL_CHARS } from './steering'
+import { getSetting } from '@/backend/services/settings'
 
 /** Carpeta de Tutti dentro de cada proyecto y el archivo de contexto que contiene. */
 export const TUTTI_DIR = '.tutti'
@@ -107,11 +108,17 @@ export function ensureGlobalContext(): string {
   return file
 }
 
+/** El tope de steering completo en caracteres: los ajustes lo guardan en tokens (≈4 caracteres cada uno). */
+const steeringBudget = (): number => {
+  const tokens = Number(getSetting('steering_max_tokens'))
+  return Number.isFinite(tokens) && tokens >= 500 ? Math.round(tokens * 4) : MAX_FULL_CHARS
+}
+
 /** El steering que entra ahora mismo: los de siempre, los que coinciden con los archivos con cambios y la lista de guías disponibles. */
 function steeringNow(project: string): ReturnType<typeof assembleSteering> | null {
   const docs = loadSteering(project, { globalDir: globalSteeringDir() })
   if (!docs.length) return null
-  return assembleSteering(project, docs, docs.some((d) => d.inclusion === 'fileMatch') ? [...new Set([...changedFiles(project), ...(working.get(project) ?? [])])] : [], globalSteeringDir())
+  return assembleSteering(project, docs, docs.some((d) => d.inclusion === 'fileMatch') ? [...new Set([...changedFiles(project), ...(working.get(project) ?? [])])] : [], globalSteeringDir(), steeringBudget())
 }
 
 /** La carpeta de los steering globales (los de todos tus proyectos), en la configuración de Tutti y fuera de cualquier repositorio. */

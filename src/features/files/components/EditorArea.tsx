@@ -72,6 +72,7 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
 export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   const t = useT()
   const docs = useStore((s) => s.docs)
+  const mdPreview = useStore((s) => s.editorMdPreview)
   const activePath = useStore((s) => s.activeDoc)
   const project = useStore((s) => s.project)
   const git = useStore((s) => s.git)
@@ -92,7 +93,11 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
   // los .md se pueden ver como Markdown; los de la carpeta .tutti se abren así por defecto
   const isMd = !!doc && doc.kind === 'text' && /\.(md|markdown)$/i.test(doc.path)
   const side = isMd && !!sides[doc!.path]
-  const preview = isMd && (previews[doc!.path] ?? /[\\/](\.tutti|\.agents)[\\/]/.test(doc!.path))
+  const preview = isMd && (previews[doc!.path] ?? (mdPreview && doc!.text.trim() !== ''))
+  // la primera vez que se abre un .md se decide la vista (vista previa si está activada en ajustes del editor y el archivo no está vacío) y se mantiene aunque luego se escriba
+  useEffect(() => {
+    if (isMd && doc && previews[doc.path] === undefined) setPreviews((p) => ({ ...p, [doc.path]: mdPreview && doc.text.trim() !== '' }))
+  }, [doc?.path, isMd])  // eslint-disable-line react-hooks/exhaustive-deps
   const pending = doc ? pendings[doc.path] ?? null : null
   const conflicts = useMemo(() => (doc?.kind === 'text' && !doc.readOnly ? findConflicts(doc.text) : []), [doc?.kind, doc?.readOnly, doc?.text])
   const resolve = (index: number, choice: Choice): void => {
@@ -254,7 +259,7 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
       {(preview || side) && doc && (() => {
         const { meta, body } = splitFrontMatter(doc.text)
         return (
-          <div onDoubleClick={side ? undefined : () => setPreviews((p) => ({ ...p, [doc.path]: false }))} title={side ? undefined : t('ed.showSource')} className={clsx('selectable min-h-0 min-w-0 flex-1 overflow-auto px-4 py-5', side ? 'order-2 border-l border-line' : 'cursor-text')}>
+          <div className={clsx('selectable min-h-0 min-w-0 flex-1 overflow-auto px-4 py-5', side ? 'order-2 border-l border-line' : 'cursor-text')}>
             <div className="mx-auto max-w-5xl">
               {meta.length > 0 && (
                 <div className="mb-3 flex flex-wrap gap-1.5">

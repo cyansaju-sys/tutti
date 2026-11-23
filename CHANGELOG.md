@@ -2,6 +2,16 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.7
+
+### Cambios
+
+- **Markdown en vista previa:** los `.md` se abren en vista previa (y en el editor si están vacíos). Ya no se vuelve al código con doble clic: se usa el botón de la barra. Se puede desactivar con el nuevo ajuste **Vista previa de Markdown** del editor.
+- **Menos consumo de IA:** nuevo tope de steering en los ajustes del editor (**Tope de steering (tokens)**, 3000 por defecto): lo que no cabe pasa a la lista de guías y el agente lo lee cuando hace falta. También puedes apagar **Sugerir el siguiente mensaje**, que cuesta una llamada extra por respuesta, y los formatos de `.tutti` ya no se envían en proyectos que no la usan.
+- **AGENTS.md más corto:** el bloque de Tutti solo apunta a la carpeta de configuración (`.tutti` o `.agents`) y a su README, sin listar todo lo que hay dentro.
+- **Pestaña Tutti:** Documentación muestra cuántos documentos tiene, se lee más rápido y el campo de nombre ya no pierde el foco al escribir.
+- **Arreglo:** al volver a un proyecto ya no se abren terminales de más.
+
 ## 1.5.6
 
 ### Cambios
