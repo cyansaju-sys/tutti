@@ -76,14 +76,14 @@
 }
 /* color del sistema (<html data-accent="system" style="--sys-accent: …">), como en Chrome: toda la interfaz se tiñe con su matiz —fondos, líneas y acento— y la luz y la saturación se ajustan a cada tema */
 :root[data-accent="system"] {
-  --color-bg: oklch(from var(--sys-accent) 0.13 min(c, 0.022) h); --color-bar: oklch(from var(--sys-accent) 0.15 min(c, 0.025) h);
-  --color-surface: oklch(from var(--sys-accent) 0.17 min(c, 0.027) h); --color-panel: oklch(from var(--sys-accent) 0.195 min(c, 0.03) h);
-  --color-raised: oklch(from var(--sys-accent) 0.22 min(c, 0.032) h); --color-pop: oklch(from var(--sys-accent) 0.19 min(c, 0.03) h);
-  --color-line: oklch(from var(--sys-accent) 0.35 min(c, 0.04) h); --color-muted: oklch(from var(--sys-accent) 0.62 min(c, 0.04) h);
-  --color-text: oklch(from var(--sys-accent) 0.93 min(c, 0.012) h);
-  --color-accent: oklch(from var(--sys-accent) 0.8 min(c, 0.12) h);
-  --color-accent-bg: oklch(from var(--sys-accent) 0.3 min(c, 0.06) h);
-  --color-accent-dim: oklch(from var(--sys-accent) 0.55 min(c, 0.07) h);
+  --color-bg: oklch(from var(--sys-accent) 0.17 min(c, 0.03) h); --color-bar: oklch(from var(--sys-accent) 0.19 min(c, 0.033) h);
+  --color-surface: oklch(from var(--sys-accent) 0.21 min(c, 0.035) h); --color-panel: oklch(from var(--sys-accent) 0.235 min(c, 0.037) h);
+  --color-raised: oklch(from var(--sys-accent) 0.275 min(c, 0.04) h); --color-pop: oklch(from var(--sys-accent) 0.245 min(c, 0.037) h);
+  --color-line: oklch(from var(--sys-accent) 0.36 min(c, 0.045) h); --color-muted: oklch(from var(--sys-accent) 0.67 min(c, 0.045) h);
+  --color-text: oklch(from var(--sys-accent) 0.94 min(c, 0.014) h);
+  --color-accent: oklch(from var(--sys-accent) 0.82 min(c, 0.13) h);
+  --color-accent-bg: oklch(from var(--sys-accent) 0.33 min(c, 0.07) h);
+  --color-accent-dim: oklch(from var(--sys-accent) 0.62 min(c, 0.08) h);
   --syn-op: oklch(from var(--sys-accent) 0.82 min(c, 0.13) h);
   --ed-bracket: oklch(from var(--sys-accent) 0.5 min(c, 0.06) h / 0.4); --ed-match: oklch(from var(--sys-accent) 0.5 min(c, 0.06) h / 0.53);
 }

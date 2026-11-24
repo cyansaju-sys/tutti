@@ -126,7 +126,7 @@ export function Menu({ anchor, items, onClose, width = WIDTH, scroll = false, fl
             </button>
             {item.submenu && sub === i && (
               <div role="menu" style={{ left: subLeft, width: SUB_WIDTH }} ref={fitSub} onMouseEnter={() => { clearTimeout(closeTimer.current); closeTimer.current = undefined }}
-                className={clsx('absolute top-0 animate-pop-in border border-ov/[0.08] bg-pop/92 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]', flat ? 'rounded-md px-[3px] py-1' : 'rounded-xl p-1')}>
+                className={clsx('absolute top-0 animate-pop-in border border-ov/[0.08] bg-pop/97 backdrop-blur-md shadow-[0_6px_18px_-6px_rgba(0,0,0,0.4)]', flat ? 'rounded-md px-[3px] py-1' : 'rounded-xl p-1')}>
                 {item.submenu.map((child, j) => (
                   <button key={child.label} role="menuitem" onMouseMove={() => setSubIndex(j)} onClick={() => { onClose(); child.onClick?.() }} className={row(child, j === subIndex)}>
                     {child.icon && <span className="grid size-4 place-items-center text-muted">{child.icon}</span>}

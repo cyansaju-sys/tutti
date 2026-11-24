@@ -1,32 +1,36 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useState } from 'react'
-import { MdDeleteOutline, MdDeleteSweep, MdEdit, MdKeyboardArrowDown, MdKeyboardArrowRight, MdMoreHoriz, MdPlayArrow } from 'react-icons/md'
+import { MdDeleteOutline, MdDeleteSweep, MdEdit, MdKeyboardArrowDown, MdKeyboardArrowRight, MdMoreHoriz, MdPlayArrow, MdPushPin, MdOutlinePushPin } from 'react-icons/md'
 import type { AgentUsage, LimitInfo, SessionInfo, UsageData } from '@/shared/types'
 import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { Menu } from '@/components/Menu'
 import { FIELD, Modal } from '@/components/ui'
-import { ago, fmtDelta, fmtTokens, resumeArgs, severity } from '@/lib/format'
+import { fmtDelta, fmtTokens, resumeArgs, severity } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { useResizeHeight } from '@/lib/useResizeHeight'
 import { basename } from '@/lib/paths'
 import { useStore } from '@/store'
-import { useChat } from '@/store/chat'
+import { useChat, useChat2 } from '@/store/chat'
 
 const REFRESH_MS = 30_000
 const WINDOW_MS = 5 * 3_600_000
+/** Hace cuánto, en corto: «now», «45m», «23h», «4d». */
+const short = (ms: number, now: number, nowLabel: string): string => {
+  const d = now - ms
+  if (d < 90_000) return nowLabel
+  if (d < 3_600_000) return `${Math.round(d / 60_000)}m`
+  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}h`
+  return `${Math.floor(d / 86_400_000)}d`
+}
 const BAR: Record<string, string> = { danger: 'bg-danger', warn: 'bg-warn', accent: 'bg-accent' }
 
 function Bar({ value, tone = 'accent' }: { value: number; tone?: string }) {
   return (
-    <div className="h-[5px] overflow-hidden rounded-full bg-ov/[0.07]">
+    <div className="h-[6px] overflow-hidden rounded-full bg-ov/[0.07]">
       <div className={clsx('h-full rounded-full transition-all duration-500', BAR[tone])} style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
     </div>
   )
 }
-
-const Row = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex justify-between text-[11px]"><span className="text-muted">{label}</span><span>{value}</span></div>
-)
 
 function Limit({ limit, extra, now }: { limit: LimitInfo; extra?: string; now: number }) {
   const t = useT()
@@ -39,15 +43,15 @@ function Limit({ limit, extra, now }: { limit: LimitInfo; extra?: string; now: n
   )
 }
 
-function Card({ u, now }: { u: AgentUsage; now: number }) {
+function Card({ u, now, email }: { u: AgentUsage; now: number; email?: string | null }) {
   const t = useT()
   const lang = useStore((s) => s.lang)
   const w = u.window
   /** Tokens abreviados, o créditos con dos decimales (Kiro). */
   const amount = (n: number): string => (u.unit === 'credits' ? t('us.credits', { n: n.toLocaleString(lang, { maximumFractionDigits: 2 }) }) : fmtTokens(n))
   return (
-    <div className="flex flex-col gap-2.5 border-t border-line px-1.5 pb-1 pt-3 first:border-t-0 first:pt-1">
-      <div className="flex items-center gap-2"><AgentIcon name={u.name} command={u.command} size={18} /><span className="text-[13px] font-semibold">{u.name}</span></div>
+    <div className="flex flex-col gap-1.5 border-t border-line px-1.5 pb-1 pt-2 first:border-t-0 first:pt-0.5 last:pb-0">
+      <div className="flex items-center gap-2 text-[12px]"><AgentIcon name={u.name} command={u.command} size={16} /><span className="shrink-0 text-muted">{u.name}</span>{email && <span className="ml-auto min-w-0 truncate">{email}</span>}</div>
       {u.limits.length > 0 ? (
         <>
           {u.limits.map((l, i) => <Limit key={l.label} limit={l} now={now} extra={i === 0 && w ? t('us.tokens', { n: fmtTokens(w.tokens) }) : undefined} />)}
@@ -66,11 +70,8 @@ function Card({ u, now }: { u: AgentUsage; now: number }) {
         <div className="text-[11px] text-muted">{t('us.noSession')}</div>
       )}
       {u.limitsError && u.limits.length === 0 && <div className="text-[10px] text-muted">{u.limitsError}</div>}
-      {(u.total > 0) && (
-        <div className="flex flex-col gap-1 border-t border-line pt-2">
-          <Row label={t('us.today')} value={amount(u.today)} /><Row label={t('us.week')} value={amount(u.week)} /><Row label={t('us.total')} value={amount(u.total)} />
-          {u.note && (w || u.limits.length > 0) && <div className="pt-1 text-[10px] text-muted">{u.note}</div>}
-        </div>
+      {u.total > 0 && u.note && (w || u.limits.length > 0) && (
+        <div className="border-t border-line pt-2 text-[10px] text-muted">{u.note}</div>
       )}
     </div>
   )
@@ -90,8 +91,8 @@ function Section({ title, id, detail, count, folded, onToggle, fill = false, res
     <>
     <section className={clsx('flex min-h-0 flex-col gap-2', fill && !folded ? 'min-h-32 flex-1' : 'shrink')}>
       <button onClick={() => onToggle(id)} aria-expanded={!folded} className="flex shrink-0 items-center gap-1 rounded-md px-0.5 py-1 text-left transition-colors hover:bg-accent-bg">
-        {folded ? <MdKeyboardArrowRight size={16} className="text-muted" /> : <MdKeyboardArrowDown size={16} className="text-muted" />}
-        <span className="text-[12px] font-semibold">{title}</span>
+        {folded ? <MdKeyboardArrowRight size={14} className="text-muted" /> : <MdKeyboardArrowDown size={14} className="text-muted" />}
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">{title}</span>
         {count !== undefined && count > 0 && <span className="rounded-full bg-accent/25 px-2 py-px text-[10px] font-semibold text-accent">{count}</span>}
         <span className="ml-1 min-w-0 flex-1 truncate text-[10px] text-muted">{detail}</span>
       </button>
@@ -118,8 +119,15 @@ export function UsageView() {
   const set = useStore((s) => s.set)
   const openAgent = useStore((s) => s.openAgent)
   const toast = useStore((s) => s.toast)
+  const chatSession = useChat((c) => c.session)
+  const chatSession2 = useChat2((c) => c.session)
+  const panes = useStore((s) => s.panes)
+  /** ¿Se está usando ahora? Es la conversación abierta en uno de los chats, o una retomada en un panel de agente. */
+  const inUse = (s: SessionInfo): boolean => chatSession === s.id || chatSession2 === s.id || panes.some((p) => p.command === s.command && (p.args ?? []).includes(s.id))
   const [data, setData] = useState<UsageData | null>(null)
+  const [accounts, setAccounts] = useState<{ claude: string | null; codex: string | null } | null>(null)          // el correo de cada cuenta con sesión iniciada
   const [names, setNames] = useState<Record<string, string>>({})
+  const [pinned, setPinned] = useState<string[]>([])          // las conversaciones fijadas (`agente:id`): van arriba
   const [folded, setFolded] = useState<Record<string, boolean>>({})
   const [menu, setMenu] = useState<{ session: SessionInfo; anchor: DOMRect } | null>(null)
   const [renaming, setRenaming] = useState<SessionInfo | null>(null)
@@ -133,11 +141,14 @@ export function UsageView() {
     setData(usage); setNames(saved); setNow(Date.now())
   }, [project])
 
-  useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })); void window.api.settings.get('collapsed').then((c) => setFolded((c as Record<string, boolean>) ?? {})) }, [set])
+  useEffect(() => { void window.api.accounts.get().then(setAccounts).catch(() => undefined) }, [])
+  useEffect(() => { void window.api.agents.detect().then((a) => set({ agents: a })); void window.api.settings.get('pinned_sessions').then((p) => setPinned(Array.isArray(p) ? p.filter((x): x is string => typeof x === 'string') : [])); void window.api.settings.get('collapsed').then((c) => setFolded((c as Record<string, boolean>) ?? {})) }, [set])
   // al abrir la pestaña se consulta a Anthropic una vez (los límites reales); después solo se relee lo local
   useEffect(() => { void load(true); const timer = setInterval(() => void load(false), REFRESH_MS); return () => clearInterval(timer) }, [load])
 
   const toggle = (id: string): void => { const next = { ...folded, [id]: !folded[id] }; setFolded(next); void window.api.settings.set('collapsed', next) }
+  const keyOf = (s: SessionInfo): string => `${s.command}:${s.id}`
+  const togglePin = (s: SessionInfo): void => { const next = pinned.includes(keyOf(s)) ? pinned.filter((k) => k !== keyOf(s)) : [...pinned, keyOf(s)]; setPinned(next); void window.api.settings.set('pinned_sessions', next) }
   const title = (s: SessionInfo): string => names[`${s.command}:${s.id}`] || s.title
 
   /** En el chat: se carga lo que se dijo y los próximos mensajes continúan esa conversación. */
@@ -163,12 +174,12 @@ export function UsageView() {
   if (!data.agents.length) return <p className="px-3 text-[12px] text-muted">{t('us.noAgents')}</p>
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-hidden px-2 pb-3">
+    <div className="flex h-full flex-col gap-0 overflow-hidden px-2 pb-3">
       <Section title={t('us.usage')} id="usage" folded={!!folded.usage} onToggle={toggle} fill={!!folded.history} resize>          {/* con el historial plegado, el consumo ocupa todo el espacio libre */}
-        {data.agents.map((u) => <Card key={u.command} u={u} now={now} />)}
+        {[...data.agents].filter((u) => u.limits.length > 0 || u.window).sort((a, b) => a.name.localeCompare(b.name)).map((u) => <Card key={u.command} u={u} now={now} email={u.command === 'claude' ? accounts?.claude : u.command === 'codex' ? accounts?.codex : null} />)}
       </Section>
       <Section title={t('us.history')} id="history" detail={project ? basename(project) : ''} count={project ? data.history.length : undefined} folded={!!folded.history} onToggle={toggle} fill
-        footer={project && data.history.length > 0 ? (
+        footer={project && data.history.some((x) => !pinned.includes(keyOf(x))) ? (
           <button onClick={() => setClearing(true)} title={t('us.clearTip')}
             className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line px-2 py-1.5 text-[12px] text-muted transition-colors hover:border-danger/50 hover:bg-danger/10 hover:text-danger">
             <MdDeleteSweep size={15} /> {t('us.clear')}
@@ -177,17 +188,19 @@ export function UsageView() {
         {!project && <p className="px-1 text-[11px] text-muted">{t('us.openProject')}</p>}
         {project && data.history.length === 0 && <p className="px-1 text-[11px] text-muted">{t('us.noSessions')}</p>}
         <ul className="flex flex-col divide-y divide-line/60">
-          {data.history.slice(0, 100).map((s) => {
+          {[...data.history.filter((x, i) => i < 100 || pinned.includes(keyOf(x)))].sort((a, b) => Number(pinned.includes(keyOf(b))) - Number(pinned.includes(keyOf(a)))).map((s) => {          // las fijadas primero; el resto conserva su orden
             const can = resumeArgs(s.command, s.id) !== null
             return (
-              <li key={`${s.command}:${s.id}`} className="group flex items-center transition-colors hover:bg-accent-bg">
-                <button disabled={!can} onClick={() => resume(s)} title={can ? t('us.resumeTip') : undefined} className="min-w-0 flex-1 px-2 py-1.5 text-left">
-                  <span className="block truncate text-[12px]">{title(s)}</span>
-                  <span className="block truncate text-[10px] text-muted">{s.agent} · {s.project} · {ago(s.end, now)} · {fmtTokens(s.tokens)}</span>
+              <li key={`${s.command}:${s.id}`} className="group flex items-center rounded transition-colors hover:bg-accent-bg">
+                <button disabled={!can} onClick={() => resume(s)} title={`${s.agent} · ${s.project} · ${fmtTokens(s.tokens)}${can ? ` — ${t('us.resumeTip')}` : ''}`} className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 text-left">
+                  {inUse(s) && <span title={t('us.inUse')} className="size-1.5 shrink-0 rounded-full bg-accent" />}
+                  {pinned.includes(keyOf(s)) && <MdPushPin size={12} className="shrink-0 text-accent" />}
+                  <span className="min-w-0 flex-1 truncate text-[13px]">{title(s)}</span>
+                  <span className={clsx('shrink-0 text-[11px] text-muted group-hover:hidden', menu?.session === s && 'hidden')}>{short(s.end, now, t('time.now'))}</span>
                 </button>
                 <button title={t('us.moreActions')} onClick={(e) => setMenu({ session: s, anchor: e.currentTarget.getBoundingClientRect() })}
-                  className={clsx('mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted transition-opacity hover:bg-ov/10 hover:text-text group-hover:opacity-100',
-                    menu?.session === s ? 'bg-ov/10 text-text opacity-100' : 'opacity-0')}>
+                  className={clsx('mr-1 size-5 shrink-0 place-items-center rounded-md text-muted hover:bg-ov/10 hover:text-text',
+                    menu?.session === s ? 'grid bg-ov/10 text-text' : 'hidden group-hover:grid')}>
                   <MdMoreHoriz size={16} />
                 </button>
               </li>
@@ -199,8 +212,9 @@ export function UsageView() {
       {menu && (
         <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
           { label: t('us.resume'), icon: <MdPlayArrow size={16} />, hidden: !resumeArgs(menu.session.command, menu.session.id), onClick: () => resume(menu.session) },
+          { label: t(pinned.includes(keyOf(menu.session)) ? 'us.unpin' : 'us.pin'), icon: pinned.includes(keyOf(menu.session)) ? <MdOutlinePushPin size={15} /> : <MdPushPin size={15} />, onClick: () => togglePin(menu.session) },
           { label: t('us.renameItem'), icon: <MdEdit size={15} />, onClick: () => setRenaming(menu.session) },
-          { label: t('us.deleteItem'), separator: true, icon: <MdDeleteOutline size={16} />, danger: true, onClick: () => setDeleting(menu.session) }
+          { label: t('us.deleteItem'), separator: true, hidden: pinned.includes(keyOf(menu.session)), icon: <MdDeleteOutline size={16} />, danger: true, onClick: () => setDeleting(menu.session) }
         ]} />
       )}
       {choosing && (
@@ -216,14 +230,14 @@ export function UsageView() {
       {clearing && (
         <Modal onClose={() => setClearing(false)} width={420} title={t('us.clearTitle')}>
           <div className="px-4 pb-4">
-            <p className="text-[12px] leading-relaxed text-muted">{t('us.clearBody', { n: data.history.length })}</p>
+            <p className="text-[12px] leading-relaxed text-muted">{t('us.clearBody', { n: data.history.filter((x) => !pinned.includes(keyOf(x))).length })}</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setClearing(false)} className="rounded-lg px-3 py-1.5 text-[12px] text-muted transition-colors hover:text-text">{t('dlg.cancel')}</button>
               <button onClick={() => {
                 setClearing(false)
                 void (async () => {
                   let failed = 0
-                  for (const s of data.history) { const r = await window.api.usage.remove(s); if (!r.ok) failed++ }
+                  for (const s of data.history.filter((x) => !pinned.includes(keyOf(x)))) { const r = await window.api.usage.remove(s); if (!r.ok) failed++ }
                   if (failed) toast(t('us.clearFailed', { n: failed }), 'error')
                   void load(false)
                 })()

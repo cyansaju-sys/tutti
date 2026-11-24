@@ -48,27 +48,37 @@ export function App() {
   // arranque: tema de íconos, ajustes guardados y proyecto
   useEffect(() => {
     void (async () => {
-      await loadIconTheme()
-      const empty = await window.api.window.isEmpty()
       let reloaded: { open: string | null } | null = null        // la ventana se recargó al abrir o cambiar de proyecto: se retoma ese proyecto
       try { const raw = sessionStorage.getItem('tutti_reload'); sessionStorage.removeItem('tutti_reload'); if (raw) reloaded = JSON.parse(raw) } catch { /* sin sessionStorage */ }
-      const fromArgs = reloaded ? null : await window.api.window.startProject()          // `tutti .` o `tutti archivo`: se abre eso en vez del último proyecto
-      const project = (empty && !reloaded) || fromArgs ? undefined : (await window.api.settings.get('project')) as string | undefined
-      const edit = await window.api.settings.get('edit_enabled')
-      await loadSettings()
-      const saved = (await window.api.settings.get('recent_projects')) as string[] | undefined
+      // lo que no depende de nada se pide a la vez (antes iba una cosa tras otra)
+      const [, empty, fromArgs, last, edit, , saved] = await Promise.all([
+        loadIconTheme(),
+        window.api.window.isEmpty(),
+        reloaded ? Promise.resolve(null) : window.api.window.startProject(),          // `tutti .` o `tutti archivo`: se abre eso en vez del último proyecto
+        window.api.settings.get('project') as Promise<string | undefined>,
+        window.api.settings.get('edit_enabled'),
+        loadSettings(),
+        window.api.settings.get('recent_projects') as Promise<string[] | undefined>
+      ])
+      const project = (empty && !reloaded) || fromArgs ? undefined : last
       const recentProjects = [...new Set([...(project ? [project] : []), ...(Array.isArray(saved) ? saved : [])])].slice(0, 10)
       useStore.setState({ project: project ?? null, recentProjects, editEnabled: edit === undefined ? true : Boolean(edit) })
       if (fromArgs) useStore.getState().setProject(fromArgs.project, fromArgs.file ?? undefined, false)            // lo guarda como último proyecto y en los recientes
-      if (project && !fromArgs) await useStore.getState().restoreProject(project, reloaded?.open ?? undefined)          // recarga o arranque normal: se retoma lo que se dejó en este proyecto
-      if (project) { try { if (await restoreChats(project)) useStore.setState({ chatOpen: true, chatSplit: true }) } catch { /* sin conversaciones guardadas */ } }          // los chats abiertos (Claude o Codex) vuelven como se dejaron
+      // retomar el proyecto, los chats y las novedades van a la vez; si algo falla o tarda demasiado (proyectos grandes), la app arranca igual
+      const restoring = project && !fromArgs
+        ? Promise.race([useStore.getState().restoreProject(project, reloaded?.open ?? undefined), new Promise<void>((r) => setTimeout(r, 15000))]).catch(() => undefined)          // recarga o arranque normal: se retoma lo que se dejó en este proyecto
+        : Promise.resolve()
+      const chats = project
+        ? restoreChats(project).then((split) => { if (split) useStore.setState({ chatOpen: true, chatSplit: true }) }).catch(() => undefined)          // los chats abiertos (Claude o Codex) vuelven como se dejaron
+        : Promise.resolve()
       // tras actualizar: se muestran las novedades una vez (la primera instalación solo apunta la versión)
-      const current = await window.api.update.version()
-      const seen = (await window.api.settings.get('last_seen_version')) as string | undefined
-      if (seen && seen !== current) useStore.getState().openNews(seen)
-      void window.api.settings.set('last_seen_version', current)
-      setReady(true)
-    })()
+      const news = (async () => {
+        const [current, seen] = await Promise.all([window.api.update.version(), window.api.settings.get('last_seen_version') as Promise<string | undefined>])
+        if (seen && seen !== current) useStore.getState().openNews(seen)
+        void window.api.settings.set('last_seen_version', current)
+      })().catch(() => undefined)
+      await Promise.all([restoring, chats, news])
+    })().catch(() => undefined).finally(() => setReady(true))          // pase lo que pase en el arranque, la interfaz se muestra
   }, [])
 
   // con «Automático», el tema sigue al del sistema
