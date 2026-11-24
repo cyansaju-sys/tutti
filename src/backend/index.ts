@@ -324,12 +324,15 @@ if (process.env.TUTTI_CAPTURE) app.setPath('appData', join(app.getPath('temp'), 
 
 app.whenReady().then(() => {
   if (!process.env.TUTTI_CAPTURE) migrateLegacyConfig()
-  if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) ensureLauncher()        // el comando `tutti` de la terminal
   Menu.setApplicationMenu(null)             // sin menú: los atajos los gestiona la propia app
   registerIpc()
-  if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) setupUpdater(() => win)
-  void startHub(() => win).then(() => { if (process.env.TUTTI_SELFTEST) void runSelfTest() })
+  // la ventana va primero: cargar la interfaz es lo más lento, y lo demás se prepara mientras tanto
   if (!process.env.TUTTI_SELFTEST) createWindow()
+  void startHub(() => win).then(() => { if (process.env.TUTTI_SELFTEST) void runSelfTest() })
+  setImmediate(() => {
+    if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST && !emptyWindow) ensureLauncher()        // el comando `tutti` de la terminal (una ventana nueva ya lo encuentra hecho por la primera)
+    if (!process.env.TUTTI_CAPTURE && !process.env.TUTTI_SELFTEST) setupUpdater(() => win)
+  })
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
 })
 let closing = false

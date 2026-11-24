@@ -2,6 +2,17 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.8
+
+### Cambios
+
+- **Arranque más rápido y sin pantalla en blanco:** la app carga los ajustes, los archivos abiertos, las terminales y los chats a la vez, y si algo falla o tarda demasiado (proyectos grandes) se abre igual en vez de quedarse en blanco. Las ventanas nuevas también abren antes.
+- **Uso renovado:** cada agente muestra su correo junto al nombre (por ejemplo **Claude - correo**) y solo aparecen los que tienen consumo visible, ordenados de la A a la Z. Los títulos van en mayúsculas y el historial es más compacto, con el tiempo a la derecha (`now`, `23h`, `4d`) y un punto en la conversación que estás usando. Se quitaron las filas Hoy, 7 días y Total.
+- **Fijar conversaciones:** el menú de cada conversación del historial tiene **Fijar** y **Desfijar**. Las fijadas suben arriba y no se pueden borrar (ni con «Borrar todo»).
+- **Cuentas:** el apartado **Cuentas** sale de los ajustes; el correo de cada agente está ahora en Uso.
+- **Color del sistema:** al activarlo, la interfaz se tiñe con tonos medios, ni tan oscuros ni tan claros, con un matiz más visible.
+- **Submenús:** tienen el fondo casi opaco, así que ya no se transparenta lo que hay detrás.
+
 ## 1.5.7
 
 ### Cambios

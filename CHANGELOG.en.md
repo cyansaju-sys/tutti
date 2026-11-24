@@ -2,6 +2,17 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.8
+
+### Changes
+
+- **Faster startup, no blank screen:** the app loads settings, open files, terminals and chats at the same time, and if something fails or takes too long (large projects) it opens anyway instead of staying blank. New windows also open sooner.
+- **Usage redesigned:** each agent shows its email next to its name (for example **Claude - email**) and only agents with visible usage appear, sorted from A to Z. Titles are in capitals and the history is more compact, with the time on the right (`now`, `23h`, `4d`) and a dot on the conversation you are using. The Today, 7 days and Total rows were removed.
+- **Pin conversations:** the menu of each conversation in the history has **Pin** and **Unpin**. Pinned ones go to the top and cannot be deleted (not even with "Delete all").
+- **Accounts:** the **Accounts** entry leaves the settings; each agent's email is now in Usage.
+- **System color:** when on, the interface is tinted with mid tones, neither too dark nor too light, with a more visible hue.
+- **Submenus:** they have a nearly opaque background, so what is behind no longer shows through.
+
 ## 1.5.7
 
 ### Changes

@@ -49,8 +49,6 @@ export function Sidebar() {
   const setSide = useStore((s) => s.setSidebarSide)
   const t = useT()
   const [menu, setMenu] = useState<DOMRect | null>(null)
-  const [accounts, setAccounts] = useState<{ claude: string | null; codex: string | null } | null>(null)          // los correos de Claude y Codex, que se piden al abrir el menú
-  useEffect(() => { if (menu) void window.api.accounts.get().then(setAccounts).catch(() => undefined) }, [!!menu])
   const powers = useRef<PowersHandle>(null)
   const [order, setOrder] = useState<string[]>([])           // el orden de los iconos, a gusto del usuario
   const [dragged, setDragged] = useState<SidebarTab | null>(null)
@@ -103,10 +101,6 @@ export function Sidebar() {
       </div>
       {menu && (
         <Menu beside={side === 'left' ? 'right' : 'left'} width={230} anchor={menu} onClose={() => setMenu(null)} items={[
-          { label: t('acct.title'), hidden: !accounts?.claude && !accounts?.codex, submenu: [
-            ...(accounts?.claude ? [{ label: 'Claude', detail: accounts.claude }] : []),
-            ...(accounts?.codex ? [{ label: 'Codex', detail: accounts.codex }] : [])
-          ] },
           { label: t('theme.group'), submenu: [
             { label: t('theme.color'), onClick: () => set({ modal: 'theme' }) },
             { label: t('icons.title'), onClick: () => set({ modal: 'iconTheme' }) },
