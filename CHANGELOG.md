@@ -2,6 +2,12 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.9
+
+### Cambios
+
+- **Los chats ya no se retoman al abrir un proyecto:** los chats con Claude o Codex empiezan vacíos cada vez, así que la app arranca más rápido y ya no guarda las conversaciones en segundo plano. Siguen volviendo las terminales, el panel de abajo y los archivos abiertos.
+
 ## 1.5.8
 
 ### Cambios
