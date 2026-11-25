@@ -126,44 +126,6 @@ export const useChat = createChat(0)
 export const useChat2 = createChat(1)
 const stores = [useChat, useChat2]
 
-/** Las conversaciones de un chat tal como se guardan para retomarlas al volver a abrir el proyecto. */
-export interface SavedChat { tabs: ChatTab[]; tab: number }
-const KEEP = 200          // mensajes que se recuerdan por conversación (los últimos)
-const clip = (text: string | undefined, max: number): string | undefined => (text && text.length > max ? text.slice(0, max) : text)
-/** Un mensaje listo para guardar: sin imágenes (pesan mucho) ni marcas de «escribiéndose», y con los textos largos recortados. */
-const slim = (m: ChatMessage): ChatMessage => ({ ...m, images: undefined, live: false, liveThink: false, body: clip(m.body, 2000), result: clip(m.result, 2000), detail: clip(m.detail, 500), context: undefined, task: m.task && m.task.status === 'running' ? { ...m.task, status: 'stopped' } : m.task })
-
-/** Las conversaciones con algo dicho de este chat (las vacías no se guardan). */
-export const snapshotChat = (slot: 0 | 1): SavedChat => {
-  const s = stores[slot].getState()
-  const tabs = saved(s).filter((t) => t.messages.length).map((t) => ({ ...t, messages: t.messages.slice(-KEEP).map(slim) }))
-  return { tabs, tab: tabs.some((t) => t.id === s.tab) ? s.tab : (tabs[0]?.id ?? 1) }
-}
-
-/** Guarda las conversaciones de los dos chats de este proyecto. */
-export async function saveChats(project: string): Promise<void> {
-  const all = { ...(((await window.api.settings.get('chat_tabs')) as Record<string, SavedChat[]> | undefined) ?? {}) }
-  all[project] = [snapshotChat(0), snapshotChat(1)]
-  await window.api.settings.set('chat_tabs', all)
-}
-
-/** Devuelve a los chats las conversaciones guardadas del proyecto; sus sesiones siguen donde se quedaron, así que el próximo mensaje las continúa. Devuelve si el chat partido tenía algo. */
-export async function restoreChats(project: string): Promise<boolean> {
-  const all = ((await window.api.settings.get('chat_tabs')) as Record<string, SavedChat[]> | undefined) ?? {}
-  const saves = all[project] ?? []
-  let second = false
-  saves.slice(0, 2).forEach((sv, slot) => {
-    if (!sv?.tabs?.length) return
-    const tabs = sv.tabs.map((t): ChatTab => ({ ...t, project, messages: t.messages.map((m) => ({ ...m, id: nextId++ })) }))
-    nextTab = Math.max(nextTab, ...tabs.map((t) => t.id)) + 1
-    const active = tabs.find((t) => t.id === sv.tab) ?? tabs[0]
-    stores[slot].setState(show(tabs, active))
-    if (slot === 1) second = true
-  })
-  return second
-}
-
-
 const onEvent = (ev: ChatEvent & { slot?: number }): void => {
   const e: ChatEvent = ev
   const store = stores[ev.slot ?? 0] ?? useChat          // el evento dice a qué chat va (sin `slot`, al primero)
