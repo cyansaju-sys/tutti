@@ -100,7 +100,7 @@ export interface UiSlice {
   chatWidth: number                                     // su ancho, que el usuario arrastra
   sidebarSide: 'left' | 'right'                         // de qué lado de la ventana va la barra lateral (con sus iconos)
   chatSplit: boolean                                    // el chat partido en 2 columnas (dos conversaciones a la vez)
-  editorFull: boolean                                   // «Ocupar todo»: con un archivo abierto, chat y editor se reparten el ancho a medias
+  editorFull: boolean                                   // «Modo agentes»: con un archivo abierto, chat y editor se reparten el ancho a medias
   editorMdPreview: boolean                              // los .md se abren en vista previa (en el editor si están vacíos)
   editorFont: string                                    // font-family del editor de código, tal como lo escribe el usuario
   sidebarWidth: number

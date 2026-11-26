@@ -2,6 +2,19 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.10
+
+### Cambios
+
+- **Modo agentes:** el ajuste «Ocupar todo» se llama ahora **Modo agentes** y cambia la vista del chat. A la izquierda están tus chats, con **Nueva sesión**, y la **Personalización** del proyecto (Agentes, Servidores MCP, Skills, Hooks, Steering y Specs, cada uno con su número), además de **Ver más** y **Ajustes**. En el centro, con el chat vacío, la caja aparece en medio con un saludo. A la derecha, el panel abre en **Archivos**, con pestañas para **Cambios** y un **+** para los demás apartados. Una barrita flotante da acceso rápido a Archivos, Cambios, la terminal, partir el chat y cerrarlo.
+- **Personalizaciones del agente:** al pulsar un apartado de Personalización se abre un diálogo con todas las secciones a la izquierda y la elegida a la derecha, con una explicación de para qué sirve. Incluye los roles del proyecto (Agentes), Powers, Hooks, Roadmap, Documentación y las instrucciones para agentes.
+- **Servidores MCP renovados:** se agrupan según dónde están guardados (compartido, este proyecto o todos los proyectos). Cada uno muestra su archivo, un botón **Probar** con su resultado, un interruptor para encenderlo o apagarlo y un menú con Detalles, Editar y Quitar.
+- **Dictado por voz:** el micrófono de la caja del chat pasa tu voz a texto dentro de la app, sin enviar el audio a internet. Mientras hablas, cada vez que haces una pausa escribe lo que dijiste. El botón **ES / EN** elige el idioma. La primera vez descarga el modelo de voz (unos 130 MB).
+- **Preguntas al margen (`/btw`) en su propio panel:** se abren en una columna al lado del chat, con su hilo de preguntas y respuestas y su caja para seguir preguntando. La papelera borra el hilo y la X lo oculta.
+- **Esc detiene la respuesta** del chat, igual que el botón de parar. El botón ahora lo indica: **Detener (Esc)**.
+- **Cambios sin nada pendiente:** en lugar de una línea suelta, aparece un aviso con accesos a **Abrir archivos** y **Buscar en archivos**.
+- **Arreglo:** en proyectos grandes con la pestaña Git abierta, la ventana podía quedarse en negro al arrancar. Ya no pasa, y si en el futuro falla algún apartado, solo ese muestra un aviso con **Reintentar** y el resto de la app sigue funcionando.
+
 ## 1.5.9
 
 ### Cambios

@@ -1,10 +1,11 @@
 import { clsx } from 'clsx'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdErrorOutline, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdSync, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
+import { MdAdd, MdCheckCircle, MdChevronRight, MdCloudQueue, MdContentCopy, MdDeleteOutline, MdEdit, MdErrorOutline, MdMoreHoriz, MdPlayArrow, MdPower, MdPowerSettingsNew, MdSettings, MdSync, MdTerminal, MdVisibility, MdVisibilityOff } from 'react-icons/md'
 import type { McpAgent, McpProbe, McpScope, McpServer, McpSpec, McpTransport, SyncScope, SyncState } from '@/shared/types'
 import { FIELD, Modal } from '@/components/ui'
 import { AGENT_NAMES, shortName, agentsMissing, editTargets, isAppServer, removeTargets, isSecret, mask, parsePairs, prefillFromServer, SCOPE_KEYS, specFromServer, splitArgs, type Prefill } from '@/features/mcp/lib/mcp'
 import { useT } from '@/lib/i18n'
+import { Menu } from '@/components/Menu'
 import { useResizeHeight } from '@/lib/useResizeHeight'
 import { useStore } from '@/store'
 
@@ -199,7 +200,8 @@ export function McpView({ compact = false, addSignal = 0 }: { compact?: boolean;
         {servers && installed.length > 0 && visible.length === 0 && (compact
           ? <div className="px-1"><button onClick={() => setAdding(true)} className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-line px-3 py-1 text-[12px] text-muted transition-colors hover:border-accent hover:bg-accent-bg hover:text-accent"><MdAdd size={15} /> {t('mcp.addTip')}</button></div>
           : <p className="px-2 text-[11px] text-muted">{t('mcp.empty')}</p>)}
-        {groups.length > 0 && <InstalledWrap compact={compact} count={groups.length}>
+        {groups.length > 0 && compact && <ScopedList groups={groups} project={project} onAdd={() => setAdding(true)} onDetails={(g) => setDetails(g[0].name.toLowerCase())} onEdit={setEditing} onRemove={setRemoving} onChanged={() => { void sync.load(); void refresh() }} />}
+        {groups.length > 0 && !compact && <InstalledWrap compact={compact} count={groups.length}>
         {groups.map((g) => {
           const first = g[0]
           const agentNames = [...new Set(g.map((x) => AGENT_NAMES[x.agent]))]
@@ -250,6 +252,100 @@ export function McpView({ compact = false, addSignal = 0 }: { compact?: boolean;
       )}
       {adding && <AddDialog installed={installed} project={project} onClose={() => setAdding(false)} onDone={() => void refresh()} />}
       {editing && <AddDialog installed={installed} project={project} editing={editing} prefill={prefillFromServer(editing.find((x) => !x.disabled) ?? editing[0])} onClose={() => setEditing(null)} onDone={() => void refresh()} />}
+    </div>
+  )
+}
+
+/** El orden de los grupos: lo del proyecto (compartido y local) antes que lo de todos los proyectos. */
+const SCOPE_ORDER: McpScope[] = ['shared', 'project', 'global']
+
+/**
+ * La lista incrustada (pestaña Tutti y diálogo de personalización): agrupada por dónde está guardado cada servidor, y en cada
+ * uno su archivo, «Probar» con su resultado, un interruptor para encenderlo o apagarlo y un menú con el resto.
+ */
+function ScopedList({ groups, project, onAdd, onDetails, onEdit, onRemove, onChanged }: {
+  groups: McpServer[][]; project: string | null; onAdd: () => void; onDetails: (g: McpServer[]) => void; onEdit: (g: McpServer[]) => void; onRemove: (g: McpServer[]) => void; onChanged: () => void
+}) {
+  const t = useT()
+  const toast = useStore((s) => s.toast)
+  const [closed, setClosed] = useState<Set<McpScope>>(new Set())
+  const [probes, setProbes] = useState<Record<string, McpProbe | 'running'>>({})
+  const [busy, setBusy] = useState<string | null>(null)
+  const [menu, setMenu] = useState<{ group: McpServer[]; anchor: DOMRect } | null>(null)
+  const keyOf = (g: McpServer[]): string => g[0].name.toLowerCase()
+  const fileOf = (sv: McpServer): string => {
+    const src = sv.source.replace(/\\/g, '/')
+    const root = project?.replace(/\\/g, '/')
+    return root && src.startsWith(`${root}/`) ? src.slice(root.length + 1) : src.split('/').pop() ?? src
+  }
+  const probe = async (g: McpServer[]): Promise<void> => {
+    setProbes((p) => ({ ...p, [keyOf(g)]: 'running' }))
+    const res = await window.api.mcp.probe(g.find((x) => !x.disabled) ?? g[0], project)
+    setProbes((p) => ({ ...p, [keyOf(g)]: res }))
+  }
+  /** El interruptor: apagado si lo está en todos sus agentes; al cambiarlo se aplica a todos. */
+  const toggle = async (g: McpServer[]): Promise<void> => {
+    const on = !g.every((x) => x.disabled)
+    setBusy(keyOf(g))
+    for (const x of g.filter((x) => Boolean(x.disabled) !== on)) {
+      const res = await (on ? window.api.mcp.disable(x, project) : window.api.mcp.enable(x, project))
+      if (!res.ok) { toast(res.message, 'error'); break }
+    }
+    setBusy(null)
+    onChanged()
+  }
+  const scopes = SCOPE_ORDER.map((scope) => ({ scope, list: groups.filter((g) => g[0].scope === scope) })).filter((x) => x.list.length > 0)
+  return (
+    <div className="flex flex-col gap-1">
+      {scopes.map(({ scope, list }) => {
+        const open = !closed.has(scope)
+        return (
+          <section key={scope}>
+            <div className="flex h-8 items-center gap-1">
+              <button onClick={() => setClosed((c) => { const n = new Set(c); if (n.has(scope)) n.delete(scope); else n.add(scope); return n })} aria-expanded={open}
+                className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 text-left transition-colors hover:text-accent">
+                <MdChevronRight size={16} className={clsx('shrink-0 text-muted transition-transform', open && 'rotate-90')} />
+                <span className="truncate text-[12.5px] font-semibold">{t(SCOPE_KEYS[scope])}</span>
+                <span className="shrink-0 rounded-full bg-ov/[0.08] px-1.5 text-[10.5px] font-semibold text-muted">{list.length}</span>
+              </button>
+              <button title={t('mcp.addTip')} onClick={onAdd} className="grid size-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-text"><MdAdd size={18} /></button>
+            </div>
+            {open && list.map((g) => {
+              const first = g[0]
+              const on = !g.every((x) => x.disabled)
+              const result = probes[keyOf(g)]
+              return (
+                <div key={keyOf(g)} className="group flex items-center gap-2 rounded-md py-1.5 pl-7 pr-1 transition-colors hover:bg-ov/[0.03]">
+                  <button onClick={() => onDetails(g)} title={t('mcp.details')} className={clsx('min-w-0 flex-1 text-left', !on && 'opacity-55')}>
+                    <span className="block truncate text-[12.5px] font-semibold text-text">{first.name}</span>
+                    <span className="block truncate text-[11px] text-muted" title={first.source}>{fileOf(first)}</span>
+                  </button>
+                  <button disabled={!on || result === 'running'} onClick={() => void probe(g)} title={t('mcp.probe')}
+                    className="shrink-0 rounded-md border border-line bg-ov/[0.04] px-2.5 py-1 text-[11.5px] text-text transition-colors hover:bg-accent-bg disabled:opacity-40">
+                    {result === 'running' ? '…' : t('mcp.probe')}
+                  </button>
+                  <span className="grid size-5 shrink-0 place-items-center">
+                    {result && result !== 'running' && (result.ok
+                      ? <MdCheckCircle size={16} className="text-ok" title={result.message} />
+                      : <MdErrorOutline size={16} className="text-danger" title={result.message} />)}
+                  </span>
+                  <button role="switch" aria-checked={on} disabled={busy === keyOf(g)} onClick={() => void toggle(g)} title={t(on ? 'mcp.turnOff' : 'mcp.turnOn')}
+                    className={clsx('relative h-[18px] w-8 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-accent/70' : 'bg-ov/[0.15]')}>
+                    <span className={clsx('absolute top-[3px] size-3 rounded-full bg-text transition-all', on ? 'left-[17px]' : 'left-[3px]')} />
+                  </button>
+                  <button title={t('mcp.more')} onClick={(e) => setMenu({ group: g, anchor: e.currentTarget.getBoundingClientRect() })}
+                    className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-ov/[0.08] hover:text-text"><MdMoreHoriz size={17} /></button>
+                </div>
+              )
+            })}
+          </section>
+        )
+      })}
+      {menu && <Menu anchor={menu.anchor} onClose={() => setMenu(null)} items={[
+        { label: t('mcp.details'), icon: <MdSettings size={14} />, onClick: () => onDetails(menu.group) },
+        { label: t('mcp.edit'), icon: <MdEdit size={14} />, onClick: () => onEdit(menu.group) },
+        { label: t('mcp.remove'), icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => onRemove(menu.group) }
+      ]} />}
     </div>
   )
 }

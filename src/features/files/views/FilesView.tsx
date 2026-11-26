@@ -14,6 +14,7 @@ import { agentRef } from '@/features/agents/lib/agentRef'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
 import { useChat, workingSubagents } from '@/store/chat'
+import { isHubLayout } from '@/lib/hub'
 
 const dirname = (p: string): string => p.replace(/[\\/][^\\/]*$/, '')
 
@@ -27,27 +28,11 @@ type Ask =
 
 export function FilesView() {
   const t = useT()
+  const hub = useStore(isHubLayout)          // en la vista de agentes los roles están en la columna del chat
   const project = useStore((s) => s.project)
   const git = useStore((s) => s.git)
   const setProject = useStore((s) => s.setProject)
   const openDoc = useStore((s) => s.openDoc)
-  const openRoleForm = useStore((s) => s.openRoleForm)
-  const openRoleGraph = useStore((s) => s.openRoleGraph)
-  const paneRoles = useStore((s) => s.paneRoles)
-  const [playing, setPlaying] = useState(false)          // el diálogo que pide el objetivo para lanzar los roles
-  const chatMessages = useChat((s) => s.messages)
-  const chatRunning = useChat((s) => s.running)
-  const asSubagent = useMemo(() => workingSubagents(chatMessages, chatRunning), [chatMessages, chatRunning])
-  const working = (name: string): boolean => {
-    const role = name.replace(/\.md$/i, '')
-    return Object.values(paneRoles).some((r) => r.working && r.role === role) || asSubagent.has(role)          // un plan lo tiene trabajando, o es un subagente del chat
-  }
-  const removeRole = async (r: { name: string; path: string }): Promise<void> => {
-    if (!(await confirmBox(t('fs.confirmDeleteRole', { name: r.name.replace(/\.md$/i, '') })))) return
-    const res = await window.api.fs.trash(r.path)
-    if (!res.ok) { useStore.getState().toast(res.message, 'error'); return }
-    useStore.getState().dropDocs(r.path); void loadRoles()
-  }
   const set = useStore((s) => s.set)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [children, setChildren] = useState<Record<string, DirEntry[]>>({})
@@ -64,9 +49,6 @@ export function FilesView() {
   const [clip, setClip] = useState<{ paths: string[]; cut: boolean } | null>(null)          // el portapapeles de archivos de Tutti: copiar o cortar y pegar en otra carpeta
   const [rootOpen, setRootOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rootCollapsed') !== '1' } catch { return true } })      // la raíz del proyecto es una sección plegable
   const toggleRoot = (): void => setRootOpen((o) => { try { localStorage.setItem('tutti.files.rootCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
-  const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
-  const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
-  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])          // los roles del proyecto: archivos .md de .tutti/agents
   const box = useRef<HTMLDivElement>(null)
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
@@ -83,18 +65,7 @@ export function FilesView() {
   // al cambiar de proyecto se empieza de cero
   useEffect(() => { setExpanded(new Set()); setChildren({}); setIgnored(new Set()); setCursor(null); if (project) void load(project) }, [project])  // eslint-disable-line react-hooks/exhaustive-deps
   // las carpetas abiertas se releen cuando cambia git y cada pocos segundos
-  const loadRoles = useCallback(async () => {
-    if (!project) return
-    const dir = await window.api.context.dir(project)
-    const files = await window.api.fs.list(`${dir}/${ROLES_DIR}`).catch(() => [] as DirEntry[])
-    // el agente de cada rol está en su cabecera («agent: claude»): da su icono
-    const list = await Promise.all(files.filter((f) => !f.isDir).map(async (f) => {
-      const text = await window.api.fs.read(f.path).then((d) => d.text, () => '')
-      return { ...f, agent: /^---\n[\s\S]*?^agent:[ \t]*(\S+)[ \t]*$/m.exec(text)?.[1] ?? '' }
-    }))
-    setRoles((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
-  }, [project])
-  const reload = useCallback(() => { if (project) { void load(project); void loadRoles(); expanded.forEach((d) => void load(d)) } }, [project, expanded, load, loadRoles])
+  const reload = useCallback(() => { if (project) { void load(project); expanded.forEach((d) => void load(d)) } }, [project, expanded, load])
   useEffect(() => { const t = setInterval(reload, 5000); return () => clearInterval(t) }, [reload])
   useEffect(() => { reload() }, [git?.files.length])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -405,35 +376,7 @@ export function FilesView() {
         })}
       </div>}
       </div>
-      {/* los roles quedan fijos abajo: el 30 % del explorador cuando está abierta, solo la cabecera plegada */}
-      <div style={rolesOpen ? { height: '30%' } : undefined} className="flex shrink-0 flex-col px-1 pt-1">
-        <div className="flex shrink-0 items-center">
-          <button onClick={toggleRoles} aria-expanded={rolesOpen} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-2 py-1 text-left transition-colors hover:text-accent">
-            <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', rolesOpen && 'rotate-90')} />
-            <span className="truncate text-[12px] font-semibold">{t('fs.roles')}</span>
-          </button>
-          <button title={t('fs.playRoles')} disabled={roles.length === 0} onClick={() => setPlaying(true)} className="grid size-[26px] shrink-0 place-items-center rounded-md text-ok transition-colors hover:bg-ok/15 disabled:cursor-not-allowed disabled:opacity-40"><MdPlayArrow size={18} /></button>
-          <button title={t('rg.open')} onClick={openRoleGraph} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAccountTree size={15} /></button>
-          <button title={t('fs.addRole')} onClick={() => openRoleForm()} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
-        </div>
-        {rolesOpen && (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {roles.map((r) => (
-              <div key={r.path} className={clsx('group flex items-center hover:bg-accent-bg', working(r.name) && 'bg-ok/10')}>
-                <button onClick={() => void openDoc(r.path)} className="flex min-w-0 flex-1 items-center gap-1.5 py-[3px] pl-[28px] pr-1.5 text-left text-[12px]">
-                  {r.agent ? <AgentIcon name={r.agent} command={r.agent} size={16} /> : <MdSmartToy size={16} className="shrink-0 text-muted" />}<span className={clsx('truncate', working(r.name) && 'font-medium text-ok')}>{r.name.replace(/\.md$/i, '')}</span>
-                  {working(r.name) && <span title={t('pane.roleWorkingShort')} className="ml-auto size-1.5 shrink-0 animate-pulse rounded-full bg-ok" />}
-                </button>
-                <button title={t('fs.editRole')} onClick={() => openRoleForm({ file: r.path, name: r.name.replace(/\.md$/i, '') })}
-                  className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100"><MdEdit size={13} /></button>
-                <button title={t('fs.deleteRole')} onClick={() => void removeRole(r)}
-                  className="mr-1.5 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-danger group-hover:opacity-100"><MdDeleteOutline size={14} /></button>
-              </div>
-            ))}
-            {roles.length === 0 && <p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p>}
-          </div>
-        )}
-      </div>
+      {!hub && <RolesList />}          {/* los roles quedan fijos abajo: el 30 % del explorador cuando está abierta, solo la cabecera plegada */}
       {rootMenu && (
         <Menu anchor={rootMenu} onClose={() => setRootMenu(null)} items={[
           { label: t('fs.newFile'), icon: <MdNoteAdd size={14} />, onClick: () => startCreate(project, false) },
@@ -464,10 +407,85 @@ export function FilesView() {
           { label: t('fs.delete'), icon: <MdDeleteOutline size={14} />, danger: true, onClick: () => setAsk({ kind: 'delete', entries: [menu.entry] }) }
         ]} />
       )}
-      {playing && project && <PlayRolesDialog project={project} onClose={() => setPlaying(false)} />}
       {ask?.kind === 'move' && <MoveDialog paths={ask.paths} dest={ask.dir === project ? basename(project) : toPosix(relative(project, ask.dir))} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
       {ask?.kind === 'delete' && <DeleteDialog entries={ask.entries} onClose={() => setAsk(null)} onOk={() => void confirmAsk('')} />}
     </div>
+  )
+}
+
+/**
+ * Los roles del proyecto (archivos .md de .tutti/agents): lanzarlos, ver su grafo, añadir, editar y borrar. Va al pie del
+ * explorador y, con `embedded`, en el diálogo de personalización (sin plegar y ocupando todo el alto).
+ */
+export function RolesList({ embedded = false }: { embedded?: boolean } = {}) {
+  const t = useT()
+  const project = useStore((s) => s.project)
+  const git = useStore((s) => s.git)
+  const openDoc = useStore((s) => s.openDoc)
+  const openRoleForm = useStore((s) => s.openRoleForm)
+  const openRoleGraph = useStore((s) => s.openRoleGraph)
+  const paneRoles = useStore((s) => s.paneRoles)
+  const [playing, setPlaying] = useState(false)          // el diálogo que pide el objetivo para lanzar los roles
+  const chatMessages = useChat((s) => s.messages)
+  const chatRunning = useChat((s) => s.running)
+  const asSubagent = useMemo(() => workingSubagents(chatMessages, chatRunning), [chatMessages, chatRunning])
+  const working = (name: string): boolean => {
+    const role = name.replace(/\.md$/i, '')
+    return Object.values(paneRoles).some((r) => r.working && r.role === role) || asSubagent.has(role)          // un plan lo tiene trabajando, o es un subagente del chat
+  }
+  const [rolesOpen, setRolesOpen] = useState(() => { try { return localStorage.getItem('tutti.files.rolesCollapsed') !== '1' } catch { return true } })
+  const toggleRoles = (): void => setRolesOpen((o) => { try { localStorage.setItem('tutti.files.rolesCollapsed', o ? '1' : '0') } catch { /* sin almacenamiento */ } return !o })
+  const [roles, setRoles] = useState<Array<DirEntry & { agent: string }>>([])
+  const loadRoles = useCallback(async () => {
+    if (!project) return
+    const dir = await window.api.context.dir(project)
+    const files = await window.api.fs.list(`${dir}/${ROLES_DIR}`).catch(() => [] as DirEntry[])
+    // el agente de cada rol está en su cabecera («agent: claude»): da su icono
+    const list = await Promise.all(files.filter((f) => !f.isDir).map(async (f) => {
+      const text = await window.api.fs.read(f.path).then((d) => d.text, () => '')
+      return { ...f, agent: /^---\n[\s\S]*?^agent:[ \t]*(\S+)[ \t]*$/m.exec(text)?.[1] ?? '' }
+    }))
+    setRoles((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
+  }, [project])
+  useEffect(() => { void loadRoles(); const timer = setInterval(() => void loadRoles(), 5000); return () => clearInterval(timer) }, [loadRoles, git?.files.length])
+  const removeRole = async (r: { name: string; path: string }): Promise<void> => {
+    if (!(await confirmBox(t('fs.confirmDeleteRole', { name: r.name.replace(/\.md$/i, '') })))) return
+    const res = await window.api.fs.trash(r.path)
+    if (!res.ok) { useStore.getState().toast(res.message, 'error'); return }
+    useStore.getState().dropDocs(r.path); void loadRoles()
+  }
+  return (
+    <>
+      <div style={!embedded && rolesOpen ? { height: '30%' } : undefined} className={clsx('flex flex-col', embedded ? 'min-h-0 flex-1' : 'shrink-0 px-1 pt-1')}>
+        <div className="flex shrink-0 items-center">
+          <button onClick={toggleRoles} aria-expanded={rolesOpen} disabled={embedded} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-2 py-1 text-left transition-colors hover:text-accent">
+            {!embedded && <MdChevronRight size={14} className={clsx('shrink-0 text-muted transition-transform', rolesOpen && 'rotate-90')} />}
+            <span className={clsx('truncate text-[12px] font-semibold', embedded && 'invisible')}>{t('fs.roles')}</span>
+          </button>
+          <button title={t('fs.playRoles')} disabled={roles.length === 0} onClick={() => setPlaying(true)} className="grid size-[26px] shrink-0 place-items-center rounded-md text-ok transition-colors hover:bg-ok/15 disabled:cursor-not-allowed disabled:opacity-40"><MdPlayArrow size={18} /></button>
+          <button title={t('rg.open')} onClick={openRoleGraph} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAccountTree size={15} /></button>
+          <button title={t('fs.addRole')} onClick={() => openRoleForm()} className="grid size-[26px] shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent"><MdAdd size={16} /></button>
+        </div>
+        {(embedded || rolesOpen) && (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {roles.map((r) => (
+              <div key={r.path} className={clsx('group flex items-center hover:bg-accent-bg', working(r.name) && 'bg-ok/10')}>
+                <button onClick={() => void openDoc(r.path)} className={`flex min-w-0 flex-1 items-center gap-1.5 py-[3px] ${embedded ? 'pl-2' : 'pl-[28px]'} pr-1.5 text-left text-[12px]`}>
+                  {r.agent ? <AgentIcon name={r.agent} command={r.agent} size={16} /> : <MdSmartToy size={16} className="shrink-0 text-muted" />}<span className={clsx('truncate', working(r.name) && 'font-medium text-ok')}>{r.name.replace(/\.md$/i, '')}</span>
+                  {working(r.name) && <span title={t('pane.roleWorkingShort')} className="ml-auto size-1.5 shrink-0 animate-pulse rounded-full bg-ok" />}
+                </button>
+                <button title={t('fs.editRole')} onClick={() => openRoleForm({ file: r.path, name: r.name.replace(/\.md$/i, '') })}
+                  className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-accent group-hover:opacity-100"><MdEdit size={13} /></button>
+                <button title={t('fs.deleteRole')} onClick={() => void removeRole(r)}
+                  className="mr-1.5 grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-all hover:text-danger group-hover:opacity-100"><MdDeleteOutline size={14} /></button>
+              </div>
+            ))}
+            {roles.length === 0 && <p className="px-6 py-1 text-[11px] text-muted">{t('fs.rolesEmpty')}</p>}
+          </div>
+        )}
+      </div>
+      {playing && project && <PlayRolesDialog project={project} onClose={() => setPlaying(false)} />}
+    </>
   )
 }
 

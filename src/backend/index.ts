@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell, systemPrefere
 import { execFile, spawn } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
+import { userInfo } from 'node:os'
 import { dirname, join, resolve, sep } from 'node:path'
 import { availableModels } from './services/agents/models'
 import { addCustomAgent, candidateExecutables, defaultShell, detectAgents, removeCustomAgent, setShell } from './services/agents/agents'
@@ -318,6 +319,13 @@ function registerIpc(): void {
   ipcMain.on('window:new', openNewWindow)
   ipcMain.handle('window:isEmpty', () => emptyWindow)
   ipcMain.handle('window:startProject', () => startProject)
+  ipcMain.handle('window:userName', () => new Promise<string>((done) => {          // solo el nombre de pila: «Cristian Yancis» → «Cristian»
+    const first = (name: string): string => name.trim().split(/\s+/)[0] ?? ''
+    execFile('git', ['config', '--global', 'user.name'], { timeout: 1500 }, (err, out) => {
+      if (!err && first(out)) return done(first(out))
+      try { done(first(userInfo().username)) } catch { done('') }
+    })
+  }))
 }
 
 if (process.env.TUTTI_CAPTURE) app.setPath('appData', join(app.getPath('temp'), `tutti-captura-${process.pid}`))   // ajustes aislados

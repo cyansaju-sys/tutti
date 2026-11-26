@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdKeyboardArrowDown, MdOpenInNew, MdRemove } from 'react-icons/md'
+import { MdAdd, MdUndo, MdArrowDownward, MdArrowUpward, MdCallSplit, MdAutoAwesome, MdCheck, MdChevronRight, MdKeyboardArrowDown, MdOpenInNew, MdOutlineFolder, MdRemove, MdSearch } from 'react-icons/md'
 import type { GitFile } from '@/shared/types'
 import { GIT_COLOR, refreshGit } from '@/features/git/lib/gitSync'
 import { FileIcon } from '@/components/FileIcon'
@@ -25,6 +25,7 @@ export function GitView() {
   const area = useRef<HTMLTextAreaElement>(null)
   const [writing, setWriting] = useState('')            // agente que está redactando (vacío = ninguno)
   const [author, setAuthor] = useState('')              // agente que redactó el mensaje que hay en el input
+  const [more, setMore] = useState<DOMRect | null>(null)          // el menú de la flecha del botón (antes de los `return` de abajo: si no, al llegar el estado de git cambia el número de hooks y React tumba la interfaz)
 
   // al abrir la sección se consulta el remoto (sin tocar nada local) para saber si hay que traer cambios
   useEffect(() => {
@@ -108,7 +109,6 @@ export function GitView() {
     } else toast(t('git.writeMessage'), 'error')
   }
   const commit = sync
-  const [more, setMore] = useState<DOMRect | null>(null)          // el menú de la flecha del botón
   /** Las variantes del menú: confirmar, modificar el último, confirmar y subir, confirmar y sincronizar (bajar lo que falte y subir). */
   const commitWith = async (mode: 'commit' | 'amend' | 'push' | 'sync'): Promise<void> => {
     if (busy) return
@@ -212,13 +212,21 @@ export function GitView() {
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {staged.length > 0 && <Group id="staged" title={t('git.staged', { n: staged.length })}>{staged.map((f) => <File key={`s${f.path}`} f={f} isStaged />)}</Group>}
-        <Group id="changes" title={t('git.changes', { n: changes.length })} actions={changes.length > 0 ? [
+        {git.files.length > 0 && <Group id="changes" title={t('git.changes', { n: changes.length })} actions={changes.length > 0 ? [
           { title: t('git.discardAll'), icon: <MdUndo size={14} />, danger: true, run: () => setDiscarding(changes) },
           { title: t('git.stageAll'), icon: <MdAdd size={15} />, run: () => void run(t('git.stage'), () => window.api.git.stage(project, changes.map((f) => f.path))) }
         ] : undefined}>
           {changes.map((f) => <File key={`c${f.path}`} f={f} isStaged={false} />)}
-        </Group>
-        {git.files.length === 0 && <p className="px-2 py-3 text-[12px] text-muted">{t('git.clean')}</p>}
+        </Group>}
+        {git.files.length === 0 && (          // sin cambios: un aviso en el centro y atajos a Archivos y Buscar
+          <div className="flex h-full min-h-[160px] flex-col items-center justify-center gap-3 px-4">
+            <p className="m-0 text-[12px] text-muted">{t('git.clean')}</p>
+            <div className="flex flex-col items-start gap-1">
+              <button onClick={() => set({ tab: 'files', sidebarOpen: true })} className="flex items-center gap-2 rounded-md px-2 py-1 text-[12px] text-text transition-colors hover:bg-accent-bg"><MdOutlineFolder size={15} className="text-muted" />{t('git.openFiles')}</button>
+              <button onClick={() => set({ tab: 'search', sidebarOpen: true })} className="flex items-center gap-2 rounded-md px-2 py-1 text-[12px] text-text transition-colors hover:bg-accent-bg"><MdSearch size={15} className="text-muted" />{t('git.searchFiles')}</button>
+            </div>
+          </div>
+        )}
       </div>
       {discarding && <DiscardDialog files={discarding} onClose={() => setDiscarding(null)} onConfirm={(list) => {
         setDiscarding(null)
