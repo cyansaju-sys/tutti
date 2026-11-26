@@ -16,6 +16,30 @@ const terms = new Map<string, Terminal>()      // id del panel -> terminal que m
 const spawned = new Set<string>()              // procesos ya iniciados (React puede montar dos veces en desarrollo)
 let wired = false
 
+/**
+ * Si un agente está trabajando: lo está mientras saca texto (su indicador se redibuja al pensar o escribir) y deja de estarlo al callar un rato.
+ * Lo que sale justo después de teclear es el eco de lo escrito, no trabajo: no cuenta.
+ */
+const BUSY_QUIET_MS = 1500          // sin salida durante este tiempo, ya no trabaja
+const ECHO_MS = 350                 // la salida que llega tan pronto tras una tecla es su eco
+const lastOut = new Map<string, number>()
+const lastIn = new Map<string, number>()
+let busyTimer: ReturnType<typeof setInterval> | null = null
+function markOutput(id: string): void {
+  const now = Date.now()
+  if (now - (lastIn.get(id) ?? 0) < ECHO_MS) return
+  if (!useStore.getState().panes.some((p) => p.id === id)) return          // solo los agentes (las terminales de abajo no tienen pestaña)
+  lastOut.set(id, now)
+  const busy = useStore.getState().paneBusy
+  if (!busy.includes(id)) useStore.setState({ paneBusy: [...busy, id] })
+  busyTimer ??= setInterval(() => {
+    const st = useStore.getState()
+    const still = st.paneBusy.filter((x) => Date.now() - (lastOut.get(x) ?? 0) < BUSY_QUIET_MS)
+    if (still.length !== st.paneBusy.length) useStore.setState({ paneBusy: still })
+    if (!still.length && busyTimer) { clearInterval(busyTimer); busyTimer = null }
+  }, 500)
+}
+
 /** Copia lo seleccionado al portapapeles y quita la selección. */
 function copySelection(t: Terminal): void {
   const text = t.getSelection()
@@ -35,7 +59,7 @@ async function pasteInto(id: string, t: Terminal): Promise<void> {
 function wire(): void {
   if (wired) return
   wired = true
-  window.api.pty.onData((id, data) => terms.get(id)?.write(data))
+  window.api.pty.onData((id, data) => { terms.get(id)?.write(data); markOutput(id) })
   window.api.pty.onExit(({ id, code }) => {
     spawned.delete(id)
     const pane = [...useStore.getState().panes, ...useStore.getState().shells].find((p) => p.id === id)
@@ -97,7 +121,7 @@ export function TerminalPane({ pane, active }: { pane: Pane; active: boolean }) 
       })
     }
     start()
-    const data = t.onData((d) => window.api.pty.write(pane.id, d))
+    const data = t.onData((d) => { lastIn.set(pane.id, Date.now()); window.api.pty.write(pane.id, d) })
     const observer = new ResizeObserver(() => { try { sendSize() } catch { /* aún sin tamaño */ } })
     observer.observe(host.current!)
     cleanup = () => { cancelled = true; clearTimeout(timer); data.dispose(); observer.disconnect(); terms.delete(pane.id); t.dispose(); term.current = null }

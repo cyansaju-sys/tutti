@@ -26,6 +26,8 @@ const SETTINGS: Setting[] = [
   { id: 'autoSave', group: 'files', title: 'ed.autoSave.t', help: 'ed.autoSave.h', control: { kind: 'select', value: 'off', options: ['off', 'afterDelay', 'onFocusChange'] } }
 ]
 const GROUPS = ['all', 'font', 'text', 'files', 'agents'] as const
+/** Los ajustes que solo sirven para el chat, que solo existe en «Modo agentes». */
+const CHAT_ONLY = ['chatSuggestions']
 
 export function EditorSettingsDialog() {
   const t = useT()
@@ -46,7 +48,8 @@ export function EditorSettingsDialog() {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
     return SETTINGS.filter((x) => (group === 'all' || x.group === group) && (!q || `${t(x.title as MsgKey)} ${t(x.help as MsgKey)}`.toLowerCase().includes(q)))
-  }, [query, group, t])
+      .filter((x) => !CHAT_ONLY.includes(x.id) || values.fullWidth === true)          // lo del chat solo con «Modo agentes» (el modo normal es solo terminal)
+  }, [query, group, t, values.fullWidth])
 
   // estilo de la pantalla de ajustes de VSCode: buscador plano, categorías sin relleno y cada ajuste con una barra de acento al pasar el ratón
   const FLAT = 'h-7 w-full rounded-[3px] border border-line bg-transparent px-2 text-[12px] font-light text-text outline-none transition-colors placeholder:text-muted focus:border-accent'

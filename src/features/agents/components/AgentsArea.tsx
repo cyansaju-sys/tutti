@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 import { Fragment, useEffect, useState } from 'react'
 import { Menu } from '@/components/Menu'
-import { MdAdd, MdDeleteOutline, MdFilterList, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdSearch, MdTerminal } from 'react-icons/md'
+import { MdAdd, MdDeleteOutline, MdFilterList, MdFlag, MdMailOutline, MdFullscreen, MdFullscreenExit, MdKeyboardArrowDown, MdMoreHoriz, MdClose, MdCreateNewFolder, MdPlayArrow, MdSearch, MdTerminal } from 'react-icons/md'
 import { AppIcon } from '@/components/AppIcon'
 import { FileIcon } from '@/components/FileIcon'
 import { AgentIcon } from './AgentIcon'
@@ -12,6 +12,11 @@ import { TerminalPane } from './TerminalPane'
 import { ProblemsPanel } from './ProblemsPanel'
 import { useProblems } from '../lib/problems'
 import { EditorArea, DocTab } from '@/features/files/components/EditorArea'
+import { TAB, TAB_ON, TAB_OFF, TAB_ROW, TAB_TRACK } from '@/components/tabs'
+import { elapsed, resumeArgs, short } from '@/lib/format'
+import { ROLES_DIR } from '@/shared/rolesDir'
+import type { SessionInfo } from '@/shared/types'
+import { PlayRolesDialog } from '@/features/files/views/FilesView'
 
 /** Pestaña de un agente en la barra superior: solo se ve el cuerpo del activo (los demás siguen vivos, ocultos). */
 const SHOWN_PROJECTS = 5
@@ -25,12 +30,18 @@ export function PaneTab({ pane, active }: { pane: Pane; active: boolean }) {
   const asking = useStore((s) => s.paneAsking.includes(pane.id))
   const pending = useStore((s) => s.paneInbox[pane.id] ?? 0)
   const role = useStore((s) => s.paneRoles[pane.id])
+  const busy = useStore((s) => s.paneBusy.includes(pane.id))          // sacando texto ahora mismo: trabajando
+  // cuánto lleva abierto: se redibuja cada medio minuto
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer) }, [])
   return (
     <>
       {/* preventDefault: si no, al pulsar la pestaña el navegador quita el foco a la terminal justo después de dárselo */}
-      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx('flex min-w-[130px] max-w-[240px] shrink-0 cursor-pointer h-8 items-center gap-1 rounded-tr-lg border-b border-r border-t-2 border-r-line px-2 transition-colors', active ? 'border-b-surface border-t-accent bg-surface' : 'border-b-line border-t-transparent bg-bar', role?.working && !active && 'border-t-ok bg-ok/10')}>
+      <div onMouseDown={(e) => { e.preventDefault(); useStore.getState().focusPane(pane.id) }} className={clsx(TAB, 'min-w-[110px] max-w-[220px] cursor-pointer pl-2.5 pr-1', active ? TAB_ON : role?.working ? 'bg-ok/10 text-text hover:bg-ok/15' : TAB_OFF)}>
         {pane.kind === 'agent' ? <AgentIcon name={pane.name ?? pane.title} command={pane.command} size={15} /> : <MdTerminal size={15} className="text-accent" />}
         <span className={clsx('min-w-0 flex-1 truncate text-[12px]', active ? 'text-text' : 'text-muted')}>{pane.title}{leader && ` · ${t('pane.leader')}`}</span>
+        {busy && !asking && !role?.working && <span title={t('pane.working')} className="size-1.5 shrink-0 animate-pulse rounded-full bg-ok" />}
+        {pane.started && <span title={t('pane.openFor', { time: elapsed(now - pane.started) })} className="shrink-0 text-[10px] tabular-nums text-muted">{elapsed(now - pane.started)}</span>}
         {role && (
           <span title={t(role.working ? 'pane.roleWorking' : 'pane.roleIdle', { role: role.title })}
             className={clsx('flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium', role.working ? 'bg-ok/20 text-ok' : 'bg-ov/[0.07] text-muted')}>
@@ -102,11 +113,9 @@ export function AgentsArea() {
         <div className="flex h-full flex-col items-center overflow-y-auto px-6 py-8">
           <div className="my-auto flex w-full max-w-[780px] flex-wrap items-center justify-center gap-x-12 gap-y-8">
             <div className="flex w-[300px] max-w-full flex-col items-center">
-              <AppIcon src={`${import.meta.env.BASE_URL}icons/logo-contorno${mode === 'light' ? '-light' : ''}.svg`} color={mode === 'light' ? 'var(--color-accent)' : 'var(--color-accent-dim)'} alt="Tutti" size={180} />
+              <AppIcon src={`${import.meta.env.BASE_URL}icons/logo-contorno${mode === 'light' ? '-light' : ''}.svg`} color={mode === 'light' ? 'var(--color-accent)' : 'var(--color-accent-dim)'} alt="Tutti" size={120} />
               <p className="mt-3 text-[12px] text-muted">{t('pane.pickAgent')}</p>
-              <button onClick={() => set({ modal: 'agents' })} className="mt-3 flex items-center gap-2 rounded-lg border border-line px-5 py-2.5 text-[13px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
-                <MdSearch size={16} /> {t('pane.chooseAgent')}
-              </button>
+              <QuickStart />
             </div>
 
             <div className="w-[380px] max-w-full">
@@ -155,24 +164,23 @@ export function AgentsArea() {
         <div className={clsx('grid h-full min-h-0 min-w-0 overflow-hidden', multi && 'gap-0.5 bg-bar')}
           style={{ gridTemplateColumns: `repeat(${units}, minmax(0, 1fr))`, gridTemplateRows: Array.from({ length: rows }, () => 'auto minmax(0, 1fr)').join(' ') }}>
           {/* vista dividida: cada panel es una tarjeta con su pestaña; las pestañas de los agentes ocultos y las de los archivos quedan en la primera */}
-          <div style={{ gridColumn: at(0).col, gridRow: 1 }} className={clsx('flex min-w-0 overflow-x-auto overflow-y-hidden bg-bar', multi ? 'rounded-t-lg border-x border-t border-line' : '')}>
+          <div style={{ gridColumn: at(0).col, gridRow: 1 }} className={clsx(TAB_ROW, 'border-b border-line bg-surface', multi ? 'rounded-t-lg border-x border-t' : '')}><div className={TAB_TRACK}>
             {(multi ? panes.filter((p) => p.id === visible[0] || !shown(p.id)) : panes).map((p) => <PaneTab key={p.id} pane={p} active={shown(p.id)} />)}
             {docs.map((d) => <DocTab key={d.path} doc={d} active={docView && d.path === activeDoc} />)}
-            <div className="min-w-0 flex-1 border-b border-line" />
-          </div>
+          </div></div>
           {visible.slice(1).map((id) => {
             const { col, row } = cell(id)
             return (
-              <div key={id} style={{ gridColumn: col, gridRow: row * 2 + 1 }} className="flex min-w-0 overflow-x-auto overflow-y-hidden rounded-t-lg border-x border-t border-line bg-bar">
+              <div key={id} style={{ gridColumn: col, gridRow: row * 2 + 1 }} className={clsx(TAB_ROW, 'rounded-t-lg border border-line bg-surface')}><div className={TAB_TRACK}>
                 {panes.filter((p) => p.id === id).map((p) => <PaneTab key={p.id} pane={p} active />)}
-              </div>
+              </div></div>
             )
           })}
           {Array.from({ length: slots }, (_, k) => {
             const { col, row } = at(visible.length + k)
             return (
               <Fragment key={`slot${k}`}>
-                <div style={{ gridColumn: col, gridRow: row * 2 + 1 }} className="flex h-7 min-w-0 rounded-t-lg border-x border-t border-line bg-bar"><div className="min-w-0 flex-1 border-b border-line" /></div>
+                <div style={{ gridColumn: col, gridRow: row * 2 + 1 }} className="h-9 min-w-0 rounded-t-lg border border-line bg-surface" />
                 <div style={{ gridColumn: col, gridRow: row * 2 + 2 }} className="flex min-h-0 min-w-0 flex-col items-center justify-center rounded-b-lg border-x border-b border-line">
                   <button onClick={() => set({ modal: 'agents' })} className="flex items-center gap-2 rounded-lg border border-line px-4 py-2 text-[12px] text-accent transition-colors hover:border-accent hover:bg-accent-bg">
                     <MdSearch size={15} /> {t('pane.chooseAgent')}
@@ -291,6 +299,63 @@ export function TerminalSection() {
           ? [{ label: t('term.new'), icon: <MdAdd size={15} />, onClick: () => void addShell() }]
           : [{ label: t('term.closeAll'), icon: <MdClose size={15} />, onClick: closeShells, danger: true }]} />
       )}
+    </div>
+  )
+}
+
+/**
+ * La pantalla de inicio sin agentes abiertos: los agentes instalados a un clic, lanzar los roles del proyecto (si tiene) y las últimas sesiones
+ * de este proyecto para retomarlas en su terminal.
+ */
+function QuickStart() {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  const project = useStore((s) => s.project)
+  const agents = useStore((s) => s.agents)
+  const openAgent = useStore((s) => s.openAgent)
+  const [roles, setRoles] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const [sessions, setSessions] = useState<SessionInfo[]>([])
+  const [names, setNames] = useState<Record<string, string>>({})
+  useEffect(() => { if (!agents.length) void window.api.agents.detect().then((a) => set({ agents: a })) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!project) return
+    void window.api.context.dir(project).then((dir) => window.api.fs.list(`${dir}/${ROLES_DIR}`)).then((l) => setRoles(l.filter((e) => !e.isDir).length), () => setRoles(0))
+    void Promise.all([window.api.usage.collect(project, false), window.api.usage.names()]).then(([u, n]) => { setSessions(u.history); setNames(n) }).catch(() => undefined)
+  }, [project])
+  const now = Date.now()
+  // solo las que se pueden retomar con un agente instalado
+  const resumable = sessions.map((x) => ({ x, agent: agents.find((a) => a.command === x.command), args: resumeArgs(x.command, x.id) })).filter((r) => r.agent && r.args).slice(0, 4)
+  const btn = 'flex min-w-0 items-center gap-2 rounded-lg border border-line px-3 py-2 text-left text-[12px] transition-colors hover:border-accent hover:bg-accent-bg'
+  return (
+    <div className="mt-4 flex w-full flex-col gap-4">
+      <div className="grid grid-cols-2 gap-1.5">
+        {agents.slice(0, 5).map((a) => (
+          <button key={a.command + a.name} onClick={() => void openAgent(a)} title={a.path} className={btn}>
+            <AgentIcon name={a.name} command={a.command} size={16} /><span className="truncate">{a.name}</span>
+          </button>
+        ))}
+        <button onClick={() => set({ modal: 'agents' })} className={clsx(btn, 'text-accent')}><MdSearch size={16} className="shrink-0" /><span className="truncate">{t(agents.length ? 'pane.moreAgents' : 'pane.chooseAgent')}</span></button>
+      </div>
+      {roles > 0 && (
+        <button onClick={() => setPlaying(true)} className="flex items-center justify-center gap-2 rounded-lg bg-ok/15 px-3 py-2 text-[12px] font-medium text-ok transition-colors hover:bg-ok/25">
+          <MdPlayArrow size={16} />{t('pane.runRoles', { n: roles })}
+        </button>
+      )}
+      {resumable.length > 0 && (
+        <div className="flex flex-col gap-0.5">
+          <span className="px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">{t('pane.resumeTitle')}</span>
+          {resumable.map(({ x, agent, args }) => (
+            <button key={`${x.command}:${x.id}`} onClick={() => void openAgent(agent!, args!, { cwd: x.cwd || undefined, title: `${x.agent} · ${names[`${x.command}:${x.id}`] || x.title}` })}
+              title={names[`${x.command}:${x.id}`] || x.title} className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-colors hover:bg-accent-bg">
+              <AgentIcon name={agent!.name} command={x.command} size={14} />
+              <span className="min-w-0 flex-1 truncate">{names[`${x.command}:${x.id}`] || x.title}</span>
+              <span className="shrink-0 text-[10.5px] text-muted">{short(x.end, now, t('time.now'))}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {playing && project && <PlayRolesDialog project={project} onClose={() => setPlaying(false)} />}
     </div>
   )
 }

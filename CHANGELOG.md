@@ -2,6 +2,23 @@
 
 Cada versión lleva su sección `## x.y.z` con frases pensadas para quien usa la app. Tutti las muestra una vez, la primera vez que se abre tras actualizar.
 
+## 1.5.11
+
+### Cambios
+
+- **Chats en paralelo:** varias conversaciones pueden responder a la vez. Puedes cambiar de conversación o abrir otra mientras una sigue trabajando; las que responden en segundo plano tienen el icono parpadeando, y al volver a ellas ves todo lo que hicieron, con sus permisos y preguntas pendientes. Cerrar una que está respondiendo con su X corta la respuesta.
+- **Historial en la columna de chats:** debajo de las conversaciones abiertas salen las guardadas de este proyecto, en la misma lista y con hace cuánto fueron. Al pulsar una, sigue donde la dejaste. Su menú **⋯** tiene **Retomar**, **Fijar**, **Renombrar** y **Borrar**.
+- **Columna de chats aparte:** va en su propia tarjeta, a toda la altura de la ventana (también junto a la terminal), y su ancho se cambia arrastrando el borde.
+- **Modo agentes más estable:** ya no se sale de la vista al abrir un archivo (se abre a la derecha del chat), al partir el chat ni con **Ctrl+W**. Al partirlo, la segunda columna muestra el mismo saludo y, como es más estrecha, las tarjetas Vibe y Spec van sin explicación.
+- **Barra flotante:** es de toda la zona del chat, tiene un estilo nuevo en forma de cápsula y se puede mover arrastrando su asa (se recuerda dónde la dejas). Ya no tiene botón para cerrar el chat.
+- **Encima de la caja del chat:** el agente se cambia con un clic (Claude ↔ Codex) y al lado se ve el proyecto con su rama.
+- **El chat es solo del Modo agentes:** el modo normal queda para los agentes de terminal. Allí ya no hay panel ni botón de chat, y el código que mandas desde el editor va al agente de la terminal. Lo que necesita el chat (como pedir algo desde la pestaña Tutti) cambia al Modo agentes.
+- **Inicio del modo normal:** los agentes instalados se abren con un clic, hay un botón para **lanzar los roles** del proyecto y la sección **Retomar** tiene las últimas sesiones para abrirlas en su terminal.
+- **Pestañas de agentes:** muestran un punto verde mientras el agente trabaja y cuánto tiempo lleva abierto. Al abrir un segundo agente, la vista se divide sola para ver los dos.
+- **Pestañas renovadas:** las del chat, el editor, los agentes y el panel lateral van en un carril, con la activa resaltada en el color de acento.
+- **Cambios renovado:** la rama va arriba en una tarjeta, el mensaje del commit y su botón comparten caja, y cada archivo muestra su estado (M, A, D…) en una etiqueta de color.
+- **Carpetas compactas:** en el explorador, una carpeta que solo contiene otra se ve en una fila (`articulos / mantenimientos`). La carpeta en la que estás va subrayada, **← →** pasan de una a otra y el clic derecho sobre cada nombre abre su menú. Al crear dentro de una de ellas, la fila se separa para que se vea dónde va lo nuevo.
+
 ## 1.5.10
 
 ### Cambios

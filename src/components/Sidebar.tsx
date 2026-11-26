@@ -17,6 +17,7 @@ import { UsageView } from '@/features/usage/views/UsageView'
 import { bindingOf, formatCombo } from '@/lib/keybindings'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { isHubLayout } from '@/lib/hub'
+import { TAB, TAB_ON, TAB_OFF, TAB_ROW, TAB_TRACK } from './tabs'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
   { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
@@ -156,6 +157,8 @@ export function Sidebar() {
 
 /** Vista de agentes: el panel lateral lleva pestañas (Archivos, Cambios y el apartado abierto) y un «+» para los demás. */
 const HUB_TABS: SidebarTab[] = ['files', 'git']
+/** Lo que en la vista de agentes ya está en «Personalización» de la columna de chats: no se repite en el «+». */
+const HUB_HIDDEN: SidebarTab[] = ['tutti', 'powers']
 function HubTabs({ tab }: { tab: SidebarTab }) {
   const t = useT()
   const set = useStore((s) => s.set)
@@ -163,15 +166,16 @@ function HubTabs({ tab }: { tab: SidebarTab }) {
   const shown = HUB_TABS.includes(tab) ? HUB_TABS : [...HUB_TABS, tab]
   const label = (id: SidebarTab): string => (id === 'git' ? t('hub.changes') : id === 'files' ? t('hub.files') : t(TABS.find((x) => x.id === id)!.titleKey))
   return (
-    <div className="flex h-[34px] shrink-0 items-stretch gap-0.5 border-b border-line px-1.5">
+    <div className={clsx(TAB_ROW, 'border-b border-line')}><div className={TAB_TRACK}>          {/* control segmentado, como las pestañas del chat y del editor */}
       {shown.map((id) => (
         <button key={id} onClick={() => set({ tab: id })}
-          className={clsx('flex items-center gap-1.5 border-b-2 px-2 text-[12px] transition-colors', tab === id ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text')}>
+          className={clsx(TAB, 'px-2.5 text-[12px]', tab === id ? TAB_ON : TAB_OFF)}>
           <AppIcon src={sidebarIcon(TABS.find((x) => x.id === id)!.icon)} className="size-4" />{label(id)}
         </button>
       ))}
-      <button title={t('hub.more')} onClick={(e) => setMore(e.currentTarget.getBoundingClientRect())} className="my-auto grid size-6 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-text"><MdAdd size={16} /></button>
-      {more && <Menu anchor={more} width={200} onClose={() => setMore(null)} items={TABS.filter((x) => !shown.includes(x.id)).map((x) => ({ label: t(x.titleKey), icon: <AppIcon src={sidebarIcon(x.icon)} className="size-4" />, onClick: () => set({ tab: x.id }) }))} />}
+      </div>
+      <button title={t('hub.more')} onClick={(e) => setMore(e.currentTarget.getBoundingClientRect())} className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-ov/[0.05] hover:text-text"><MdAdd size={16} /></button>
+      {more && <Menu anchor={more} width={200} onClose={() => setMore(null)} items={TABS.filter((x) => !shown.includes(x.id) && !HUB_HIDDEN.includes(x.id)).map((x) => ({ label: t(x.titleKey), icon: <AppIcon src={sidebarIcon(x.icon)} className="size-4" />, onClick: () => set({ tab: x.id }) }))} />}
     </div>
   )
 }

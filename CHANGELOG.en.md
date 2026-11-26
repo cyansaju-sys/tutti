@@ -2,6 +2,23 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.11
+
+### Changes
+
+- **Chats in parallel:** several conversations can reply at the same time. You can switch conversations or open a new one while another keeps working; the ones replying in the background have a blinking icon, and when you go back to them you see everything they did, with their pending permissions and questions. Closing one that is replying with its X stops the reply.
+- **History in the chats column:** below the open conversations you get the saved ones for this project, in the same list and with how long ago they were. Clicking one picks it up where you left it. Its **⋯** menu has **Resume**, **Pin**, **Rename** and **Delete**.
+- **Chats column on its own:** it sits in its own card, the full height of the window (next to the terminal too), and you can change its width by dragging its edge.
+- **Steadier Agents mode:** the view no longer goes away when you open a file (it opens to the right of the chat), when you split the chat or with **Ctrl+W**. When split, the second column shows the same greeting and, since it is narrower, the Vibe and Spec cards come without their explanation.
+- **Floating bar:** it now covers the whole chat area, has a new capsule look and can be moved by dragging its handle (it remembers where you leave it). It no longer has a button to close the chat.
+- **Above the chat box:** you switch the agent with one click (Claude ↔ Codex), and next to it you see the project and its branch.
+- **The chat is only for Agents mode:** normal mode is now for terminal agents. There is no chat panel or chat button there, and code you send from the editor goes to the terminal agent. Anything that needs the chat (like asking from the Tutti tab) switches to Agents mode.
+- **Normal mode start screen:** installed agents open with one click, there is a button to **run the project roles**, and the **Resume** section lists the latest sessions to open in their terminal.
+- **Agent tabs:** they show a green dot while the agent is working and how long it has been open. When you open a second agent, the view splits by itself so you see both.
+- **Redesigned tabs:** the chat, editor, agent and side panel tabs sit in a track, with the active one highlighted in the accent colour.
+- **Redesigned Changes:** the branch sits at the top in a card, the commit message and its button share a box, and each file shows its status (M, A, D…) in a coloured tag.
+- **Compact folders:** in the explorer, a folder that only holds another folder shows on one row (`articles / maintenance`). The folder you are on is underlined, **← →** move between them and right-clicking each name opens its menu. When you create something inside one of them, the row splits so you see where the new item goes.
+
 ## 1.5.10
 
 ### Changes

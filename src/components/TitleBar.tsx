@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { isHubLayout } from '@/lib/hub'
 import { createPortal } from 'react-dom'
 import { MdOutlineForum, MdCropSquare, MdClose, MdFileDownload, MdOpenInNew, MdRefresh, MdRemove } from 'react-icons/md'
 import { useT } from '@/lib/i18n'
@@ -80,6 +81,8 @@ export function TitleBar() {
   const addShell = useStore((s) => s.addShell)
   const project = useStore((s) => s.project)
   const chatOpen = useStore((s) => s.chatOpen)
+  const hub = useStore(isHubLayout)
+  const editorFull = useStore((s) => s.editorFull)          // el chat es solo del «Modo agentes»: en el modo normal (terminal) no hay botón
   const projectName = project?.split(/[\\/]/).filter(Boolean).pop()
 
   const [fileMenu, setFileMenu] = useState<DOMRect | null>(null)
@@ -95,7 +98,7 @@ export function TitleBar() {
       {/* el nombre del proyecto, centrado en la ventana; no recibe clics: la barra sigue arrastrándose por ahí */}
       {projectName && (
         <span title={project ?? undefined} className="pointer-events-none absolute left-1/2 top-1/2 flex max-w-[34%] -translate-x-1/2 -translate-y-1/2 items-center gap-2 text-[12px] font-medium text-muted">
-          <span className="truncate">{projectName}</span><button title={t('chat.title')} onClick={() => set({ chatOpen: !chatOpen })} className={`no-drag pointer-events-auto grid shrink-0 place-items-center rounded transition-colors hover:text-text ${chatOpen ? 'text-accent' : ''}`}><MdOutlineForum size={15} /></button>
+          <span className="truncate">{projectName}</span>{editorFull && !hub && <button title={t('chat.title')} onClick={() => set({ chatOpen: !chatOpen })} className={`no-drag pointer-events-auto grid shrink-0 place-items-center rounded transition-colors hover:text-text ${chatOpen ? 'text-accent' : ''}`}><MdOutlineForum size={15} /></button>}          {/* en la vista de agentes el chat es la vista: no hace falta */}
         </span>
       )}
       <div className="flex items-center gap-0.5">
