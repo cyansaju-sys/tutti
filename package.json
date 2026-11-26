@@ -1,6 +1,6 @@
 {
   "name": "tutti",
-  "version": "1.5.9",
+  "version": "1.5.10",
   "description": "Editor multi-agente para trabajar con varios agentes de programación a la vez",
   "main": "./out/main/index.js",
   "author": "cyansaju",
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.1",
+    "@huggingface/transformers": "4.3.2",
     "@tailwindcss/vite": "^4.0.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.10.0",

@@ -3,7 +3,7 @@ import { FileIcon } from '@/components/FileIcon'
 import { listProjectFiles } from '@/lib/projectFiles'
 import { basename, relative, toPosix } from '@/lib/paths'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { MdAdd, MdArrowUpward, MdChatBubbleOutline, MdCheckCircleOutline, MdChevronRight, MdClose, MdCode, MdExpandMore, MdOutlineBuild, MdOutlineDescription, MdOutlineSchedule, MdLanguage, MdOutlineFileUpload, MdStop, MdTerminal, MdVerticalSplit } from 'react-icons/md'
+import { MdAdd, MdArrowUpward, MdChatBubbleOutline, MdCheckCircleOutline, MdChevronRight, MdClose, MdCode, MdExpandMore, MdOutlineBuild, MdOutlineDescription, MdOutlineSchedule, MdLanguage, MdMic, MdMicNone, MdOutlineFileUpload, MdOutlineFolderOpen, MdStop, MdTerminal, MdVerticalSplit } from 'react-icons/md'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
 import { useChat, useChat2 } from '@/store/chat'
@@ -17,7 +17,9 @@ import { ChatQuestions } from './ChatQuestion'
 import { ChatSubagent, isSubagentTool } from './ChatSubagent'
 import { ChatThinking } from './ChatThinking'
 import { ChatPlanCard } from './ChatPlan'
-import { ChatBtwCard } from './ChatBtw'
+import { ChatBtwPanel } from './ChatBtw'
+import { ChatSessions, HubToolbar } from './ChatHub'
+import { DICTATION_LANGS, useDictation, type DictationLang } from '@/lib/voice/dictation'
 import { IconButton } from './ui'
 import { Menu } from './Menu'
 
@@ -30,7 +32,7 @@ const FLOWS: Array<{ id: 'vibe' | 'spec'; icon: ReactNode; mode: ChatMode }> = [
 ]
 
 /** Panel de chat con Claude (SDK): va al lado opuesto de la barra lateral. */
-export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0 | 1 }) {
+export function ChatPanel({ fill = false, slot = 0, hub = false }: { fill?: boolean; slot?: 0 | 1; hub?: boolean }) {          // hub: «Modo agentes» con el chat solo (vista de agentes)
   const t = useT()
   const set = useStore((s) => s.set)
   const width = useStore((s) => s.chatWidth)
@@ -38,7 +40,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
   const chat = store()
   const split = useStore((s) => s.chatSplit)
   const list = useRef<HTMLDivElement>(null)
-  useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight }) }, [chat.messages, chat.permissions, chat.asks, chat.plans, chat.btw])
+  useEffect(() => { list.current?.scrollTo({ top: list.current.scrollHeight }) }, [chat.messages, chat.permissions, chat.asks, chat.plans])
   const [text, setText] = useState('')
   const [models, setModels] = useState<ChatModel[] | null>(null)
   const [model, setModel] = useState('default')
@@ -122,7 +124,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
     if (slash && trigger === '@' && /(?:^|\s)@\S*$/.test(text)) return      // con la lista de archivos abierta, Enter no envía
     if ((kind === '#' || text.trim() === '/') && !/\s/.test(text.trim())) { if (!slash) openCommands(null, kind); return }      // «#algo» suelto o «/» no se envían: son para elegir de la lista
     const aside = /^\/btw(?:\s+([\s\S]*))?$/i.exec(text.trim())          // «/btw pregunta»: una nota al margen, se puede hacer aunque Claude esté respondiendo
-    if (aside) { setSlash(null); if (aside[1]?.trim()) { chat.askBtw(aside[1], { project, model: current?.value ?? model }); setText('') } return }
+    if (aside) { setSlash(null); setText(''); if (aside[1]?.trim()) askBtw(aside[1]); else chat.openBtw(); return }          // «/btw» solo abre el panel
     const auth = /^\/(login|logout)$/.exec(text.trim())          // el inicio y cierre de sesión van en una terminal (el primero es interactivo)
     if (auth) { setText(''); setSlash(null); void useStore.getState().openAgent({ name: 'Claude Code', command: 'claude' }, ['auth', auth[1]], { cwd: project ?? undefined, title: `Claude Code · ${auth[1]}` }); return }
     if (text.trim() === '/clear') { setText(''); setSlash(null); chat.clear(); return }
@@ -196,9 +198,31 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
     window.api.settings.get(`chat.effort.${chat.agent}`).then((v) => { if (typeof v === 'string') setEffort(v as ChatEffort) }).catch(() => undefined)
   }, [chat.agent])          // los modelos de la cuenta del agente de la pestaña
 
+  // dictado por voz (Whisper dentro de la app): lo dicho se añade al final de la caja
+  // dictado por voz (Whisper dentro de la app): con cada pausa, lo dicho se añade al final de la caja
+  const appLang = useStore((s) => s.lang)
+  const [micLang, setMicLang] = useState<DictationLang>(appLang === 'en' ? 'en' : 'es')
+  useEffect(() => { void window.api.settings.get('dictation_lang').then((v) => { if (v === 'es' || v === 'en') setMicLang(v) }) }, [])
+  const nextMicLang = (): void => { const v = DICTATION_LANGS[(DICTATION_LANGS.indexOf(micLang) + 1) % DICTATION_LANGS.length]; setMicLang(v); void window.api.settings.set('dictation_lang', v) }
+  const dictation = useDictation(micLang, (spoken) => setText((v) => (v && !/\s$/.test(v) ? `${v} ${spoken}` : `${v}${spoken}`)), (message) => useStore.getState().toast(t('chat.micError', { message }), 'error'))
+  const mic = dictation.state
+  // vista de agentes: el saludo usa tu nombre
+  const [userName, setUserName] = useState('')
+  useEffect(() => { void window.api.window.userName().then(setUserName).catch(() => undefined) }, [])
+  const hero = hub && chat.messages.length === 0 && !chat.running          // sin mensajes: saludo y la caja en el centro
+  const askBtw = (question: string): void => chat.askBtw(question, { project, model: current?.value ?? model })
+
   return (
-    <aside data-chat-slot={slot} style={fill ? undefined : { width }} className={`flex flex-col overflow-hidden rounded-lg border border-line bg-panel ${fill ? 'min-w-0 flex-1' : 'shrink-0'}`}>
-      <div className="flex h-[28px] shrink-0 items-center bg-bg pr-1">
+    <>
+    <aside data-chat-slot={slot} onKeyDown={(e) => {          // Esc interrumpe la respuesta (como en Claude Code), salvo si hay una lista o un menú abierto: entonces Esc los cierra
+      if (e.key !== 'Escape' || !chat.running || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return
+      if (slash || picker || modes || attachMenu || plus || document.querySelector('[role="menu"], [role="dialog"]')) return
+      e.preventDefault(); chat.cancel()
+    }} style={fill ? undefined : { width }} className={`flex ${hub ? 'flex-row' : 'flex-col'} overflow-hidden rounded-lg border border-line bg-panel ${fill ? 'min-w-0 flex-1' : 'shrink-0'}`}>
+      {hub && <ChatSessions chat={chat} onNew={setPlus} />}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      {hub && <HubToolbar />}
+      <div className={`${hub ? 'hidden' : 'flex'} h-[28px] shrink-0 items-center bg-bg pr-1`}>
       {(
         <div className="flex min-w-0 flex-1 items-stretch justify-start gap-0 self-stretch overflow-x-auto [scrollbar-width:none]">
           {chat.tabs.map((x) => {
@@ -224,7 +248,7 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
           <IconButton title={t('chat.close')} onClick={() => (slot === 1 ? set({ chatSplit: false }) : set({ chatOpen: false }))}><MdClose size={15} /></IconButton>
         </div>
       </div>
-      <div ref={list} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden break-words px-4 py-3 [&_code]:break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_table]:block">
+      <div ref={list} className={`${hero ? 'hidden' : 'flex'} min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden break-words px-4 py-3 [&_code]:break-all [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_table]:block`}>
         {chat.messages.length === 0 && (
           <div className={`m-auto flex w-full flex-col items-center gap-3 ${fill ? 'max-w-[760px]' : ''}`}>
             <div className="text-center">
@@ -300,10 +324,21 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
           </div>
         ))}
         {chat.plans.map((p) => <ChatPlanCard key={p.id} plan={p.plan} onDecide={(d) => chat.planReply(p.id, d)} />)}
-        {chat.btw && <ChatBtwCard btw={chat.btw} onClose={chat.closeBtw} />}
         {chat.running && chat.permissions.length === 0 && chat.asks.length === 0 && chat.plans.length === 0 && <div className="text-[11px] text-muted">{t('chat.thinking')}</div>}
       </div>
+      {hero && (
+        <div className="flex flex-1 flex-col items-center justify-end gap-2 px-6 pb-8 text-center">
+          <div className="text-[26px] font-semibold text-text/90">{userName ? t('hub.greeting', { name: userName }) : t('hub.greetingNoName')}</div>
+          <div className="text-[12px] text-muted">{t('chat.buildSub')}</div>
+        </div>
+      )}
       <div className={`mx-auto w-full shrink-0 p-2 ${fill ? 'max-w-[760px]' : ''}`}>
+        {hero && (          // encima de la caja: dónde va a trabajar el agente
+          <div className="ml-3 flex w-fit items-center gap-3 rounded-t-lg border border-b-0 border-line bg-bg/60 px-3 py-1.5 text-[11.5px] text-muted">
+            <span className="flex items-center gap-1.5">{chat.agent === 'codex' ? <MdCode size={13} /> : <MdChatBubbleOutline size={12} />}{chat.agent === 'codex' ? 'Codex' : 'Claude'}</span>
+            {project && <span className="flex min-w-0 items-center gap-1.5" title={project}><MdOutlineFolderOpen size={13} className="shrink-0" /><span className="truncate">{basename(project)}</span></span>}
+          </div>
+        )}
         <div ref={composer} onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault() }} onDrop={(e) => { const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')); if (files.length) { e.preventDefault(); void attach(files) } }}
           className="flex flex-col overflow-hidden rounded-xl border border-accent/40 bg-panel transition-colors focus-within:border-accent/60">
           <input ref={fileInput} type="file" accept={IMAGE_TYPES.join(',')} multiple hidden onChange={(e) => { void attach([...(e.target.files ?? [])]); e.target.value = '' }} />
@@ -327,9 +362,18 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
             </div>
           )}
           <div className="relative">
-            <div ref={marks} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-transparent [scrollbar-gutter:stable]">{mentions(text)}</div>
+            <div ref={marks} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-transparent [scrollbar-gutter:stable] pr-14">{mentions(text)}</div>
           <textarea ref={input} rows={1} onPaste={(e) => { const files = [...e.clipboardData.items].filter((i) => i.kind === 'file' && i.type.startsWith('image/')).map((i) => i.getAsFile()).filter((f): f is File => !!f); if (files.length) { e.preventDefault(); void attach(files) } }} onScroll={(e) => { if (marks.current) marks.current.scrollTop = e.currentTarget.scrollTop }} value={text} onChange={(e) => onType(e.target.value)} onKeyDown={(e) => { if (recall(e)) return; if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } else if (e.key === 'Tab' && !e.shiftKey && !text && chat.suggestion) { e.preventDefault(); const s = chat.takeSuggestion(); if (s) onType(s) } else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); setMode(MODES[(MODES.findIndex((m) => m.id === mode) + 1) % MODES.length].id) } }} placeholder={chat.suggestion ? `${chat.suggestion}   ⇥ Tab` : t('chat.placeholder')}
-            className="relative block max-h-[140px] w-full resize-none bg-transparent px-3 pb-2 pt-2.5 text-[12px] leading-[1.35] text-text outline-none [scrollbar-gutter:stable] placeholder:text-muted" />
+            className="relative block max-h-[140px] w-full resize-none bg-transparent px-3 pb-2 pr-14 pt-2.5 text-[12px] leading-[1.35] text-text outline-none [scrollbar-gutter:stable] placeholder:text-muted" />
+            <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
+              <button onClick={nextMicLang} title={t('chat.micLang')}
+                className="no-drag grid h-[22px] min-w-[22px] place-items-center rounded-md px-1 text-[10px] font-semibold uppercase text-muted transition-colors hover:bg-ov/10 hover:text-text">{micLang}</button>
+              <button onClick={dictation.toggle}
+                title={mic.percent !== null ? t('chat.micDownloading', { n: String(mic.percent) }) : mic.recording ? t('chat.micStop') : mic.busy ? t('chat.micTranscribing') : t('chat.mic')}
+                className={`no-drag grid size-[22px] place-items-center rounded-md transition-colors ${mic.recording ? 'bg-danger/20 text-danger' : mic.busy ? 'animate-pulse text-accent' : 'text-muted hover:text-text'}`}>
+                {mic.percent !== null && (mic.recording || mic.busy > 0) ? <span className="text-[9px] font-semibold">{mic.percent}%</span> : mic.recording ? <MdMic size={15} className={mic.busy ? 'animate-pulse' : ''} /> : <MdMicNone size={15} />}
+              </button>
+            </div>
           </div>
           <div className="flex items-center py-1 pl-0.5 pr-1">
             <button title={t('chat.attach')} onClick={(e) => setAttachMenu(e.currentTarget.getBoundingClientRect())} className="no-drag grid size-[22px] place-items-center text-muted"><MdAdd size={17} /></button>
@@ -350,6 +394,8 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
           </div>
         </div>
       </div>
+      {hero && <div className="flex-[1.3]" />}
+      </div>
       {slash && <CommandPicker files={files} key={`${trigger}${group ?? ''}`} anchor={slash} trigger={trigger} commands={commands} items={items} initial={group} filter={trigger === '@' ? (/(?:^|\s)@(\S*)$/.exec(text)?.[1] ?? '') : text[0] === trigger ? text.slice(1) : ''} onPick={pick} onClose={() => setSlash(null)} />}
       {plus && <Menu anchor={plus} onClose={() => setPlus(null)} items={[
         { label: 'Claude', icon: <MdChatBubbleOutline size={14} />, onClick: () => chat.newTab() },
@@ -364,6 +410,8 @@ export function ChatPanel({ fill = false, slot = 0 }: { fill?: boolean; slot?: 0
       {modes && <ModePicker anchor={modes} mode={mode} onMode={setMode} onClose={() => setModes(null)} />}
       {picker && <ModelPicker anchor={picker} models={models} model={current?.value ?? model} effort={effort} onModel={(v) => { setModel(v); void window.api.settings.set(`chat.model.${chat.agent}`, v) }} onEffort={(v) => { setEffort(v); void window.api.settings.set(`chat.effort.${chat.agent}`, v) }} onClose={() => setPicker(null)} />}
     </aside>
+    {chat.btwOpen && <><div className="w-1 shrink-0" /><ChatBtwPanel btws={chat.btws} fill={fill} onAsk={askBtw} onClear={chat.clearBtw} onClose={() => { chat.closeBtw(); input.current?.focus() }} /></>}          {/* la pregunta al margen: una columna al lado */}
+    </>
   )
 }
 

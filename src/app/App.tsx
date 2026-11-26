@@ -3,6 +3,8 @@ import { AgentsArea, TerminalSection } from '@/features/agents/components/Agents
 import { confirmAsk, useConfirm } from '@/lib/confirm'
 import { AgentPicker, AddAgentDialog, BranchPicker, ConfirmDialog, GoLineDialog, ThemePicker, IconThemePicker, QuickOpenDialog, EditorSettingsDialog, ShellDialog, ShortcutsDialog, WorktreeDialog } from '@/components/dialogs'
 import { EditorArea, saveDoc } from '@/features/files/components/EditorArea'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { isHubLayout } from '@/lib/hub'
 import { Footer } from '@/components/Footer'
 import { Sidebar, TABS } from '@/components/Sidebar'
 import { Toasts } from '@/components/Toasts'
@@ -278,11 +280,11 @@ export function App() {
   const dragShell = useDrag(() => useStore.getState().shellHeight, (v) => s.set({ shellHeight: v }), 140, 700, true)
   if (!ready) return <div className="h-full bg-bg" />
   const Modal = s.modal ? MODALS[s.modal] : undefined
-  const full = s.editorFull && s.chatOpen && !!s.project          // «Ocupar todo»: el chat se estira; con un archivo abierto (o agentes o terminal) se reparte el ancho con ellos
+  const full = s.editorFull && s.chatOpen && !!s.project          // «Modo agentes»: el chat se estira; con un archivo abierto (o agentes o terminal) se reparte el ancho con ellos
   const alone = full && s.docs.length === 0 && s.panes.length === 0          // sin archivos ni agentes que mostrar (no sale «Elegir agente»): el chat ocupa todo el ancho; la terminal, si hay, sigue debajo
 
-  const right = s.sidebarSide === 'right'
-  // con «Ocupar todo» la zona de trabajo es una rejilla: chat | editor arriba y la terminal debajo, a todo el ancho de los dos (como en VSCode); el contenedor del centro se vuelve transparente (`contents`) para que sus hijos entren en la rejilla sin volver a montarse
+  const right = s.sidebarSide === 'right' || isHubLayout(s)          // en la vista de agentes el panel lateral va a la derecha, junto a la barra flotante
+  // con «Modo agentes» la zona de trabajo es una rejilla: chat | editor arriba y la terminal debajo, a todo el ancho de los dos (como en VSCode); el contenedor del centro se vuelve transparente (`contents`) para que sus hijos entren en la rejilla sin volver a montarse
   const col = (n: number): number => (right ? n : n + 1)          // las columnas del chat y del editor: la barra lateral ocupa la primera (izquierda) o la última (derecha)
   const chatAt = full ? { gridColumn: alone ? `${col(1)} / ${col(2) + 1}` : col(1), gridRow: 1 } : { order: 4 }
   const topAt = full ? { gridColumn: col(2), gridRow: 1 } : undefined
@@ -301,25 +303,23 @@ export function App() {
           <div style={topAt} className={`min-h-0 min-w-0 flex-1 ${alone ? 'hidden' : 'flex'}`}>
             {s.docs.length > 0 && s.panes.length === 0 ? (
               // sin agentes abiertos, el editor ocupa el espacio de «Elegir agente»
-              <div className="flex min-w-0 flex-1 flex-col"><EditorArea /></div>
+              <div className="flex min-w-0 flex-1 flex-col"><ErrorBoundary><EditorArea /></ErrorBoundary></div>
             ) : (
-              <>
-                <AgentsArea />
-              </>
+              <ErrorBoundary><AgentsArea /></ErrorBoundary>
             )}
           </div>
           {(s.shells.length > 0 || s.problemsOpen) && (
             <div style={termAt} className={full ? 'relative flex min-w-0 flex-col' : 'contents'}>
               {!s.shellMax && <Resizer direction="y" onDrag={dragShell} />}
-              <TerminalSection />
+              <ErrorBoundary><TerminalSection /></ErrorBoundary>
             </div>
           )}
         </div>
-        {s.chatOpen && s.project && (          // con «Ocupar todo» el chat va a la izquierda del editor y se reparten el ancho a medias; si no, un panel pequeño al lado
-          <div style={chatAt} className={`flex ${full ? 'min-h-0 min-w-0' : right ? 'flex-row-reverse' : ''}`}>          {/* sin «Ocupar todo» el divisor va en el borde que da al centro (con la barra a la derecha, el chat queda a la izquierda): así siempre queda el hueco entre los dos paneles */}
+        {s.chatOpen && s.project && (          // con «Modo agentes» el chat va a la izquierda del editor y se reparten el ancho a medias; si no, un panel pequeño al lado
+          <div style={chatAt} className={`flex ${full ? 'min-h-0 min-w-0' : right ? 'flex-row-reverse' : ''}`}>          {/* sin «Modo agentes» el divisor va en el borde que da al centro (con la barra a la derecha, el chat queda a la izquierda): así siempre queda el hueco entre los dos paneles */}
             {!full && <Resizer onDrag={dragChat} />}
-            <ChatPanel fill={full} />
-            {s.chatSplit && <><div className="w-1 shrink-0" /><ChatPanel fill={full} slot={1} /></>}          {/* el chat partido en 2: otra conversación al lado */}
+            <ErrorBoundary><ChatPanel fill={full} hub={isHubLayout(s)} /></ErrorBoundary>
+            {s.chatSplit && <><div className="w-1 shrink-0" /><ErrorBoundary><ChatPanel fill={full} slot={1} /></ErrorBoundary></>}          {/* el chat partido en 2: otra conversación al lado */}
             {full && !alone && <div className="w-1 shrink-0" />}          {/* el mismo hueco que deja el divisor: entre el chat y el editor */}
           </div>
         )}

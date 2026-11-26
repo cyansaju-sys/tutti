@@ -570,7 +570,7 @@ Los textos de la interfaz están en `src/shared/locales/es.json` y `en.json`; si
 
 **Panel de Problemas:** junto a la terminal, lista los conflictos de fusión sin resolver y los cambios sin guardar.
 
-**Chat con Claude y Codex:** el chat admite los dos agentes, con sus modelos y su sesión. *Partir el chat en 2* abre una segunda columna; un chat puede pasarle tareas al del otro agente. *Cuentas* muestra el correo de cada sesión. `/init` crea un `AGENTS.md`; con Codex también `/review`, `/new` y `/clear`. El ajuste *Ocupar todo* del editor divide el ancho en chat | editor al abrir un archivo.
+**Chat con Claude y Codex:** el chat admite los dos agentes, con sus modelos y su sesión. *Partir el chat en 2* abre una segunda columna; un chat puede pasarle tareas al del otro agente. *Cuentas* muestra el correo de cada sesión. `/init` crea un `AGENTS.md`; con Codex también `/review`, `/new` y `/clear`. El ajuste *Modo agentes* del editor hace que el chat ocupe la ventana (chats y configuración a la izquierda, Archivos y Cambios a la derecha) y divide el ancho en chat | editor al abrir un archivo.
 
 En los menús desplegables: `↑` `↓` mueven, `→` abre un submenú, `←` lo cierra, `Enter` elige y `Esc` cierra.
 

@@ -2,6 +2,19 @@
 
 Each version has its own `## x.y.z` section with sentences written for people who use the app. Tutti shows them once, the first time it opens after updating. This file is the English version of CHANGELOG.md.
 
+## 1.5.10
+
+### Changes
+
+- **Agents mode:** the "Take the full width" setting is now called **Agents mode** and changes how the chat looks. On the left are your chats, with **New session**, and the project **Customizations** (Agents, MCP servers, Skills, Hooks, Steering and Specs, each with its count), plus **See more** and **Settings**. In the middle, when the chat is empty, the box sits in the center with a greeting. On the right, the panel opens on **Files**, with tabs for **Changes** and a **+** for the other views. A small floating bar gives quick access to Files, Changes, the terminal, splitting the chat and closing it.
+- **Agent customizations:** clicking an item under Customizations opens a dialog with every section on the left and the chosen one on the right, with a note on what it is for. It includes the project roles (Agents), Powers, Hooks, Roadmap, Documentation and the instructions for agents.
+- **Redesigned MCP servers:** they are grouped by where they are saved (shared, this project or all projects). Each one shows its file, a **Test** button with its result, a switch to turn it on or off and a menu with Details, Edit and Remove.
+- **Voice dictation:** the microphone in the chat box turns your voice into text inside the app, without sending the audio to the internet. While you speak, each time you pause it types what you said. The **ES / EN** button picks the language. The first time, it downloads the speech model (about 130 MB).
+- **Side questions (`/btw`) in their own panel:** they open in a column next to the chat, with their thread of questions and answers and their own box to keep asking. The bin clears the thread and the X hides it.
+- **Esc stops the reply** in the chat, just like the stop button. The button now says so: **Stop (Esc)**.
+- **Changes with nothing pending:** instead of a lone line, a notice shows links to **Open files** and **Search in files**.
+- **Fix:** in large projects with the Git tab open, the window could stay black on startup. That no longer happens, and if a view ever fails, only that view shows a notice with **Retry** while the rest of the app keeps working.
+
 ## 1.5.9
 
 ### Changes

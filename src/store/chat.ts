@@ -34,11 +34,14 @@ interface ChatState {
   selection: EditorSelection | null
   asks: ChatAsk[]
   plans: ChatPlan[]
-  btw: ChatBtw | null
+  btws: ChatBtw[]          // el hilo de preguntas al margen (/btw) de esta conversación
+  btwOpen: boolean          // el panel «Pregunta al margen» está abierto
   suggestion: string | null      // el mensaje que Claude propone como siguiente: se ve de placeholder y Tab lo rellena
   takeSuggestion: () => string | null      // lo devuelve y lo quita
   askBtw: (question: string, opts: { project: string | null; model: string }) => void      // /btw: responde sin tocar la conversación, aunque otra respuesta siga en curso
-  closeBtw: () => void
+  openBtw: () => void
+  closeBtw: () => void      // oculta el panel sin borrar el hilo
+  clearBtw: () => void      // borra el hilo (y corta la respuesta en curso)
   planReply: (id: string, d: ChatPlanDecision) => void
   queued: string | null              // una petición hecha desde fuera del panel (la pestaña Tutti): el panel la envía con su modelo, esfuerzo y modo
   queuedShown: string | null         // lo que se ve en la conversación de la petición en cola, si no es todo el texto
@@ -63,7 +66,7 @@ type Live = Pick<ChatState, 'agent' | 'tabs' | 'tab' | 'messages' | 'session' | 
 /** Las pestañas con la activa al día. */
 const saved = (s: Live): ChatTab[] => s.tabs.map((t) => (t.id === s.tab ? { ...t, agent: s.agent, messages: s.messages, session: s.session, project: s.project, usage: s.usage } : t))
 /** Pone una pestaña como la activa (permisos y preguntas pendientes son de la anterior y no pasan). */
-const show = (tabs: ChatTab[], t: ChatTab): Partial<ChatState> => ({ tabs, tab: t.id, agent: t.agent, messages: t.messages, session: t.session, project: t.project, usage: t.usage, permissions: [], asks: [], plans: [], btw: null, suggestion: null })
+const show = (tabs: ChatTab[], t: ChatTab): Partial<ChatState> => ({ tabs, tab: t.id, agent: t.agent, messages: t.messages, session: t.session, project: t.project, usage: t.usage, permissions: [], asks: [], plans: [], btws: [], btwOpen: false, suggestion: null })
 let nextId = 1
 const add = (messages: ChatMessage[], m: Omit<ChatMessage, 'id'>): ChatMessage[] => [...messages, { ...m, id: nextId++ }]
 
@@ -83,7 +86,7 @@ const createChat = (slot: number) => create<ChatState>((set, get) => ({
     if (id === s.tab) set(show(rest, rest[Math.min(at, rest.length - 1)]))
     else set({ tabs: rest })
   },
-  messages: [], running: false, session: null, project: null, permissions: [], selection: null, asks: [], plans: [], btw: null, suggestion: null, queued: null, queuedShown: null,
+  messages: [], running: false, session: null, project: null, permissions: [], selection: null, asks: [], plans: [], btws: [], btwOpen: false, suggestion: null, queued: null, queuedShown: null,
   queue: (text, shown) => set({ queued: text, queuedShown: shown ?? null }),
   insert: null,
   insertText: (text) => set((s) => ({ insert: (s.insert ?? '') + text })),
@@ -109,13 +112,15 @@ const createChat = (slot: number) => create<ChatState>((set, get) => ({
   askBtw: (question, opts) => {
     const q = question.trim()
     if (!q) return
-    const prev = get().btw
-    if (prev && !prev.done) void window.api.chat.btwCancel(prev.id)          // una a la vez: la nueva sustituye a la anterior
+    const prev = get().btws.find((b) => !b.done)
+    if (prev) void window.api.chat.btwCancel(prev.id)          // una a la vez: la nueva corta la que seguía respondiendo
     const id = `b${nextId++}`
-    set({ btw: { id, question: q, answer: '', done: false } })
+    set((st) => ({ btwOpen: true, btws: [...st.btws.map((b) => (b.done ? b : { ...b, done: true })), { id, question: q, answer: '', done: false }] }))
     void window.api.chat.btw({ slot, id, question: q, project: opts.project, session: get().session, model: opts.model })
   },
-  closeBtw: () => { const b = get().btw; if (b && !b.done) void window.api.chat.btwCancel(b.id); set({ btw: null }) },
+  openBtw: () => set({ btwOpen: true }),
+  closeBtw: () => set({ btwOpen: false }),          // se oculta; el hilo sigue ahí al volver a abrirlo
+  clearBtw: () => { const b = get().btws.find((x) => !x.done); if (b) void window.api.chat.btwCancel(b.id); set({ btws: [] }) },
   planReply: (id, d) => { set((s) => ({ plans: s.plans.filter((p) => p.id !== id) })); void window.api.chat.planReply(id, d, slot) },
   takeSuggestion: () => { const text = get().suggestion; if (text) set({ suggestion: null }); return text },
   cancel: () => { void window.api.chat.cancel(slot) },
@@ -162,9 +167,8 @@ const onEvent = (ev: ChatEvent & { slot?: number }): void => {
     case 'suggestion': store.setState({ suggestion: e.text }); break
     case 'plan': store.setState({ plans: [...s.plans, { id: e.id, plan: e.plan }] }); break
     case 'btw': {
-      const b = s.btw
-      if (!b || b.id !== e.id) break
-      store.setState({ btw: { ...b, answer: b.answer + (e.text ?? ''), done: b.done || !!e.done, error: e.error ?? b.error } })
+      if (!s.btws.some((b) => b.id === e.id)) break
+      store.setState({ btws: s.btws.map((b) => (b.id === e.id ? { ...b, answer: b.answer + (e.text ?? ''), done: b.done || !!e.done, error: e.error ?? b.error } : b)) })
       break
     }
     case 'tool': store.setState({ messages: add(s.messages, { role: 'tool', text: e.name, detail: e.input, toolId: e.id, body: e.body, file: e.file, parent: e.parent, sub: e.sub }) }); break

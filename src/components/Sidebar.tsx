@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import type { MsgKey } from '@/shared/i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MdAdd, MdOutlineSettings } from 'react-icons/md'
-import { Menu } from '@/components/Menu'
+import { Menu, type MenuItem } from '@/components/Menu'
 import { useT } from '@/lib/i18n'
 import { sidebarIcon } from '@/lib/icons'
 import { AppIcon } from './AppIcon'
@@ -15,6 +15,8 @@ import { SearchView } from '@/features/search/views/SearchView'
 import { TuttiView } from '@/features/tutti/views/TuttiView'
 import { UsageView } from '@/features/usage/views/UsageView'
 import { bindingOf, formatCombo } from '@/lib/keybindings'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { isHubLayout } from '@/lib/hub'
 
 export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: string }> = [
   { id: 'files', icon: 'files', titleKey: 'tab.files', key: 'E' },
@@ -27,6 +29,27 @@ export const TABS: Array<{ id: SidebarTab; icon: string; titleKey: MsgKey; key: 
 ]
 
 const ORDER_KEY = 'sidebar_order'
+
+/** El menú del engranaje (tema, idioma, editor, terminal, atajos, lado de la barra): también se abre desde la columna de la vista de agentes. */
+export function settingsMenuItems(t: ReturnType<typeof useT>): MenuItem[] {
+  const { set, sysAccent, setSysAccent, langPref, setLang, sidebarSide: side, setSidebarSide: setSide } = useStore.getState()
+  return [
+          { label: t('theme.group'), submenu: [
+            { label: t('theme.color'), onClick: () => set({ modal: 'theme' }) },
+            { label: t('icons.title'), onClick: () => set({ modal: 'iconTheme' }) },
+            { label: t('theme.accent'), checked: sysAccent, onClick: () => void setSysAccent(!sysAccent) }
+          ] },
+          { label: t('lang.title'), detail: t(`lang.s.${langPref}`), submenu: [
+            { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },
+            { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
+            { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
+          ] },
+          { label: t('editor.title'), onClick: () => set({ modal: 'editorSettings' }) },
+          { label: t('shell.title'), onClick: () => set({ modal: 'shell' }) },
+          { label: t('title.shortcuts'), onClick: () => useStore.getState().openShortcuts() },
+          { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), onClick: () => setSide(side === 'left' ? 'right' : 'left') }
+  ]
+}
 
 /** Las pestañas en el orden guardado; las que no aparezcan en él (p. ej. una nueva) van al final en su orden de siempre. */
 const ordered = (ids: string[]): typeof TABS => [...ids.flatMap((id) => TABS.filter((x) => x.id === id)), ...TABS.filter((x) => !ids.includes(x.id))]
@@ -54,6 +77,7 @@ export function Sidebar() {
   const [dragged, setDragged] = useState<SidebarTab | null>(null)
   const [over, setOver] = useState<SidebarTab | null>(null)
   const tabs = useMemo(() => ordered(order), [order])
+  const hub = useStore(isHubLayout)
   useEffect(() => { void window.api.settings.get(ORDER_KEY).then((v) => { if (Array.isArray(v)) setOrder(v.filter((x): x is string => typeof x === 'string')) }) }, [])
 
   // suelta `dragged` en el lugar de `target`
@@ -67,9 +91,10 @@ export function Sidebar() {
     setDragged(null); setOver(null)
   }
 
+  if (hub && !open) return null          // vista de agentes: los apartados están en la columna del chat; aquí solo se ve el que se abra
   return (
-    <div style={{ width: open ? width + 48 : 48 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', side === 'right' && 'flex-row-reverse', !open && (side === 'right' ? 'ml-1.5' : 'mr-1.5'))}>
-      <div className={clsx('flex w-12 shrink-0 flex-col items-center gap-1 border-line p-0.5', side === 'right' ? 'border-l' : 'border-r')}>
+    <div style={{ width: hub ? width : open ? width + 48 : 48 }} className={clsx('flex shrink-0 overflow-hidden rounded-lg border border-line bg-panel', side === 'right' && 'flex-row-reverse', !open && (side === 'right' ? 'ml-1.5' : 'mr-1.5'))}>
+      <div className={clsx('flex w-12 shrink-0 flex-col items-center gap-1 border-line p-0.5', side === 'right' ? 'border-l' : 'border-r', hub && 'hidden')}>
         {tabs.map((tab_) => (
           <button
             key={tab_.id}
@@ -100,26 +125,12 @@ export function Sidebar() {
         </button>
       </div>
       {menu && (
-        <Menu beside={side === 'left' ? 'right' : 'left'} width={230} anchor={menu} onClose={() => setMenu(null)} items={[
-          { label: t('theme.group'), submenu: [
-            { label: t('theme.color'), onClick: () => set({ modal: 'theme' }) },
-            { label: t('icons.title'), onClick: () => set({ modal: 'iconTheme' }) },
-            { label: t('theme.accent'), checked: sysAccent, onClick: () => void setSysAccent(!sysAccent) }
-          ] },
-          { label: t('lang.title'), detail: t(`lang.s.${langPref}`), submenu: [
-            { label: t('lang.auto'), checked: langPref === 'auto', onClick: () => setLang('auto') },
-            { label: t('lang.es'), checked: langPref === 'es', onClick: () => setLang('es') },
-            { label: t('lang.en'), checked: langPref === 'en', onClick: () => setLang('en') }
-          ] },
-          { label: t('editor.title'), onClick: () => set({ modal: 'editorSettings' }) },
-          { label: t('shell.title'), onClick: () => set({ modal: 'shell' }) },
-          { label: t('title.shortcuts'), onClick: () => useStore.getState().openShortcuts() },
-          { label: t(side === 'left' ? 'sidebar.toRight' : 'sidebar.toLeft'), onClick: () => setSide(side === 'left' ? 'right' : 'left') }
-        ]} />
+        <Menu beside={side === 'left' ? 'right' : 'left'} width={230} anchor={menu} onClose={() => setMenu(null)} items={settingsMenuItems(t)} />
       )}
-      {open && <div className="flex min-w-0 flex-1 flex-col overflow-hidden pt-1.5">
-        <div className="flex items-center justify-between pb-1 pr-2">
-          <h3 className="truncate px-3.5 pb-1 pt-0.5 text-[12px] font-medium text-muted/75">{t(`tt.${tab}` as MsgKey)}</h3>
+      {open && <div className={clsx('flex min-w-0 flex-1 flex-col overflow-hidden', !hub && 'pt-1.5')}>
+        {hub && <HubTabs tab={tab} />}
+        <div className={clsx('flex items-center justify-between pb-1 pr-2', hub && tab !== 'powers' && 'hidden')}>
+          <h3 className={clsx('truncate px-3.5 pb-1 pt-0.5 text-[12px] font-medium text-muted/75', hub && 'invisible')}>{t(`tt.${tab}` as MsgKey)}</h3>
           {tab === 'powers' && (
             <button title={t('powers.add')} onClick={() => powers.current?.add()}
               className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-accent">
@@ -128,6 +139,7 @@ export function Sidebar() {
           )}
         </div>
         <div className="min-h-0 flex-1">
+        <ErrorBoundary resetKey={tab}>
         {tab === 'files' && <FilesView />}
         {tab === 'search' && <SearchView />}
         {tab === 'agents' && <AgentsView />}
@@ -135,8 +147,31 @@ export function Sidebar() {
         {tab === 'tutti' && <TuttiView />}
         {tab === 'ai' && <UsageView />}
         {tab === 'powers' && <PowersView ref={powers} />}
+        </ErrorBoundary>
         </div>
       </div>}
+    </div>
+  )
+}
+
+/** Vista de agentes: el panel lateral lleva pestañas (Archivos, Cambios y el apartado abierto) y un «+» para los demás. */
+const HUB_TABS: SidebarTab[] = ['files', 'git']
+function HubTabs({ tab }: { tab: SidebarTab }) {
+  const t = useT()
+  const set = useStore((s) => s.set)
+  const [more, setMore] = useState<DOMRect | null>(null)
+  const shown = HUB_TABS.includes(tab) ? HUB_TABS : [...HUB_TABS, tab]
+  const label = (id: SidebarTab): string => (id === 'git' ? t('hub.changes') : id === 'files' ? t('hub.files') : t(TABS.find((x) => x.id === id)!.titleKey))
+  return (
+    <div className="flex h-[34px] shrink-0 items-stretch gap-0.5 border-b border-line px-1.5">
+      {shown.map((id) => (
+        <button key={id} onClick={() => set({ tab: id })}
+          className={clsx('flex items-center gap-1.5 border-b-2 px-2 text-[12px] transition-colors', tab === id ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text')}>
+          <AppIcon src={sidebarIcon(TABS.find((x) => x.id === id)!.icon)} className="size-4" />{label(id)}
+        </button>
+      ))}
+      <button title={t('hub.more')} onClick={(e) => setMore(e.currentTarget.getBoundingClientRect())} className="my-auto grid size-6 place-items-center rounded-md text-muted transition-colors hover:bg-accent-bg hover:text-text"><MdAdd size={16} /></button>
+      {more && <Menu anchor={more} width={200} onClose={() => setMore(null)} items={TABS.filter((x) => !shown.includes(x.id)).map((x) => ({ label: t(x.titleKey), icon: <AppIcon src={sidebarIcon(x.icon)} className="size-4" />, onClick: () => set({ tab: x.id }) }))} />}
     </div>
   )
 }

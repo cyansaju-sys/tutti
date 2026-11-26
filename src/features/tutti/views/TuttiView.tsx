@@ -25,12 +25,19 @@ type Kind = 'hooks' | 'steering' | 'skills' | 'docs'
 
 /** Acordeón: solo una sección abierta a la vez (se recuerda cuál); el resto se queda en su cabecera, así la columna no necesita scroll. */
 const OPEN_KEY = 'tutti.tutti.open'
-const Accordion = createContext<{ open: string | null; setOpen: (id: string | null) => void }>({ open: null, setOpen: () => {} })
+const Accordion = createContext<{ open: string | null; setOpen: (id: string | null) => void; only?: string }>({ open: null, setOpen: () => {} })          // only: se pinta solo esa sección (el diálogo de personalización)
 
 /** Sección del acordeón: el título con una flecha y, a la derecha, el botón + para añadir. La abierta ocupa el alto que sobra y hace scroll por dentro. */
 function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title: string; count?: number; onAdd?: () => void; addTip?: string; children: React.ReactNode }) {
-  const { open, setOpen } = useContext(Accordion)
-  const isOpen = open === id
+  const { open, setOpen, only } = useContext(Accordion)
+  const isOpen = only ? only === id : open === id
+  if (only && only !== id) return null
+  if (only) return (          // sola en el diálogo: sin cabecera de acordeón (el título lo pone el diálogo), solo su botón de añadir
+    <section className="flex min-h-0 flex-1 flex-col">
+      {onAdd && <button onClick={onAdd} className="mb-2 flex items-center gap-1 self-end rounded-md border border-line px-2 py-1 text-[11.5px] text-text transition-colors hover:bg-accent-bg"><MdAdd size={14} />{addTip}</button>}
+      <div className="sect-scroll min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </section>
+  )
   return (
     <section className={clsx(isOpen ? 'flex min-h-0 flex-1 flex-col pb-1' : 'shrink-0')}>
       <div className="flex h-7 shrink-0 items-center">
@@ -52,7 +59,7 @@ function Fold({ id, title, count, onAdd, addTip, children }: { id: string; title
 }
 
 /** Lo que hay en la carpeta .tutti del proyecto (specs, hooks, steering, skills) y los servidores MCP instalados, cada sección con su +. */
-export function TuttiView() {
+export function TuttiView({ only }: { only?: string } = {}) {
   const t = useT()
   const project = useStore((s) => s.project)
   const openDoc = useStore((s) => s.openDoc)
@@ -333,7 +340,7 @@ export function TuttiView() {
   }
 
   return (
-    <Accordion.Provider value={{ open: openSection, setOpen }}>
+    <Accordion.Provider value={{ open: openSection, setOpen, only }}>
     <div className="flex h-full flex-col px-2 pb-2">
       {Section({ kind: 'docs', title: t('tutti.docs') })}
       <Fold id="roadmap" title={t('tutti.roadmap')} onAdd={roadmap && !roadmap.exists ? () => void createRoadmap(project, lang, openDoc).then((e) => { if (e) toast(e, 'error'); void refresh() }) : undefined} addTip={t('tutti.add.roadmap')}>

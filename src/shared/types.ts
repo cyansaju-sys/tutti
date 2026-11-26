@@ -363,6 +363,7 @@ export interface Api {
     isEmpty(): Promise<boolean>
     startProject(): Promise<StartProject | null>      // ruta pasada en la línea de comandos (`tutti .`, `tutti archivo.ts`)
     onMaximized(cb: (maximized: boolean) => void): () => void
+    userName(): Promise<string>      // el nombre para saludar: el `user.name` de git o, si no hay, el usuario del sistema
   }
 }
 
