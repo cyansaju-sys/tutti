@@ -18,7 +18,8 @@ import { isHubLayout } from '@/lib/hub'
 
 const dirname = (p: string): string => p.replace(/[\\/][^\\/]*$/, '')
 
-interface Row { entry: DirEntry; depth: number }
+/** Una fila del árbol. `chain`: carpetas compactadas en una sola fila («a / b»), porque cada una solo contiene la siguiente; `entry` es la última. */
+interface Row { entry: DirEntry; depth: number; chain?: DirEntry[] }
 /** Acción pendiente: crear y renombrar piden el nombre dentro del árbol; borrar pide confirmación en un diálogo. */
 type Ask =
   | { kind: 'create'; dir: string; isDir: boolean }
@@ -53,13 +54,14 @@ export function FilesView() {
   const creating = ask?.kind === 'create' ? ask : null
   const renaming = ask?.kind === 'rename' ? ask.entry.path : null
 
-  const load = useCallback(async (dir: string) => {
+  const load = useCallback(async (dir: string): Promise<DirEntry[]> => {
     const entries = await window.api.fs.list(dir)
     setChildren((c) => ({ ...c, [dir]: entries }))
     if (project) {
       const hit = await window.api.git.ignored(project, entries.map((e) => e.path))
       setIgnored((prev) => new Set([...prev, ...hit]))
     }
+    return entries
   }, [project])
 
   // al cambiar de proyecto se empieza de cero
@@ -90,25 +92,43 @@ export function FilesView() {
     return { map, tone, staged }
   }, [project, git])
 
+  const creatingIn = creating?.dir ?? null
   const rows = useMemo(() => {
     const out: Row[] = []
     const walk = (dir: string, depth: number): void => {
-      for (const entry of children[dir] ?? []) {
-        out.push({ entry, depth })
+      for (const first of children[dir] ?? []) {
+        // carpetas compactas: si una carpeta solo contiene otra carpeta (y nada más), van juntas en una fila, como «articulos / mantenimientos»
+        let entry = first
+        const chain = [first]
+        for (;;) {
+          if (entry.path === creatingIn) break          // creando dentro de esta carpeta: la cadena se corta aquí para que el campo del nombre salga dentro, junto a lo que ya tiene
+          const kids = entry.isDir ? children[entry.path] : undefined
+          if (!kids || kids.length !== 1 || !kids[0].isDir) break
+          entry = kids[0]; chain.push(entry)
+        }
+        out.push({ entry, depth, ...(chain.length > 1 && { chain }) })
         if (entry.isDir && expanded.has(entry.path)) walk(entry.path, depth + 1)
       }
     }
     if (project) walk(project, 0)
     return out
-  }, [project, children, expanded])
+  }, [project, children, expanded, creatingIn])
 
   const toggle = (path: string): void => {
     setExpanded((prev) => {
       const next = new Set(prev)
       if (next.has(path)) next.delete(path)
-      else { next.add(path); void load(path) }
+      else { next.add(path); void expandChain(path) }
       return next
     })
+  }
+  /** Al abrir una carpeta que solo contiene otra carpeta, se abre también esa (y así hasta que haya más contenido): se ven compactadas en una fila. */
+  const expandChain = async (path: string): Promise<void> => {
+    const kids = await load(path)
+    if (kids.length !== 1 || !kids[0].isDir) return
+    const only = kids[0].path
+    setExpanded((prev) => (prev.has(only) ? prev : new Set(prev).add(only)))
+    await expandChain(only)
   }
 
   const activate = (row: Row): void => {
@@ -203,9 +223,9 @@ export function FilesView() {
 
   /** Escribe la ruta en el agente activo (sin Enter, para que el usuario siga escribiendo). */
   const sendToAgent = (entries: DirEntry[]): void => {
-    const { panes, activePane, chatOpen } = useStore.getState()
+    const { panes, activePane, chatOpen, editorFull } = useStore.getState()
     // con el chat abierto, la referencia va a su caja (@ruta) en vez de a un agente de terminal
-    if (chatOpen && project) { useChat.getState().insertText(entries.map((e) => `@${toPosix(relative(project, e.path))}${e.isDir ? '/' : ''}`).join(' ') + ' '); return }
+    if (chatOpen && editorFull && project) { useChat.getState().insertText(entries.map((e) => `@${toPosix(relative(project, e.path))}${e.isDir ? '/' : ''}`).join(' ') + ' '); return }
     const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
     if (!pane) { toast(t('fs.noAgent'), 'error'); return }
     window.api.pty.write(pane.id, entries.map((e) => agentRef(pane.command, toPosix(relative(project!, e.path)))).join(' ') + ' ')
@@ -237,6 +257,23 @@ export function FilesView() {
     }
   }
 
+  // en una fila compactada («a / b / c»), el tramo marcado con ← →: null es el último (donde actúan las acciones de siempre)
+  // va atado a la fila: al pasar a otra, vuelve a marcarse la última
+  const [segOf, setSegOf] = useState<{ row: string; i: number } | null>(null)
+  const seg = segOf && segOf.row === cursor ? segOf.i : null
+  const setSeg = (i: number | null): void => setSegOf(i === null || !cursor ? null : { row: cursor, i })
+  // al abrir una carpeta que se compacta, su fila pasa a llamarse por la última de la cadena: el resaltado la sigue y deja marcado el tramo que era
+  useEffect(() => {
+    if (!cursor || rows.some((r) => r.entry.path === cursor)) return
+    const row = rows.find((r) => r.chain?.some((c) => c.path === cursor))
+    if (!row) return
+    const i = row.chain!.findIndex((c) => c.path === cursor)
+    setCursor(row.entry.path)
+    setSegOf(i === row.chain!.length - 1 ? null : { row: row.entry.path, i })
+  }, [rows, cursor])
+  /** La carpeta marcada de una fila: el tramo elegido con ← → o, si no, la fila entera (su última carpeta). */
+  const targetOf = (r: Row): DirEntry => (r.chain && seg !== null && r.entry.path === cursor ? r.chain[seg] : r.entry)
+
   useEffect(() => {
     if (!byKey.current || !cursor) return
     byKey.current = false
@@ -244,13 +281,13 @@ export function FilesView() {
     el?.scrollIntoView({ block: 'nearest' })
   }, [cursor, rows])
 
-  // navegación con el teclado: ↑↓ mueven la selección, → abre, ← cierra o sube, Enter abre, Esc devuelve el teclado a la terminal
+  // navegación con el teclado: ↑↓ mueven la selección, → abre, ← cierra o sube (en una fila compactada, ← → pasan antes por sus tramos), Enter abre, Esc devuelve el teclado a la terminal
   const onKeyDown = (e: React.KeyboardEvent): void => {
     const k = e.key.toLowerCase()
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (k === 'c' || k === 'x' || k === 'v')) {          // Ctrl+C / Ctrl+X / Ctrl+V sobre el árbol
       const cur = rows.find((r) => r.entry.path === cursor)
-      if (k === 'v') { void pasteInto(cur ? pasteDirOf(cur.entry) : project!); e.preventDefault(); return }
-      const entries = selected.size > 0 ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : cur ? [cur.entry] : []
+      if (k === 'v') { void pasteInto(cur ? pasteDirOf(targetOf(cur)) : project!); e.preventDefault(); return }
+      const entries = selected.size > 0 ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : cur ? [targetOf(cur)] : []
       if (entries.length) { clipEntries(entries, k === 'x'); e.preventDefault() }
       return
     }
@@ -259,7 +296,7 @@ export function FilesView() {
     if (menuKey) {          // la tecla de menú abre el de la fila marcada (la que sigue al ratón), no la que tenga el foco del navegador
       const target = rows.find((r) => r.entry.path === cursor)
       const el = target && [...e.currentTarget.querySelectorAll('button[title]')].find((b) => b.getAttribute('title') === target.entry.path)
-      if (target && el) { const r = el.getBoundingClientRect(); setMenu({ entry: target.entry, anchor: new DOMRect(r.left + 24 + 190, r.bottom, 0, 0) }); e.preventDefault() }
+      if (target && el) { const r = el.getBoundingClientRect(); setMenu({ entry: targetOf(target), anchor: new DOMRect(r.left + 24 + 190, r.bottom, 0, 0) }); e.preventDefault() }
       return
     }
     const i = rows.findIndex((r) => r.entry.path === cursor)
@@ -272,7 +309,7 @@ export function FilesView() {
     }
     if (e.shiftKey) return
     if (e.key === 'Delete' && (selected.size > 0 || current)) {
-      const entries = selected.size > 0 ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : [current.entry]
+      const entries = selected.size > 0 ? rows.filter((r) => selected.has(r.entry.path)).map((r) => r.entry) : [targetOf(current)]
       setAsk({ kind: 'delete', entries }); e.preventDefault(); return
     }
     if (e.key === 'Escape' && selected.size > 0) { clearSelection(); e.preventDefault(); return }
@@ -281,10 +318,12 @@ export function FilesView() {
       case 'ArrowDown': go(i + 1); break
       case 'ArrowUp': go(i < 0 ? 0 : i - 1); break
       case 'ArrowRight':
+        if (current?.chain && seg !== null) { setSeg(seg + 1 >= current.chain.length - 1 ? null : seg + 1); break }          // fila compactada: al tramo siguiente
         if (current?.entry.isDir && !expanded.has(current.entry.path)) toggle(current.entry.path)
         else if (current?.entry.isDir) go(i + 1)
         break
       case 'ArrowLeft':
+        if (current?.chain && (seg ?? current.chain.length - 1) > 0) { setSeg((seg ?? current.chain.length - 1) - 1); break }          // fila compactada: al tramo anterior
         if (current?.entry.isDir && expanded.has(current.entry.path)) toggle(current.entry.path)
         else if (current) { const parent = rows.slice(0, i).reverse().find((r) => r.depth < current.depth); if (parent) setCursor(parent.entry.path) }
         break
@@ -367,7 +406,15 @@ export function FilesView() {
             >
               {entry.isDir ? <MdChevronRight size={14} className={clsx('-mr-0.5 shrink-0 text-muted transition-transform', expanded.has(entry.path) && 'rotate-90')} /> : <span className="-mr-0.5 w-3.5 shrink-0" />}
               <FileIcon name={entry.name} dir={entry.isDir} open={expanded.has(entry.path)} />
-              <span className="min-w-0 flex-1 truncate" style={{ color }}>{entry.name}</span>
+              <span className="min-w-0 flex-1 truncate" style={{ color }}>{row.chain ? row.chain.map((c, i) => <Fragment key={c.path}>{i > 0 && <span className="px-0.5 text-muted/60">/</span>}
+                {/* cada tramo se subraya al pasar el ratón; en la fila marcada, el último (donde actúan las acciones). Clic derecho: el menú de ese tramo */}
+                <span onContextMenu={(e) => {
+                  if (!(e.nativeEvent as PointerEvent).pointerType || c.path === entry.path) return
+                  e.preventDefault(); e.stopPropagation()
+                  setCursor(entry.path)
+                  setMenu({ entry: c, anchor: new DOMRect(e.clientX + 190, e.clientY, 0, 0) })
+                }} className={clsx('underline-offset-[3px] hover:underline', cursor === entry.path && i === (seg ?? row.chain!.length - 1) && 'underline decoration-accent')}>{c.name}</span>
+              </Fragment>) : entry.name}</span>
               {code && <span className={clsx('shrink-0 font-semibold', code === '●' ? 'text-[9px]' : 'text-[11px]')} style={{ color }}>{code}</span>}
             </button>}
             {creating && creating.dir === entry.path && <NameInput isDir={creating.isDir} depth={depth + 1} onOk={(v) => void confirmAsk(v)} onCancel={() => setAsk(null)} />}
@@ -495,7 +542,7 @@ async function chooseProject(setProject: (p: string | null) => void): Promise<vo
 }
 
 /** Pide el objetivo común y lanza todos los roles en el orden de sus dependencias (cada uno con su agente y modelo). */
-function PlayRolesDialog({ project, onClose }: { project: string; onClose: () => void }) {
+export function PlayRolesDialog({ project, onClose }: { project: string; onClose: () => void }) {
   const t = useT()
   const toast = useStore((s) => s.toast)
   const [goal, setGoal] = useState('')

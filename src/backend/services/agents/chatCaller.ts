@@ -12,6 +12,6 @@ export function registerChat(id: string, cwd: string, command = 'claude'): void 
 }
 export const unregisterChat = (id: string): void => { chats.delete(id) }
 export const chatMeta = (id: string): Meta | undefined => chats.get(id)
-/** El `slot` (columna) de un chat a partir de su id: `chat<ventana + slot × 100000>`. */
+/** El canal (`slot`) de un chat a partir de su id: `chat<ventana + canal × 100000>`. El canal lleva la columna en el bit bajo y la conversación en el resto. */
 export const slotOf = (id: string): number => Math.floor(Number(id.replace('chat', '')) / 100_000)
 export const isChat = (id: string): boolean => chats.has(id)

@@ -15,8 +15,10 @@ export interface ChatPlan { id: string; plan: string }
 /** La pregunta al margen (/btw) y su respuesta, que no forma parte de la conversación. */
 export interface ChatBtw { id: string; question: string; answer: string; done: boolean; error?: string }
 
+/** Lo de cada conversación. La activa lo tiene en los campos del chat; las demás, en su pestaña, y siguen respondiendo en segundo plano (chats en paralelo). */
+export interface ChatConv { agent: 'claude' | 'codex'; messages: ChatMessage[]; session: string | null; project: string | null; usage: ChatUsage; running: boolean; permissions: ChatPermission[]; asks: ChatAsk[]; plans: ChatPlan[]; btws: ChatBtw[]; btwOpen: boolean; suggestion: string | null }
 /** Una conversación abierta como pestaña; la activa vive en los campos de arriba y aquí queda su última copia. */
-export interface ChatTab { agent: 'claude' | 'codex'; id: number; messages: ChatMessage[]; session: string | null; project: string | null; usage: ChatUsage }
+export interface ChatTab extends ChatConv { id: number }
 
 interface ChatState {
   tabs: ChatTab[]
@@ -61,12 +63,20 @@ interface ChatState {
 
 const ZERO: ChatUsage = { cost: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
 let nextTab = 2
-const blank = (id: number, project: string | null, agent: 'claude' | 'codex' = 'claude'): ChatTab => ({ agent, id, messages: [], session: null, project, usage: ZERO })
-type Live = Pick<ChatState, 'agent' | 'tabs' | 'tab' | 'messages' | 'session' | 'project' | 'usage'>
+const blank = (id: number, project: string | null, agent: 'claude' | 'codex' = 'claude'): ChatTab => ({ id, agent, messages: [], session: null, project, usage: ZERO, running: false, permissions: [], asks: [], plans: [], btws: [], btwOpen: false, suggestion: null })
+/** Lo de la conversación activa, sacado de los campos del chat. */
+const conv = (s: ChatConv): ChatConv => ({ agent: s.agent, messages: s.messages, session: s.session, project: s.project, usage: s.usage, running: s.running, permissions: s.permissions, asks: s.asks, plans: s.plans, btws: s.btws, btwOpen: s.btwOpen, suggestion: s.suggestion })
 /** Las pestañas con la activa al día. */
-const saved = (s: Live): ChatTab[] => s.tabs.map((t) => (t.id === s.tab ? { ...t, agent: s.agent, messages: s.messages, session: s.session, project: s.project, usage: s.usage } : t))
-/** Pone una pestaña como la activa (permisos y preguntas pendientes son de la anterior y no pasan). */
-const show = (tabs: ChatTab[], t: ChatTab): Partial<ChatState> => ({ tabs, tab: t.id, agent: t.agent, messages: t.messages, session: t.session, project: t.project, usage: t.usage, permissions: [], asks: [], plans: [], btws: [], btwOpen: false, suggestion: null })
+const saved = (s: ChatState): ChatTab[] => s.tabs.map((t) => (t.id === s.tab ? { ...conv(s), id: t.id } : t))
+/** Pone una pestaña como la activa: sus campos pasan a los del chat. */
+const show = (tabs: ChatTab[], t: ChatTab): Partial<ChatState> => ({ tabs, tab: t.id, ...conv(t) })
+/**
+ * El canal de una conversación hacia el backend: cada una tiene el suyo (el backend la trata como un chat aparte), así varias responden a la vez.
+ * Se codifica la columna (`slot`) en el bit bajo para que el backend y la delegación sepan a qué columna va.
+ */
+export const chatChannel = (slot: number, tab: number): number => tab * 2 + slot
+/** Lo de una conversación por su id, sea la activa o no. */
+export const tabConv = (s: ChatState, id: number): ChatConv | undefined => (id === s.tab ? conv(s) : s.tabs.find((t) => t.id === id))
 let nextId = 1
 const add = (messages: ChatMessage[], m: Omit<ChatMessage, 'id'>): ChatMessage[] => [...messages, { ...m, id: nextId++ }]
 
@@ -75,12 +85,12 @@ const add = (messages: ChatMessage[], m: Omit<ChatMessage, 'id'>): ChatMessage[]
 const createChat = (slot: number) => create<ChatState>((set, get) => ({
   tabs: [blank(1, null)], tab: 1, agent: 'claude',
   setAgent: (agent) => { const s = get(); if (!s.running && !s.messages.length) set({ agent, session: null }) },
-  newTab: (agent = 'claude') => { const s = get(); if (s.running) return; const t = blank(nextTab++, s.project, agent); set(show([...saved(s), t], t)) },
-  switchTab: (id) => { const s = get(); if (s.running || id === s.tab) return; const tabs = saved(s); const t = tabs.find((x) => x.id === id); if (t) set(show(tabs, t)) },
+  newTab: (agent = 'claude') => { const s = get(); const t = blank(nextTab++, s.project, agent); set(show([...saved(s), t], t)) },
+  switchTab: (id) => { const s = get(); if (id === s.tab) return; const tabs = saved(s); const t = tabs.find((x) => x.id === id); if (t) set(show(tabs, t)) },
   closeTab: (id) => {
     const s = get()
-    if (s.running && id === s.tab) return
     const tabs = saved(s), at = tabs.findIndex((x) => x.id === id)
+    if (tabs[at]?.running) void window.api.chat.cancel(chatChannel(slot, id))          // cerrar una conversación que sigue respondiendo la corta
     const rest = tabs.filter((x) => x.id !== id)
     if (!rest.length) { const t = blank(nextTab++, s.project); set(show([t], t)); return }
     if (id === s.tab) set(show(rest, rest[Math.min(at, rest.length - 1)]))
@@ -93,21 +103,21 @@ const createChat = (slot: number) => create<ChatState>((set, get) => ({
   note: (text) => set((s) => ({ messages: add(s.messages, { role: 'note', text }) })),
   load: (session, project, history) => {
     const s = get()
-    if (s.running) return
     const messages = history.map((m): ChatMessage => ({ ...m, id: nextId++ }))
     const opened = s.tabs.find((x) => x.session === session)          // ya abierta: se va a ella
     if (opened && opened.id !== s.tab) { get().switchTab(opened.id); return }
-    const into = s.messages.length ? { ...blank(nextTab++, project), messages, session } : { ...blank(s.tab, project), messages, session }          // la pestaña vacía se reutiliza
-    set(show(s.messages.length ? [...saved(s), into] : saved(s).map((x) => (x.id === s.tab ? into : x)), into))
+    const busy = s.messages.length > 0 || s.running
+    const into = busy ? { ...blank(nextTab++, project), messages, session } : { ...blank(s.tab, project), messages, session }          // la pestaña vacía se reutiliza
+    set(show(busy ? [...saved(s), into] : saved(s).map((x) => (x.id === s.tab ? into : x)), into))
   },
-  reply: (id, answers) => { set((s) => ({ asks: s.asks.filter((a) => a.id !== id) })); void window.api.chat.reply(id, answers, slot) }, usage: ZERO,
+  reply: (id, answers) => { set((s) => ({ asks: s.asks.filter((a) => a.id !== id) })); void window.api.chat.reply(id, answers, chatChannel(slot, get().tab)) }, usage: ZERO,
   setSelection: (selection) => set({ selection }),
   send: (text, opts) => {
     const s = get()
     if (s.running || (!text.trim() && !opts.images?.length)) return
     const fresh = s.project !== opts.project          // otro proyecto: otra conversación
     set({ messages: opts.shown === '' ? (fresh ? [] : s.messages) : add(fresh ? [] : s.messages, { role: 'user', text: opts.shown ?? text, images: opts.images?.map((i) => `data:${i.mediaType};base64,${i.data}`) }), running: true, project: opts.project, session: fresh ? null : s.session, permissions: [], suggestion: null })
-    void window.api.chat.send({ text, project: opts.project, model: opts.model, effort: opts.effort, mode: opts.mode, thinking: opts.thinking, images: opts.images, agent: s.agent, slot, session: fresh ? null : s.session })
+    void window.api.chat.send({ text, project: opts.project, model: opts.model, effort: opts.effort, mode: opts.mode, thinking: opts.thinking, images: opts.images, agent: s.agent, slot: chatChannel(slot, s.tab), session: fresh ? null : s.session })
   },
   askBtw: (question, opts) => {
     const q = question.trim()
@@ -116,70 +126,84 @@ const createChat = (slot: number) => create<ChatState>((set, get) => ({
     if (prev) void window.api.chat.btwCancel(prev.id)          // una a la vez: la nueva corta la que seguía respondiendo
     const id = `b${nextId++}`
     set((st) => ({ btwOpen: true, btws: [...st.btws.map((b) => (b.done ? b : { ...b, done: true })), { id, question: q, answer: '', done: false }] }))
-    void window.api.chat.btw({ slot, id, question: q, project: opts.project, session: get().session, model: opts.model })
+    void window.api.chat.btw({ slot: chatChannel(slot, get().tab), id, question: q, project: opts.project, session: get().session, model: opts.model })
   },
   openBtw: () => set({ btwOpen: true }),
   closeBtw: () => set({ btwOpen: false }),          // se oculta; el hilo sigue ahí al volver a abrirlo
   clearBtw: () => { const b = get().btws.find((x) => !x.done); if (b) void window.api.chat.btwCancel(b.id); set({ btws: [] }) },
-  planReply: (id, d) => { set((s) => ({ plans: s.plans.filter((p) => p.id !== id) })); void window.api.chat.planReply(id, d, slot) },
+  planReply: (id, d) => { set((s) => ({ plans: s.plans.filter((p) => p.id !== id) })); void window.api.chat.planReply(id, d, chatChannel(slot, get().tab)) },
   takeSuggestion: () => { const text = get().suggestion; if (text) set({ suggestion: null }); return text },
-  cancel: () => { void window.api.chat.cancel(slot) },
-  answer: (id, allow, always) => { set((s) => ({ permissions: s.permissions.filter((p) => p.id !== id) })); void window.api.chat.answer(id, allow, always, slot) },
+  cancel: () => { void window.api.chat.cancel(chatChannel(slot, get().tab)) },
+  answer: (id, allow, always) => { set((s) => ({ permissions: s.permissions.filter((p) => p.id !== id) })); void window.api.chat.answer(id, allow, always, chatChannel(slot, get().tab)) },
   clear: () => { if (!get().running) set({ messages: [], session: null, permissions: [], asks: [], usage: ZERO, suggestion: null }) }
 }))
 export const useChat = createChat(0)
 export const useChat2 = createChat(1)
 const stores = [useChat, useChat2]
 
-const onEvent = (ev: ChatEvent & { slot?: number }): void => {
-  const e: ChatEvent = ev
-  const store = stores[ev.slot ?? 0] ?? useChat          // el evento dice a qué chat va (sin `slot`, al primero)
-  const s = store.getState()
+/** Lo que cambia un evento en una conversación (null: nada). */
+const reduce = (c: ChatConv, e: ChatEvent): Partial<ChatConv> | null => {
+  let out: Partial<ChatConv> | null = null
   switch (e.kind) {
-    case 'session': if (s.session !== e.id) store.setState({ session: e.id }); break
+    case 'session': if (c.session !== e.id) out = ({ session: e.id }); break
     case 'context': {          // se cuelga del último mensaje del usuario
-      const i = s.messages.map((m) => m.role).lastIndexOf('user')
-      if (i >= 0) store.setState({ messages: s.messages.map((m, j) => (j === i ? { ...m, context: e.text } : m)) })
+      const i = c.messages.map((m) => m.role).lastIndexOf('user')
+      if (i >= 0) out = ({ messages: c.messages.map((m, j) => (j === i ? { ...m, context: e.text } : m)) })
       break
     }
-    case 'blockstart': store.setState({ messages: add(s.messages, e.think ? { role: 'thinking', text: '', liveThink: true } : { role: 'assistant', text: '', live: true }) }); break
+    case 'blockstart': out = ({ messages: add(c.messages, e.think ? { role: 'thinking', text: '', liveThink: true } : { role: 'assistant', text: '', live: true }) }); break
     case 'delta': {
       if (e.think) {          // el razonamiento que se va escribiendo
-        const k = s.messages.map((m) => !!m.liveThink).lastIndexOf(true)
-        store.setState({ messages: k < 0 ? add(s.messages, { role: 'thinking', text: e.text, liveThink: true }) : s.messages.map((m, j) => (j === k ? { ...m, text: m.text + e.text } : m)) })
+        const k = c.messages.map((m) => !!m.liveThink).lastIndexOf(true)
+        out = ({ messages: k < 0 ? add(c.messages, { role: 'thinking', text: e.text, liveThink: true }) : c.messages.map((m, j) => (j === k ? { ...m, text: m.text + e.text } : m)) })
         break
       }
-      const i = s.messages.map((m) => !!m.live).lastIndexOf(true)
-      store.setState({ messages: i < 0 ? add(s.messages, { role: 'assistant', text: e.text, live: true }) : s.messages.map((m, j) => (j === i ? { ...m, text: m.text + e.text } : m)) })
+      const i = c.messages.map((m) => !!m.live).lastIndexOf(true)
+      out = ({ messages: i < 0 ? add(c.messages, { role: 'assistant', text: e.text, live: true }) : c.messages.map((m, j) => (j === i ? { ...m, text: m.text + e.text } : m)) })
       break
     }
     case 'text': {          // el bloque ya completo: sustituye al que se iba escribiendo (el primero aún en vivo) o, si no lo hubo, se añade
-      if (e.parent) { store.setState({ messages: add(s.messages, { role: 'assistant', text: e.text, parent: e.parent }) }); break }          // lo de un subagente va dentro de su bloque
-      const i = s.messages.findIndex((m) => m.live)
-      store.setState({ messages: i < 0 ? add(s.messages, { role: 'assistant', text: e.text }) : s.messages.map((m, j) => (j === i ? { ...m, text: e.text, live: false } : m)) })
+      if (e.parent) { out = ({ messages: add(c.messages, { role: 'assistant', text: e.text, parent: e.parent }) }); break }          // lo de un subagente va dentro de su bloque
+      const i = c.messages.findIndex((m) => m.live)
+      out = ({ messages: i < 0 ? add(c.messages, { role: 'assistant', text: e.text }) : c.messages.map((m, j) => (j === i ? { ...m, text: e.text, live: false } : m)) })
       break
     }
     case 'thinking': {          // el razonamiento completo: sustituye al que se iba escribiendo o, si no lo hubo (o es de un subagente), se añade
-      const k = e.parent ? -1 : s.messages.findIndex((m) => m.liveThink)
-      store.setState({ messages: k < 0 ? add(s.messages, { role: 'thinking', text: e.text, parent: e.parent }) : s.messages.map((m, j) => (j === k ? { ...m, text: e.text, liveThink: false } : m)) })
+      const k = e.parent ? -1 : c.messages.findIndex((m) => m.liveThink)
+      out = ({ messages: k < 0 ? add(c.messages, { role: 'thinking', text: e.text, parent: e.parent }) : c.messages.map((m, j) => (j === k ? { ...m, text: e.text, liveThink: false } : m)) })
       break
     }
-    case 'suggestion': store.setState({ suggestion: e.text }); break
-    case 'plan': store.setState({ plans: [...s.plans, { id: e.id, plan: e.plan }] }); break
+    case 'suggestion': out = ({ suggestion: e.text }); break
+    case 'plan': out = ({ plans: [...c.plans, { id: e.id, plan: e.plan }] }); break
     case 'btw': {
-      if (!s.btws.some((b) => b.id === e.id)) break
-      store.setState({ btws: s.btws.map((b) => (b.id === e.id ? { ...b, answer: b.answer + (e.text ?? ''), done: b.done || !!e.done, error: e.error ?? b.error } : b)) })
+      if (!c.btws.some((b) => b.id === e.id)) break
+      out = ({ btws: c.btws.map((b) => (b.id === e.id ? { ...b, answer: b.answer + (e.text ?? ''), done: b.done || !!e.done, error: e.error ?? b.error } : b)) })
       break
     }
-    case 'tool': store.setState({ messages: add(s.messages, { role: 'tool', text: e.name, detail: e.input, toolId: e.id, body: e.body, file: e.file, parent: e.parent, sub: e.sub }) }); break
-    case 'task': store.setState({ messages: s.messages.map((m) => (m.toolId === e.id ? { ...m, task: { status: e.status, tools: e.tools ?? m.task?.tools ?? 0, tokens: e.tokens ?? m.task?.tokens ?? 0, ms: e.ms ?? m.task?.ms ?? 0, last: e.last ?? m.task?.last } } : m)) }); break
-    case 'toolResult': store.setState({ messages: s.messages.map((m) => (m.toolId === e.id ? { ...m, result: e.text, resultError: e.error } : m)) }); break
-    case 'usage': store.setState({ usage: { cost: s.usage.cost + e.cost, input: s.usage.input + e.input, output: s.usage.output + e.output, cacheRead: s.usage.cacheRead + e.cacheRead, cacheWrite: s.usage.cacheWrite + e.cacheWrite } }); break
-    case 'permission': store.setState({ permissions: [...s.permissions, { id: e.id, tool: e.tool, input: e.input }] }); break
-    case 'question': store.setState({ asks: [...s.asks, { id: e.id, questions: e.questions }] }); break
-    case 'error': store.setState({ messages: add(s.messages, { role: 'error', text: e.message }) }); break
-    case 'done': store.setState({ running: false, permissions: [], asks: [], plans: [], messages: s.messages.filter((m) => !(m.live && !m.text) && !(m.liveThink && !m.text)).map((m) => (m.liveThink ? { ...m, liveThink: false } : m)).map((m) => (m.live ? { ...m, live: false } : m)).map((m) => (m.task?.status === 'running' ? { ...m, task: { ...m.task, status: 'stopped' as const } } : m)) }); break
+    case 'tool': out = ({ messages: add(c.messages, { role: 'tool', text: e.name, detail: e.input, toolId: e.id, body: e.body, file: e.file, parent: e.parent, sub: e.sub }) }); break
+    case 'task': out = ({ messages: c.messages.map((m) => (m.toolId === e.id ? { ...m, task: { status: e.status, tools: e.tools ?? m.task?.tools ?? 0, tokens: e.tokens ?? m.task?.tokens ?? 0, ms: e.ms ?? m.task?.ms ?? 0, last: e.last ?? m.task?.last } } : m)) }); break
+    case 'toolResult': out = ({ messages: c.messages.map((m) => (m.toolId === e.id ? { ...m, result: e.text, resultError: e.error } : m)) }); break
+    case 'usage': out = ({ usage: { cost: c.usage.cost + e.cost, input: c.usage.input + e.input, output: c.usage.output + e.output, cacheRead: c.usage.cacheRead + e.cacheRead, cacheWrite: c.usage.cacheWrite + e.cacheWrite } }); break
+    case 'permission': out = ({ permissions: [...c.permissions, { id: e.id, tool: e.tool, input: e.input }] }); break
+    case 'question': out = ({ asks: [...c.asks, { id: e.id, questions: e.questions }] }); break
+    case 'error': out = ({ messages: add(c.messages, { role: 'error', text: e.message }) }); break
+    case 'done': out = ({ running: false, permissions: [], asks: [], plans: [], messages: c.messages.filter((m) => !(m.live && !m.text) && !(m.liveThink && !m.text)).map((m) => (m.liveThink ? { ...m, liveThink: false } : m)).map((m) => (m.live ? { ...m, live: false } : m)).map((m) => (m.task?.status === 'running' ? { ...m, task: { ...m.task, status: 'stopped' as const } } : m)) }); break
   }
+  return out
+}
+
+const onEvent = (ev: ChatEvent & { slot?: number }): void => {
+  // el canal dice la columna (bit bajo) y la conversación; sin canal, va a la activa del primero
+  const ch = ev.slot ?? 0
+  const store = stores[ch % 2] ?? useChat
+  const s = store.getState()
+  const id = Math.floor(ch / 2) || s.tab
+  const c = tabConv(s, id)
+  if (!c) return          // la conversación ya se cerró
+  const out = reduce(c, ev)
+  if (!out) return
+  if (id === s.tab) store.setState(out)
+  else store.setState({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...out } : t)) })          // en segundo plano: se guarda en su pestaña
 }
 if (typeof window !== 'undefined' && window.api?.chat) window.api.chat.onEvent(onEvent)
 

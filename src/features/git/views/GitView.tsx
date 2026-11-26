@@ -124,71 +124,82 @@ export function GitView() {
   }
 
   const File = ({ f, isStaged }: { f: GitFile; isStaged: boolean }) => (
-    <li className="group flex items-center gap-1.5 rounded-md px-2 py-[5px] transition-colors hover:bg-accent-bg">
-      <button className={`flex min-w-0 flex-1 items-center gap-2 text-left`} onClick={() => void (f.code === 'C' ? openDoc(`${project}/${f.path}`) : openDiff(`${project}/${f.path}`, isStaged))} title={t('git.viewChanges')}>
-        <FileIcon name={basename(f.path)} />
-        <span className="truncate text-[12px]" style={{ color: isStaged ? 'var(--color-git-staged)' : GIT_COLOR[f.code] }}>{basename(f.path)}</span>
+    <li className="group flex items-center gap-1.5 rounded-md px-1.5 py-[3px] transition-colors hover:bg-ov/[0.05]">
+      <button className="flex min-w-0 flex-1 items-center gap-1.5 text-left" onClick={() => void (f.code === 'C' ? openDoc(`${project}/${f.path}`) : openDiff(`${project}/${f.path}`, isStaged))} title={t('git.viewChanges')}>
+        <FileIcon name={basename(f.path)} className="size-3.5" />
+        <span className="truncate text-[12px] text-text">{basename(f.path)}</span>
         <span className="truncate text-[10px] text-muted">{dirname(f.path) === f.path ? '' : dirname(f.path)}</span>
       </button>
-      <button title={t('git.openFile')} onClick={() => void openDoc(`${project}/${f.path}`)} className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100">
-        <MdOpenInNew size={14} />
+      <button title={t('git.openFile')} onClick={() => void openDoc(`${project}/${f.path}`)} className="grid size-4 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100">
+        <MdOpenInNew size={13} />
       </button>
       {!isStaged && (
-        <button title={t('git.discard')} onClick={() => setDiscarding([f])} className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100">
-          <MdUndo size={14} />
+        <button title={t('git.discard')} onClick={() => setDiscarding([f])} className="grid size-4 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100">
+          <MdUndo size={13} />
         </button>
       )}
       <button
         title={isStaged ? t('git.unstageTip') : t('git.stageTip')}
         onClick={() => void run(isStaged ? t('git.unstage') : t('git.stage'), () => (isStaged ? window.api.git.unstage : window.api.git.stage)(project, [f.path]))}
-        className="grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100"
+        className="grid size-4 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity hover:text-accent group-hover:opacity-100"
       >
-        {isStaged ? <MdRemove size={15} /> : <MdAdd size={15} />}
+        {isStaged ? <MdRemove size={14} /> : <MdAdd size={14} />}
       </button>
-      <span className={`w-3 shrink-0 text-center text-[11px] font-semibold`} style={{ color: isStaged ? 'var(--color-git-staged)' : GIT_COLOR[f.code] }}>{f.code}</span>
+      <Badge code={f.code} color={isStaged ? 'var(--color-git-staged)' : GIT_COLOR[f.code]} />
     </li>
   )
 
   return (
-    <div className="flex h-full flex-col gap-2 px-2">
+    <div className="flex h-full flex-col gap-1.5 px-1.5 pt-1">
+      {/* la rama, como una tarjeta fina: el nombre y, aparte, lo que falta por bajar o subir y los cambios */}
+      <button onClick={() => set({ modal: 'branches' })} className="flex items-center gap-1.5 rounded-lg bg-ov/[0.04] px-2 py-1 text-left ring-1 ring-ov/[0.06] transition-colors hover:bg-ov/[0.07]">
+        <MdCallSplit size={13} className="shrink-0 text-accent" />
+        <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{git.branch}</span>
+        {git.hasUpstream && git.behind > 0 && <span className="flex shrink-0 items-center rounded-full bg-ov/[0.08] px-1 text-[9.5px] text-muted"><MdArrowDownward size={9} />{git.behind}</span>}
+        {git.hasUpstream && git.ahead > 0 && <span className="flex shrink-0 items-center rounded-full bg-ov/[0.08] px-1 text-[9.5px] text-muted"><MdArrowUpward size={9} />{git.ahead}</span>}
+        <span className="shrink-0 rounded-full bg-accent/15 px-1.5 text-[9.5px] font-medium leading-4 text-accent">{git.files.length}</span>
+      </button>
+      {/* el commit: el mensaje y el botón en una misma caja, como la del chat */}
+      <div className="flex flex-col gap-1 rounded-lg bg-ov/[0.04] p-1 ring-1 ring-ov/[0.06] focus-within:ring-accent/40">
       <div className="relative">
         {/* mientras un agente redacta el commit: una barra de carga sobre la caja */}
-        {writing && <div title={t('git.writingMsg', { agent: writing })} className="absolute inset-x-0 -top-1.5 h-[3px] overflow-hidden rounded-full bg-accent/20"><div className="h-full w-full animate-sweep bg-gradient-to-r from-transparent via-accent to-transparent" /></div>}
+        {writing && <div title={t('git.writingMsg', { agent: writing })} className="absolute inset-x-0 -top-1 h-[2px] overflow-hidden rounded-full bg-accent/20"><div className="h-full w-full animate-sweep bg-gradient-to-r from-transparent via-accent to-transparent" /></div>}
         <textarea
           ref={area} value={message} rows={1} title={author ? `${t('git.writtenBy')} ${author}` : undefined}
           onChange={(e) => { setMessage(e.target.value); setAuthor('') }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void commit() } }}
           placeholder={writing ? t('git.writingMsg', { agent: writing }) : t('git.messagePlaceholder')}
-          className="block max-h-[68px] w-full resize-none overflow-y-auto rounded-md border border-line bg-transparent py-2 pl-2.5 pr-8 text-[12px] leading-snug outline-none transition-colors placeholder:text-muted/70 focus:border-accent/60"
+          className="block max-h-[60px] w-full resize-none overflow-y-auto bg-transparent py-1 pl-1 pr-7 text-[12px] leading-snug outline-none placeholder:text-muted/70"
         />
         <button
           title={t('git.generateTip')} disabled={!!writing || busy} onClick={() => void suggest()}
-          className={`absolute right-1.5 top-1.5 grid size-6 place-items-center rounded text-muted transition-colors hover:text-accent disabled:opacity-60 ${writing ? 'animate-pulse text-accent' : ''}`}
+          className={`absolute right-0 top-0 grid size-6 place-items-center rounded-md text-muted transition-colors hover:text-accent disabled:opacity-60 ${writing ? 'animate-pulse text-accent' : ''}`}
         >
-          <MdAutoAwesome size={15} />
+          <MdAutoAwesome size={14} />
         </button>
       </div>
       <div className="flex items-stretch">
         <button disabled={busy} onClick={() => void sync()} title={action.hint}
-          className={clsx('relative flex flex-1 items-center justify-center gap-2 overflow-hidden rounded-l-md border py-1.5 text-[12px] font-medium transition-colors disabled:cursor-default',
-            phase === 'done' ? 'border-ok/40 bg-ok/20 text-ok' : action.ready ? 'border-accent/60 bg-accent/60 text-text hover:bg-accent/70' : 'border-accent/30 bg-accent/15 text-text/80 hover:bg-accent/25')}>
+          className={clsx('relative flex h-6 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-l-md text-[11.5px] font-medium transition-colors disabled:cursor-default',
+            phase === 'done' ? 'bg-ok/20 text-ok' : action.ready ? 'bg-accent text-bg hover:brightness-110' : 'bg-ov/[0.07] text-muted hover:bg-ov/[0.1] hover:text-text')}>
         {busy && <span className="pointer-events-none absolute inset-0 animate-sweep bg-gradient-to-r from-transparent via-white/25 to-transparent" />}
-        <span className="relative flex items-center gap-2">
+        <span className="relative flex items-center gap-1.5">
           {/* el icono se vuelve a montar al cambiar (key), así entra con su animación */}
-          <span key={iconKey} className="grid size-4 animate-icon-swap place-items-center">
-            {phase === 'done' ? <MdCheck size={16} className="animate-check-pop" />
-              : phase === 'pull' ? <MdArrowDownward size={16} className="animate-bounce" />
-              : busy || action.icon === 'push' ? <MdArrowUpward size={16} className={busy ? 'animate-arrow-up' : ''} />
-              : action.icon === 'pull' ? <MdArrowDownward size={16} />
-              : <MdCheck size={16} />}
+          <span key={iconKey} className="grid size-3.5 animate-icon-swap place-items-center">
+            {phase === 'done' ? <MdCheck size={14} className="animate-check-pop" />
+              : phase === 'pull' ? <MdArrowDownward size={14} className="animate-bounce" />
+              : busy || action.icon === 'push' ? <MdArrowUpward size={14} className={busy ? 'animate-arrow-up' : ''} />
+              : action.icon === 'pull' ? <MdArrowDownward size={14} />
+              : <MdCheck size={14} />}
           </span>
           {phase === 'commit' ? t('git.committing') : phase === 'push' ? t('git.pushing') : phase === 'pull' ? t('git.pulling') : phase === 'done' ? t('git.done') : action.label}
-          {phase === 'idle' && action.count > 0 && <span className="rounded-full bg-accent/40 px-1.5 text-[10px]">{action.count}</span>}
+          {phase === 'idle' && action.count > 0 && <span className="rounded-full bg-bg/25 px-1 text-[9.5px] leading-[14px]">{action.count}</span>}
         </span>
         </button>
         <button disabled={busy} title={t('git.cmMore')} onClick={(e) => setMore(e.currentTarget.getBoundingClientRect())}
-          className={clsx('grid w-7 shrink-0 place-items-center rounded-r-md border border-l-0 transition-colors disabled:cursor-default',
-            phase === 'done' ? 'border-ok/40 bg-ok/20 text-ok' : action.ready ? 'border-accent/60 bg-accent/60 text-text hover:bg-accent/70' : 'border-accent/30 bg-accent/15 text-text/80 hover:bg-accent/25')}><MdKeyboardArrowDown size={16} /></button>
+          className={clsx('grid h-6 w-6 shrink-0 place-items-center rounded-r-md border-l transition-colors disabled:cursor-default',
+            phase === 'done' ? 'border-ok/30 bg-ok/20 text-ok' : action.ready ? 'border-bg/25 bg-accent text-bg hover:brightness-110' : 'border-ov/10 bg-ov/[0.07] text-muted hover:bg-ov/[0.1] hover:text-text')}><MdKeyboardArrowDown size={15} /></button>
+      </div>
       </div>
       {more && <Menu anchor={more} width={230} alignLeft onClose={() => setMore(null)} items={[
         { label: t('git.cmCommit'), onClick: () => void commitWith('commit') },
@@ -196,25 +207,18 @@ export function GitView() {
         { label: t('git.cmPush'), separator: true, onClick: () => void commitWith('push') },
         { label: t('git.cmSync'), onClick: () => void commitWith('sync') }
       ]} />}
-      {!git.hasRemote && <p className="-mt-1 px-1 text-center text-[10px] text-muted">{t('git.noRemote')}</p>}
-      <button onClick={() => set({ modal: 'branches' })} className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-accent-bg">
-        <MdCallSplit size={15} className="text-accent" />
-        <span className="text-[13px] font-semibold">{git.branch}</span>
-        <span className="ml-auto text-[11px] text-muted">
-          {git.hasUpstream && (git.ahead || git.behind) ? `${git.behind}↓ ${git.ahead}↑ · ` : ''}{git.files.length} cambios
-        </span>
-      </button>
+      {!git.hasRemote && <p className="-mt-0.5 px-1 text-center text-[10px] text-muted">{t('git.noRemote')}</p>}
       {git.files.some((f) => f.code === 'C') && (
-        <div className="flex flex-col gap-1.5 rounded-md border border-danger/30 bg-danger/[0.06] px-2 py-1.5 text-[11px]">
-          <span className="leading-snug text-muted">{t('git.conflictBanner')}</span>
-          <button disabled={busy} onClick={() => void run(t('git.abortOp'), () => window.api.git.abortOp(project))} className="self-start rounded bg-danger/15 px-2 py-0.5 text-danger hover:bg-danger/25 disabled:opacity-50">{t('git.abortOp')}</button>
+        <div className="flex items-center gap-2 rounded-lg bg-danger/[0.07] px-2 py-1 text-[11px] ring-1 ring-danger/25">
+          <span className="min-w-0 flex-1 leading-snug text-muted">{t('git.conflictBanner')}</span>
+          <button disabled={busy} onClick={() => void run(t('git.abortOp'), () => window.api.git.abortOp(project))} className="shrink-0 rounded bg-danger/15 px-1.5 py-px text-danger hover:bg-danger/25 disabled:opacity-50">{t('git.abortOp')}</button>
         </div>
       )}
       <div className="min-h-0 flex-1 overflow-y-auto">
         {staged.length > 0 && <Group id="staged" title={t('git.staged', { n: staged.length })}>{staged.map((f) => <File key={`s${f.path}`} f={f} isStaged />)}</Group>}
         {git.files.length > 0 && <Group id="changes" title={t('git.changes', { n: changes.length })} actions={changes.length > 0 ? [
-          { title: t('git.discardAll'), icon: <MdUndo size={14} />, danger: true, run: () => setDiscarding(changes) },
-          { title: t('git.stageAll'), icon: <MdAdd size={15} />, run: () => void run(t('git.stage'), () => window.api.git.stage(project, changes.map((f) => f.path))) }
+          { title: t('git.discardAll'), icon: <MdUndo size={13} />, danger: true, run: () => setDiscarding(changes) },
+          { title: t('git.stageAll'), icon: <MdAdd size={14} />, run: () => void run(t('git.stage'), () => window.api.git.stage(project, changes.map((f) => f.path))) }
         ] : undefined}>
           {changes.map((f) => <File key={`c${f.path}`} f={f} isStaged={false} />)}
         </Group>}
@@ -244,20 +248,25 @@ function Group({ id, title, children, actions }: { id: string; title: string; ch
     setCollapsed((c) => { try { localStorage.setItem(key, c ? '0' : '1') } catch { /* sin almacenamiento */ } return !c })
   }
   return (
-    <section className="mb-2">
-      <div className="flex items-center justify-between pb-1 pt-1 pr-2">
-        <button onClick={toggle} aria-expanded={!collapsed} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-1 text-left text-muted transition-colors hover:text-text">
-          <MdChevronRight size={15} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
-          <h4 className="truncate text-[11px] font-semibold tracking-wide">{label}</h4>
-          {count && <span className="shrink-0 rounded-full bg-accent/40 px-1.5 text-[10px] font-medium leading-4 text-text">{count}</span>}
+    <section className="mb-1.5">
+      <div className="flex items-center justify-between py-0.5 pr-1.5">
+        <button onClick={toggle} aria-expanded={!collapsed} className="flex min-w-0 flex-1 items-center gap-0.5 rounded px-0.5 text-left text-muted transition-colors hover:text-text">
+          <MdChevronRight size={14} className={clsx('shrink-0 transition-transform', !collapsed && 'rotate-90')} />
+          <h4 className="truncate text-[10px] font-semibold uppercase tracking-wider">{label}</h4>
+          {count && <span className="ml-1 shrink-0 rounded-full bg-ov/[0.08] px-1.5 text-[9.5px] font-medium leading-[14px] text-muted">{count}</span>}
         </button>
-        {actions?.map((a) => <button key={a.title} title={a.title} onClick={a.run} className={clsx('grid size-5 place-items-center rounded text-muted transition-colors', a.danger ? 'hover:text-danger' : 'hover:text-accent')}>{a.icon}</button>)}
+        {actions?.map((a) => <button key={a.title} title={a.title} onClick={a.run} className={clsx('grid size-5 place-items-center rounded-md text-muted transition-colors hover:bg-ov/[0.07]', a.danger ? 'hover:text-danger' : 'hover:text-accent')}>{a.icon}</button>)}
       </div>
       {!collapsed && <ul>{children}</ul>}
     </section>
   )
 }
 
+
+/** El estado de un archivo (M, A, D, U, C…) en una insignia teñida de su color. */
+function Badge({ code, color }: { code: string; color: string }) {
+  return <span className="grid h-3.5 min-w-3.5 shrink-0 place-items-center rounded-[3px] px-0.5 text-[9.5px] font-bold" style={{ color, background: `color-mix(in srgb, ${color} 16%, transparent)` }}>{code}</span>
+}
 
 /** Confirmación antes de deshacer cambios: lo ya conocido por git no se puede recuperar; los archivos nuevos van a la papelera. */
 function DiscardDialog({ files, onClose, onConfirm }: { files: GitFile[]; onClose: () => void; onConfirm: (files: GitFile[]) => void }) {

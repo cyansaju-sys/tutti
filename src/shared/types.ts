@@ -167,7 +167,7 @@ export interface ChatModel { value: string; displayName: string; description: st
 
 export type ChatAgent = 'claude' | 'codex'
 /** Lo que se envía al SDK con cada mensaje del chat. */
-export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; /** a qué chat va (0 = el primero, 1 = el de la segunda columna) */ slot?: number; /** quién responde: Claude (por defecto) o Codex */ agent?: ChatAgent; images?: ChatImage[]; /** pedir el razonamiento resumido (el modelo lo admite) */ thinking?: boolean }
+export interface ChatSendRequest { text: string; project: string | null; model: string; effort: ChatEffort; mode: 'manual' | 'edit' | 'plan' | 'explorer' | 'auto'; session: string | null; /** el canal de la conversación: pestaña × 2 + columna (0 = la primera, 1 = la segunda); cada conversación tiene el suyo y responden en paralelo */ slot?: number; /** quién responde: Claude (por defecto) o Codex */ agent?: ChatAgent; images?: ChatImage[]; /** pedir el razonamiento resumido (el modelo lo admite) */ thinking?: boolean }
 /** «/btw»: una pregunta al margen, sin tocar la conversación ni interrumpir la respuesta en curso. */
 export interface ChatBtwRequest { slot?: number; id: string; question: string; project: string | null; session: string | null; model: string }
 /** Lo que el usuario decide ante el plan de Claude: aprobarlo (con o sin aceptar las ediciones solas) o pedir cambios. */

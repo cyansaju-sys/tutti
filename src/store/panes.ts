@@ -3,23 +3,27 @@ import { tr } from './helpers'
 import type { State, PanesSlice } from './types'
 
 export const MAX_VISIBLE = 6     // la vista dividida: hasta 3 en horizontal y 2 en vertical
-/** Si hay un hueco libre en la vista dividida, el agente nuevo lo ocupa y el que estaba delante se queda a su lado. */
-const openSlot = (s: State): { paneSplit?: string[] } => {
+/**
+ * Si hay un hueco libre en la vista dividida, el agente nuevo lo ocupa y el que estaba delante se queda a su lado.
+ * Con un solo agente abierto (y sin dividir), el segundo divide la vista él solo: los dos se ven uno al lado del otro.
+ */
+const openSlot = (s: State): { paneSplit?: string[]; paneWant?: number } => {
   const shown = s.paneSplit.filter((id) => s.panes.some((p) => p.id === id))
   const prev = s.panes.some((p) => p.id === s.activePane) ? s.activePane : null
+  if (prev && s.panes.length === 1 && s.paneWant <= 1) return { paneSplit: [prev], paneWant: 2 }
   return prev && s.paneWant > shown.length + 1 ? { paneSplit: [...shown, prev] } : {}
 }
 let paneId = 1   // solo para la terminal (los agentes piden su id a la app)
 
 export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, get) => ({
-  panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, paneSplit: [], paneWant: 1, paneInbox: {}, paneAsking: [], paneRoles: {}, paneLeader: null,
+  panes: [], shells: [], shellActive: null, shellMax: false, activePane: null, paneSplit: [], paneWant: 1, paneInbox: {}, paneAsking: [], paneBusy: [], paneRoles: {}, paneLeader: null,
 
   openAgent: async (agent, args = [], opts = {}) => {
     const cwd = opts.cwd || get().project
     if (!cwd) { get().toast(tr(get, 'store.openProjectFirst'), 'error'); return }
     const id = await window.api.orchestra.newId()          // los ids los reparte la app: así no chocan con los de los sub-agentes
     const title = opts.title ?? agent.name
-    set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args: [...(agent.args ?? []), ...args], cwd, ...(opts.prompt && { prompt: opts.prompt }) }], activePane: id, focus: 'pane', modal: null, ...openSlot(s) }))
+    set((s) => ({ panes: [...s.panes, { id, kind: 'agent', title, name: agent.name, command: agent.command, args: [...(agent.args ?? []), ...args], cwd, started: Date.now(), ...(opts.prompt && { prompt: opts.prompt }) }], activePane: id, focus: 'pane', modal: null, ...openSlot(s) }))
   },
   /** Un agente pidió abrir otro (reparto de tareas): se añade su panel y la terminal inicia el proceso con la tarea. */
   addPane: (pane) => set((s) => {
@@ -28,7 +32,7 @@ export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, g
     // los que ya se veían se quedan y el nuevo se suma a la cuadrícula (hasta 6; si no cabe, deja sitio quitando el más antiguo)
     const keep = s.paneSplit.filter((id) => id !== pane.parentId && s.panes.some((p) => p.id === id))
     const split = pane.parentId && s.panes.some((p) => p.id === pane.parentId) ? { activePane: pane.parentId, paneSplit: [...keep, pane.id].slice(-(MAX_VISIBLE - 1)) } : {}
-    return { panes: [...s.panes, pane], ...split, ...(split.paneSplit && { paneWant: Math.max(s.paneWant, split.paneSplit.length + 1) }) }
+    return { panes: [...s.panes, { started: Date.now(), ...pane }], ...split, ...(split.paneSplit && { paneWant: Math.max(s.paneWant, split.paneSplit.length + 1) }) }
   }),
   toggleShell: async () => {
     if (get().shells.length) get().closeShells()
@@ -53,7 +57,8 @@ export const createPanesSlice: StateCreator<State, [], [], PanesSlice> = (set, g
     const activePane = s.activePane === id ? (shellActive ?? panes.at(-1)?.id ?? null) : s.activePane
     const wasShown = s.panes.some((p) => p.id === id) && (s.activePane === id || s.paneSplit.includes(id))
     const paneSplit = s.paneSplit.filter((x) => x !== id)
-    return { panes, shells, shellActive, activePane, paneSplit, paneWant: wasShown ? Math.max(1, s.paneWant - 1) : s.paneWant, shellMax: shells.length ? s.shellMax : false, focus: 'pane', paneFocus: s.paneFocus + 1 }      // el teclado pasa al panel que queda
+    const paneBusy = s.paneBusy.filter((x) => x !== id)
+    return { panes, shells, shellActive, activePane, paneSplit, paneBusy, paneWant: wasShown ? Math.max(1, s.paneWant - 1) : s.paneWant, shellMax: shells.length ? s.shellMax : false, focus: 'pane', paneFocus: s.paneFocus + 1 }      // el teclado pasa al panel que queda
   }),
   closeSlot: () => {
     const s = get()

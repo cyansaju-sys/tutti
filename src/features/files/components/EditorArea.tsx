@@ -26,6 +26,7 @@ import { RoleGraphView } from '@/features/tutti/components/RoleGraphView'
 import { RoleFormView } from '@/features/tutti/components/RoleFormView'
 import { SkillFormView } from '@/features/tutti/components/SkillFormView'
 import { SteeringFormView } from '@/features/tutti/components/SteeringFormView'
+import { TAB, TAB_ON, TAB_OFF, TAB_ROW, TAB_TRACK } from '@/components/tabs'
 
 export async function saveDoc(doc: Doc): Promise<void> {
   const { toast, markSaved } = useStore.getState()
@@ -60,11 +61,11 @@ export function DocTab({ doc: d, active }: { doc: Doc; active: boolean }) {
   const set = useStore((s) => s.set)
   return (
     <div onMouseDown={(e) => { e.preventDefault(); set({ activeDoc: d.path, focus: 'editor' }) }} onAuxClick={(e) => { if (e.button === 1) closeDocAsk(d) }}
-      className={clsx('group flex min-w-[130px] max-w-[240px] shrink-0 cursor-pointer h-8 items-center gap-1.5 rounded-tr-lg border-b border-r border-t-2 border-r-line px-2 transition-colors', active ? 'border-b-surface border-t-accent bg-surface text-text' : 'border-b-line border-t-transparent bg-bar text-muted hover:bg-raised')}>
+      className={clsx(TAB, 'min-w-[110px] max-w-[220px] cursor-pointer pl-2.5 pr-1', active ? TAB_ON : TAB_OFF)}>
       {d.kind === 'graph' ? <MdAccountTree size={16} className="text-accent" /> : d.kind === 'news' ? <MdNewReleases size={16} className="text-accent" /> : d.kind === 'shortcuts' ? <MdKeyboard size={16} className="text-accent" /> : ['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news', 'shortcuts'].includes(d.kind) ? <MdTune size={16} className="text-accent" /> : <FileIcon name={d.title} className="size-3.5" />}
       <span className="min-w-0 flex-1 truncate text-[12px]">{d.title}</span>
       {isDirty(d) && <span title={t('ed.unsavedTip')} className="text-[10px] text-warn">●</span>}
-      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className="grid size-4 place-items-center rounded text-muted transition-colors hover:bg-line hover:text-text"><MdClose size={12} /></button>
+      <button onClick={(e) => { e.stopPropagation(); closeDocAsk(d) }} className={clsx('grid size-4 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-ov/10 hover:text-text', !active && 'opacity-0 group-hover:opacity-100')}><MdClose size={12} /></button>
     </div>
   )
 }
@@ -166,9 +167,9 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
 
   /** Escribe en el prompt del agente activo la referencia al trozo (y el código si es corto), sin enviarla. */
   const sendSelection = (path: string, sel: { startLine: number; endLine: number; text: string }): void => {
-    const { panes, activePane, toast, chatOpen } = useStore.getState()
+    const { panes, activePane, toast, chatOpen, editorFull } = useStore.getState()
     // con el chat abierto, el trozo se ofrece como contexto del chat y la caja recibe el foco
-    if (chatOpen && project) { useChat.getState().setSelection({ path, ...sel }); useChat.getState().insertText(''); return }
+    if (chatOpen && editorFull && project) { useChat.getState().setSelection({ path, ...sel }); useChat.getState().insertText(''); return }
     const pane = panes.find((p) => p.id === activePane && p.kind === 'agent') ?? panes.find((p) => p.kind === 'agent')
     if (!pane || !project) { toast(t('ed.noAgent'), 'error'); return }
     const rel = toPosix(relative(project, path))
@@ -190,10 +191,9 @@ export function EditorArea({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <div className={clsx('flex min-w-0 flex-1 flex-col overflow-hidden bg-surface', embedded ? 'min-h-0' : 'rounded-lg border border-line')} onMouseDown={() => set({ focus: 'editor' })}>
-      {!embedded && <div className="flex shrink-0 overflow-x-auto overflow-y-hidden bg-bar">
+      {!embedded && <div className={clsx(TAB_ROW, 'border-b border-line bg-surface')}><div className={TAB_TRACK}>
         {docs.map((d) => <DocTab key={d.path} doc={d} active={d.path === activePath} />)}
-        <div className="min-w-0 flex-1 border-b border-line" />
-      </div>}
+      </div></div>}
       {doc && doc.kind !== 'graph' && !['hookform', 'steeringform', 'skillform', 'roleform', 'rolegraph', 'news', 'shortcuts'].includes(doc.kind) && (
         <div className="flex shrink-0 items-center justify-between border-b border-line px-3 py-1.5">
           <div className="flex items-center gap-1 overflow-hidden text-[11px] text-muted">

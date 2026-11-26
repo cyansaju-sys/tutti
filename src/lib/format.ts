@@ -21,3 +21,20 @@ export const severity = (percent: number): 'danger' | 'warn' | 'accent' => (perc
 
 export const resumeArgs = (command: string, id: string): string[] | null =>
   command === 'claude' ? ['--resume', id] : command === 'codex' ? ['resume', id] : command === 'opencode' ? ['--session', id] : command === 'agy' ? ['--conversation', id] : null
+
+/** Hace cuánto, en corto: «now», «45m», «23h», «4d». */
+export const short = (ms: number, now: number, nowLabel: string): string => {
+  const d = now - ms
+  if (d < 90_000) return nowLabel
+  if (d < 3_600_000) return `${Math.round(d / 60_000)}m`
+  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}h`
+  return `${Math.floor(d / 86_400_000)}d`
+}
+
+/** Cuánto dura algo, en corto: «0m», «45m», «2h05», «3d». */
+export const elapsed = (ms: number): string => {
+  const m = Math.max(0, Math.floor(ms / 60_000))
+  if (m < 60) return `${m}m`
+  if (m < 1440) return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
+  return `${Math.floor(m / 1440)}d`
+}

@@ -143,8 +143,9 @@ async function systemAccent(): Promise<string | null> {
 }
 
 /**
- * El chat de la segunda columna (`slot` 1) comparte ventana con el primero: se le da otra «ventana» a medida que responde con su propio id (así sus respuestas, permisos y llamadas al MCP de Tutti no se mezclan con las del otro)
- * y que marca cada evento con su `slot` para que el renderer lo lleve a su columna.
+ * Cada conversación del chat tiene su canal (`slot`: la pestaña × 2 + la columna, ver `chatChannel`) y todas comparten ventana: a cada canal se le da otra «ventana» a medida
+ * con su propio id (así sus respuestas, permisos y llamadas al MCP de Tutti no se mezclan y varias responden en paralelo) que marca cada evento con su `slot` para que el
+ * renderer lo lleve a su conversación.
  */
 function forSlot(sender: WebContents, slot = 0): WebContents {
   if (!slot) return sender

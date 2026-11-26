@@ -16,6 +16,7 @@ export function useAskAgent() {
   const setPicked = useCallback((_key: string): void => undefined, [])
   /** Envía la petición al chat; devuelve su nombre. */
   const send = async (prompt: string): Promise<string | null> => {
+    useStore.getState().setEditorFull(true)          // el chat solo está en «Modo agentes»
     useStore.getState().set({ chatOpen: true })
     useChat.getState().queue(prompt)
     return CHAT.name

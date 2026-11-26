@@ -13,6 +13,7 @@ export interface Doc extends FileData { path: string; title: string; savedText: 
 export interface Pane {
   id: string; kind: 'agent' | 'shell'; title: string; command: string; args: string[]; cwd: string
   name?: string; prompt?: string; parentId?: string      // agente que lo abrió y su tarea inicial (reparto de tareas)
+  started?: number      // cuándo se abrió (ms): la pestaña enseña cuánto lleva
 }
 /** Lo que se recuerda de cada proyecto al dejarlo: pestaña de la barra lateral, archivos abiertos y terminales. */
 export interface ProjectConfig { tab: SidebarTab; docs: string[]; activeDoc: string | null; shells?: number
@@ -77,6 +78,7 @@ export interface PanesSlice {
   /** Avisos de Tutti que esperan a que cada agente esté libre (o a que dejes de escribir en su panel). */
   paneInbox: Record<string, number>
   paneAsking: string[]
+  paneBusy: string[]          // los agentes que están sacando texto ahora mismo (trabajando): lo apunta la terminal al recibir datos
   paneRoles: Record<string, { role: string; title: string; working: boolean }>          // el rol que lleva cada agente (por id de panel) y si está trabajando
   /** El agente líder; null si solo hay uno abierto. */
   paneLeader: string | null

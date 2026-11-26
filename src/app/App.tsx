@@ -20,7 +20,8 @@ import { loadSettings } from '@/functions/loadSettings'
 import { ChatPanel } from '@/components/ChatPanel'
 import { isDirty, useStore } from '@/store'
 import { saveProjectConfig } from '@/store/project'
-import { useChat, useChat2 } from '@/store/chat'
+import { tabConv, useChat, useChat2 } from '@/store/chat'
+import { HubToolbar } from '@/components/ChatHub'
 
 /** Diálogo que se abre con cada valor de `modal`. */
 const MODALS: Record<string, ComponentType | undefined> = {
@@ -149,28 +150,33 @@ export function App() {
     })
     // un chat le pasa una tarea al del otro agente: el chat se parte en 2 y la tarea va a la otra columna, en una conversación del agente pedido
     const offDelegate = window.api.orchestra.onChatDelegate(({ agent, task, from, same }) => {
+      // `from` es el canal del chat que la pide: la columna en el bit bajo y la conversación en el resto
+      useStore.getState().setEditorFull(true)
       useStore.setState({ chatOpen: true, chatSplit: true })
-      const dest = from === 1 ? useChat : useChat2
+      const fromTab = Math.floor(from / 2)
+      const dest = from % 2 === 1 ? useChat : useChat2
+      const origin = from % 2 === 1 ? useChat2 : useChat
       const st = dest.getState()
-      if (!st.running) {
-        const mine = same ? st.tabs.find((x) => (x.id === st.tab ? st.agent : x.agent) === agent) : undefined          // si el usuario lo pidió: la conversación que ya tenía ese agente
-        if (mine) st.switchTab(mine.id)
-        else if (st.messages.length) st.newTab(agent)
-        else st.setAgent(agent)          // una pestaña vacía se reutiliza: no se deja un «Nuevo chat» al lado
-      }
-      dest.getState().queue(task)          // el panel de esa columna la envía con su modelo y modo (y espera si está respondiendo)
-      // al terminar, el chat que la pidió recibe el aviso con la respuesta (y, si está ocupado, lo recibe en cuanto quede libre)
+      const mine = same ? st.tabs.find((x) => { const c = tabConv(st, x.id); return c?.agent === agent && !c.running }) : undefined          // si el usuario lo pidió: la conversación que ya tenía ese agente (si está libre)
+      if (mine) st.switchTab(mine.id)
+      else if (st.messages.length || st.running) st.newTab(agent)          // las demás siguen respondiendo en paralelo
+      else st.setAgent(agent)          // una pestaña vacía se reutiliza: no se deja un «Nuevo chat» al lado
+      const tabId = dest.getState().tab
+      dest.getState().queue(task)          // el panel de esa columna la envía con su modelo y modo
+      // al terminar esa conversación, el chat que la pidió recibe el aviso con la respuesta
       let started = false
-      const origin = from === 1 ? useChat2 : useChat
-      const off = dest.subscribe((cur, prev) => {
-        if (!started) { if (prev.queued === task && cur.queued === null) started = true; return }          // empezó cuando el panel la tomó
-        if (!(prev.running && !cur.running)) return
+      const off = dest.subscribe((cur) => {
+        const conv = tabConv(cur, tabId)
+        if (!conv) { off(); return }          // se cerró sin terminar
+        if (!started) { if (conv.running) started = true; return }
+        if (conv.running) return
         off()
-        const last = cur.messages.map((m) => m.role).lastIndexOf('user')
-        const after = cur.messages.slice(last + 1).filter((m) => !m.parent)
+        const last = conv.messages.map((m) => m.role).lastIndexOf('user')
+        const after = conv.messages.slice(last + 1).filter((m) => !m.parent)
         const answer = after.filter((m) => m.role === 'assistant').map((m) => m.text.trim()).filter(Boolean).join('\n\n')
         const failed = after.find((m) => m.role === 'error')
         const who = agent === 'codex' ? 'Codex' : 'Claude'
+        if (tabConv(origin.getState(), fromTab)) origin.getState().switchTab(fromTab)          // la respuesta va a la conversación que la pidió
         origin.getState().note(t(failed ? 'app.delegateFailedShort' : 'app.delegateDoneShort', { agent: who }))          // una línea tenue con el aviso; la respuesta de Codex le llega al agente sin dibujarse como mensaje
         origin.getState().queue(t(failed ? 'app.delegateFailed' : 'app.delegateDone', { agent: who, text: (failed?.text ?? answer ?? '').slice(0, 4000) || '—' }), '')          // el agente recibe la respuesta de Codex, pero el mensaje no se ve en el chat: solo se ve lo que él conteste
       })
@@ -220,9 +226,9 @@ export function App() {
       const closeChat = (): boolean => {
         const slot = chatSlot ?? 0
         const c = (slot === 1 ? useChat2 : useChat).getState()
-        if (c.running) return true          // respondiendo: no se cierra (como con la X)
+        if (c.running) return true          // respondiendo: con el atajo no se cierra (la X sí, y corta la respuesta)
         if (c.tabs.length === 1 && slot === 1) st.set({ chatSplit: false })
-        else if (c.tabs.length === 1 && !c.messages.length) st.set({ chatOpen: false })
+        else if (c.tabs.length === 1 && !c.messages.length) { if (!st.editorFull) st.set({ chatOpen: false }) }          // en «Modo agentes» el chat es la vista: Ctrl+W no la cierra
         else c.closeTab(c.tab)
         return true
       }
@@ -283,9 +289,10 @@ export function App() {
   const full = s.editorFull && s.chatOpen && !!s.project          // «Modo agentes»: el chat se estira; con un archivo abierto (o agentes o terminal) se reparte el ancho con ellos
   const alone = full && s.docs.length === 0 && s.panes.length === 0          // sin archivos ni agentes que mostrar (no sale «Elegir agente»): el chat ocupa todo el ancho; la terminal, si hay, sigue debajo
 
-  const right = s.sidebarSide === 'right' || isHubLayout(s)          // en la vista de agentes el panel lateral va a la derecha, junto a la barra flotante
+  const hub = isHubLayout(s)
+  const right = s.sidebarSide === 'right' || hub          // en la vista de agentes el panel lateral va a la derecha, junto a la barra flotante
   // con «Modo agentes» la zona de trabajo es una rejilla: chat | editor arriba y la terminal debajo, a todo el ancho de los dos (como en VSCode); el contenedor del centro se vuelve transparente (`contents`) para que sus hijos entren en la rejilla sin volver a montarse
-  const col = (n: number): number => (right ? n : n + 1)          // las columnas del chat y del editor: la barra lateral ocupa la primera (izquierda) o la última (derecha)
+  const col = (n: number): number => (right ? n : n + 1) + (hub ? 1 : 0)          // en la vista de agentes la primera columna es la de los chats, a toda la altura          // las columnas del chat y del editor: la barra lateral ocupa la primera (izquierda) o la última (derecha)
   const chatAt = full ? { gridColumn: alone ? `${col(1)} / ${col(2) + 1}` : col(1), gridRow: 1 } : { order: 4 }
   const topAt = full ? { gridColumn: col(2), gridRow: 1 } : undefined
   const termAt = full ? { gridColumn: `${col(1)} / ${col(2) + 1}`, gridRow: s.shellMax ? '1 / -1' : 2 } : undefined
@@ -293,12 +300,13 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-bg">
       <TitleBar />
-      <div style={full ? { gridTemplateColumns: right ? '1fr 1fr auto' : 'auto 1fr 1fr', gridTemplateRows: 'minmax(0,1fr) auto' } : undefined}
+      <div style={full ? { gridTemplateColumns: hub ? 'auto 1fr 1fr auto' : right ? '1fr 1fr auto' : 'auto 1fr 1fr', gridTemplateRows: 'minmax(0,1fr) auto' } : undefined}
         className={`${full ? 'grid' : 'flex'} min-h-0 flex-1 p-[4px] pb-1 pt-0.5 ${!full && right ? 'flex-row-reverse' : ''}`}>
-        <div style={full ? { gridColumn: right ? 3 : 1, gridRow: '1 / -1' } : undefined} className={`flex ${right ? 'flex-row-reverse' : ''}`}>
+        <div style={full ? { gridColumn: hub ? 4 : right ? 3 : 1, gridRow: '1 / -1' } : undefined} className={`flex ${right ? 'flex-row-reverse' : ''}`}>
           <Sidebar />
           {s.sidebarOpen && <Resizer onDrag={dragSidebar} />}
         </div>
+        {hub && <div id="hub-sessions" style={{ gridColumn: 1, gridRow: '1 / -1' }} className="flex min-h-0" />}          {/* la columna de chats de la vista de agentes: el chat la pinta aquí, a toda la altura (también junto a la terminal) */}
         <div style={full ? undefined : { order: 3 }} className={full ? 'contents' : 'relative flex min-w-0 flex-1 flex-col overflow-hidden'}>
           <div style={topAt} className={`min-h-0 min-w-0 flex-1 ${alone ? 'hidden' : 'flex'}`}>
             {s.docs.length > 0 && s.panes.length === 0 ? (
@@ -315,11 +323,12 @@ export function App() {
             </div>
           )}
         </div>
-        {s.chatOpen && s.project && (          // con «Modo agentes» el chat va a la izquierda del editor y se reparten el ancho a medias; si no, un panel pequeño al lado
-          <div style={chatAt} className={`flex ${full ? 'min-h-0 min-w-0' : right ? 'flex-row-reverse' : ''}`}>          {/* sin «Modo agentes» el divisor va en el borde que da al centro (con la barra a la derecha, el chat queda a la izquierda): así siempre queda el hueco entre los dos paneles */}
+        {full && (          // el chat solo existe en «Modo agentes» (el modo normal es para los agentes de terminal); con «Modo agentes» el chat va a la izquierda del editor y se reparten el ancho a medias; si no, un panel pequeño al lado
+          <div style={chatAt} className={`relative flex ${full ? 'min-h-0 min-w-0' : right ? 'flex-row-reverse' : ''}`}>          {/* sin «Modo agentes» el divisor va en el borde que da al centro (con la barra a la derecha, el chat queda a la izquierda): así siempre queda el hueco entre los dos paneles */}
             {!full && <Resizer onDrag={dragChat} />}
-            <ErrorBoundary><ChatPanel fill={full} hub={isHubLayout(s)} /></ErrorBoundary>
-            {s.chatSplit && <><div className="w-1 shrink-0" /><ErrorBoundary><ChatPanel fill={full} slot={1} /></ErrorBoundary></>}          {/* el chat partido en 2: otra conversación al lado */}
+            <ErrorBoundary><ChatPanel fill={full} hub={hub} /></ErrorBoundary>
+            {s.chatSplit && <><div className="w-1 shrink-0" /><ErrorBoundary><ChatPanel fill={full} slot={1} greet={hub} /></ErrorBoundary></>}
+            {hub && <HubToolbar />}          {/* la barra flotante es de toda la zona del chat (también con el chat partido), no de una columna */}          {/* el chat partido en 2: otra conversación al lado */}
             {full && !alone && <div className="w-1 shrink-0" />}          {/* el mismo hueco que deja el divisor: entre el chat y el editor */}
           </div>
         )}

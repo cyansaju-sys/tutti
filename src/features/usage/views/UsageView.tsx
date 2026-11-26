@@ -5,7 +5,7 @@ import type { AgentUsage, LimitInfo, SessionInfo, UsageData } from '@/shared/typ
 import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { Menu } from '@/components/Menu'
 import { FIELD, Modal } from '@/components/ui'
-import { fmtDelta, fmtTokens, resumeArgs, severity } from '@/lib/format'
+import { fmtDelta, fmtTokens, resumeArgs, severity, short } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { useResizeHeight } from '@/lib/useResizeHeight'
 import { basename } from '@/lib/paths'
@@ -14,14 +14,6 @@ import { useChat, useChat2 } from '@/store/chat'
 
 const REFRESH_MS = 30_000
 const WINDOW_MS = 5 * 3_600_000
-/** Hace cuánto, en corto: «now», «45m», «23h», «4d». */
-const short = (ms: number, now: number, nowLabel: string): string => {
-  const d = now - ms
-  if (d < 90_000) return nowLabel
-  if (d < 3_600_000) return `${Math.round(d / 60_000)}m`
-  if (d < 86_400_000) return `${Math.floor(d / 3_600_000)}h`
-  return `${Math.floor(d / 86_400_000)}d`
-}
 const BAR: Record<string, string> = { danger: 'bg-danger', warn: 'bg-warn', accent: 'bg-accent' }
 
 function Bar({ value, tone = 'accent' }: { value: number; tone?: string }) {
@@ -156,6 +148,7 @@ export function UsageView() {
     if (useChat.getState().running) { toast(t('us.chatBusy'), 'error'); return }
     void window.api.chat.history(s.id, s.cwd || undefined).then((history) => {
       useChat.getState().load(s.id, project, history)
+      useStore.getState().setEditorFull(true)          // el chat solo está en «Modo agentes»
       set({ chatOpen: true })
     }).catch(() => toast(t('us.cannotResume'), 'error'))
   }
@@ -262,7 +255,7 @@ export function UsageView() {
   )
 }
 
-function RenameDialog({ session, current, onClose, onSaved }: { session: SessionInfo; current: string; onClose: () => void; onSaved: () => void }) {
+export function RenameDialog({ session, current, onClose, onSaved }: { session: SessionInfo; current: string; onClose: () => void; onSaved: () => void }) {
   const t = useT()
   const [value, setValue] = useState(current)
   const save = (): void => { void window.api.usage.rename(session, value).then(() => { onSaved(); onClose() }) }

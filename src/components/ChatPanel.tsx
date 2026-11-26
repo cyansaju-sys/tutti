@@ -3,7 +3,8 @@ import { FileIcon } from '@/components/FileIcon'
 import { listProjectFiles } from '@/lib/projectFiles'
 import { basename, relative, toPosix } from '@/lib/paths'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { MdAdd, MdArrowUpward, MdChatBubbleOutline, MdCheckCircleOutline, MdChevronRight, MdClose, MdCode, MdExpandMore, MdOutlineBuild, MdOutlineDescription, MdOutlineSchedule, MdLanguage, MdMic, MdMicNone, MdOutlineFileUpload, MdOutlineFolderOpen, MdStop, MdTerminal, MdVerticalSplit } from 'react-icons/md'
+import { createPortal } from 'react-dom'
+import { MdAdd, MdArrowUpward, MdChatBubbleOutline, MdCheckCircleOutline, MdChevronRight, MdClose, MdCode, MdExpandMore, MdOutlineBuild, MdOutlineDescription, MdOutlineSchedule, MdLanguage, MdMic, MdMicNone, MdOutlineFileUpload, MdOutlineFolderOpen, MdStop, MdTerminal, MdVerticalSplit, MdSwapHoriz, MdCallSplit } from 'react-icons/md'
 import { useT } from '@/lib/i18n'
 import { useStore } from '@/store'
 import { useChat, useChat2 } from '@/store/chat'
@@ -18,10 +19,12 @@ import { ChatSubagent, isSubagentTool } from './ChatSubagent'
 import { ChatThinking } from './ChatThinking'
 import { ChatPlanCard } from './ChatPlan'
 import { ChatBtwPanel } from './ChatBtw'
-import { ChatSessions, HubToolbar } from './ChatHub'
+import { ChatSessions } from './ChatHub'
 import { DICTATION_LANGS, useDictation, type DictationLang } from '@/lib/voice/dictation'
 import { IconButton } from './ui'
+import { AgentIcon } from '@/features/agents/components/AgentIcon'
 import { Menu } from './Menu'
+import { TAB, TAB_ON, TAB_OFF, TAB_ROW, TAB_TRACK } from './tabs'
 
 /** Las dos formas de empezar: charlar y construir (Vibe) o planificar antes de construir (Spec, el modo plan). */
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
@@ -32,7 +35,7 @@ const FLOWS: Array<{ id: 'vibe' | 'spec'; icon: ReactNode; mode: ChatMode }> = [
 ]
 
 /** Panel de chat con Claude (SDK): va al lado opuesto de la barra lateral. */
-export function ChatPanel({ fill = false, slot = 0, hub = false }: { fill?: boolean; slot?: 0 | 1; hub?: boolean }) {          // hub: «Modo agentes» con el chat solo (vista de agentes)
+export function ChatPanel({ fill = false, slot = 0, hub = false, greet = false }: { fill?: boolean; slot?: 0 | 1; hub?: boolean; greet?: boolean }) {          // greet: sin ser la vista de agentes, la conversación vacía se ve igual que en ella (la segunda columna al partirla)          // hub: «Modo agentes» con el chat solo (vista de agentes)
   const t = useT()
   const set = useStore((s) => s.set)
   const width = useStore((s) => s.chatWidth)
@@ -48,6 +51,9 @@ export function ChatPanel({ fill = false, slot = 0, hub = false }: { fill?: bool
   const [mode, setMode] = useState<ChatMode>('auto')
   const [modes, setModes] = useState<DOMRect | null>(null)
   const [attachMenu, setAttachMenu] = useState<DOMRect | null>(null)          // el «+» del compositor: subir imágenes, añadir contexto, buscar en la web
+  // la vista de agentes: la columna de chats se pinta en su hueco de la rejilla de App (a toda la altura), pero su estado sigue aquí
+  const [sessionsSlot, setSessionsSlot] = useState<HTMLElement | null>(null)
+  useLayoutEffect(() => { setSessionsSlot(hub ? document.getElementById('hub-sessions') : null) }, [hub])
   const [plus, setPlus] = useState<DOMRect | null>(null)          // el menú del «+»: otra conversación de Claude o Claude Code en una terminal
   const [picker, setPicker] = useState<DOMRect | null>(null)
   const composer = useRef<HTMLDivElement>(null)
@@ -209,31 +215,31 @@ export function ChatPanel({ fill = false, slot = 0, hub = false }: { fill?: bool
   // vista de agentes: el saludo usa tu nombre
   const [userName, setUserName] = useState('')
   useEffect(() => { void window.api.window.userName().then(setUserName).catch(() => undefined) }, [])
-  const hero = hub && chat.messages.length === 0 && !chat.running          // sin mensajes: saludo y la caja en el centro
+  const branch = useStore((s) => (s.git?.isRepo ? s.git.branch : null))
+  const hero = (hub || greet) && chat.messages.length === 0 && !chat.running          // sin mensajes: saludo y la caja en el centro
   const askBtw = (question: string): void => chat.askBtw(question, { project, model: current?.value ?? model })
 
   return (
     <>
+    {hub && sessionsSlot && createPortal(<ChatSessions chat={chat} onNew={setPlus} />, sessionsSlot)}          {/* la columna de chats va en su propia tarjeta, a toda la altura (la pone App) */}
     <aside data-chat-slot={slot} onKeyDown={(e) => {          // Esc interrumpe la respuesta (como en Claude Code), salvo si hay una lista o un menú abierto: entonces Esc los cierra
       if (e.key !== 'Escape' || !chat.running || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return
       if (slash || picker || modes || attachMenu || plus || document.querySelector('[role="menu"], [role="dialog"]')) return
       e.preventDefault(); chat.cancel()
-    }} style={fill ? undefined : { width }} className={`flex ${hub ? 'flex-row' : 'flex-col'} overflow-hidden rounded-lg border border-line bg-panel ${fill ? 'min-w-0 flex-1' : 'shrink-0'}`}>
-      {hub && <ChatSessions chat={chat} onNew={setPlus} />}
+    }} style={fill ? undefined : { width }} className={`flex flex-col overflow-hidden rounded-lg border border-line bg-panel ${fill ? 'min-w-0 flex-1' : 'shrink-0'}`}>
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      {hub && <HubToolbar />}
-      <div className={`${hub ? 'hidden' : 'flex'} h-[28px] shrink-0 items-center bg-bg pr-1`}>
+      <div className={hub ? 'hidden' : `${TAB_ROW} pt-1`}>          {/* las conversaciones en un control segmentado (no como las pestañas de un editor) */}
       {(
-        <div className="flex min-w-0 flex-1 items-stretch justify-start gap-0 self-stretch overflow-x-auto [scrollbar-width:none]">
+        <div className={TAB_TRACK}>
           {chat.tabs.map((x) => {
             const active = x.id === chat.tab
             const first = (active ? chat.messages : x.messages).find((m) => m.role === 'user')?.text.trim().replace(/\s+/g, ' ')
             const agent = active ? chat.agent : x.agent
-            const busy = active && chat.running          // respondiendo ahora mismo
+            const busy = active ? chat.running : x.running          // respondiendo ahora mismo (las demás siguen en segundo plano)
             return (
-              <div key={x.id} title={first || undefined} onAuxClick={(e) => { if (e.button === 1 && !(chat.running && active)) { e.preventDefault(); chat.closeTab(x.id) } }} className={`group relative flex h-full max-w-[150px] shrink-0 items-center gap-1 rounded-none border-x pl-2 pr-1 text-[11px] transition-colors ${active ? 'border-line bg-panel text-text' : 'border-transparent text-muted hover:text-text'}`}>
-                {agent === 'codex' ? <MdCode size={12} className={`shrink-0 ${active ? 'text-accent' : ''} ${busy ? 'animate-pulse' : ''}`} /> : <MdChatBubbleOutline size={11} className={`shrink-0 ${active ? 'text-accent' : ''} ${busy ? 'animate-pulse' : ''}`} />}<button disabled={chat.running && !active} onClick={() => chat.switchTab(x.id)} className="min-w-0 truncate text-left disabled:opacity-50">{first || t('chat.newChat')}</button>
-                <button disabled={chat.running && active} title={t('chat.closeTab')} onClick={() => chat.closeTab(x.id)} className={`grid size-3.5 shrink-0 place-items-center rounded text-muted transition-opacity hover:bg-ov/10 hover:text-text disabled:opacity-40 ${active ? '' : 'opacity-0 group-hover:opacity-100'}`}><MdClose size={10} /></button>
+              <div key={x.id} title={first || undefined} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); chat.closeTab(x.id) } }} className={`${TAB} relative max-w-[160px] pl-2.5 pr-1 text-[11.5px] ${active ? TAB_ON : TAB_OFF}`}>
+                {agent === 'codex' ? <MdCode size={12} className={`shrink-0 ${active ? 'text-accent' : ''} ${busy ? 'animate-pulse' : ''}`} /> : <MdChatBubbleOutline size={11} className={`shrink-0 ${active ? 'text-accent' : ''} ${busy ? 'animate-pulse' : ''}`} />}<button onClick={() => chat.switchTab(x.id)} className="min-w-0 truncate text-left">{first || t('chat.newChat')}</button>
+                <button title={t('chat.closeTab')} onClick={() => chat.closeTab(x.id)} className={`grid size-4 shrink-0 place-items-center rounded text-muted transition-opacity hover:bg-ov/10 hover:text-text ${active ? '' : 'opacity-0 group-hover:opacity-100'}`}><MdClose size={10} /></button>
               </div>
             )
           })}
@@ -262,17 +268,17 @@ export function ChatPanel({ fill = false, slot = 0, hub = false }: { fill?: bool
                   <button key={f.id} onClick={() => { setMode(f.mode); input.current?.focus() }}
                     className={`no-drag flex flex-col items-start gap-1.5 rounded-lg border p-2.5 text-left transition-colors ${on ? 'border-accent/60 bg-accent-bg' : 'border-line hover:bg-accent-bg/50'}`}>
                     <span className={`flex items-center gap-1.5 text-[12px] font-medium ${on ? 'text-accent' : 'text-text'}`}>{f.icon}{t(`chat.${f.id}` as never)}</span>
-                    <span className="text-[10.5px] leading-snug text-muted">{t(`chat.${f.id}D` as never)}</span>
+                    {!split && <span className="text-[10.5px] leading-snug text-muted">{t(`chat.${f.id}D` as never)}</span>}          {/* partido: solo el nombre */}
                   </button>
                 )
               })}
             </div>
-            <div className="w-full px-1 text-[11px] text-text/90">
+            {!split && <div className="w-full px-1 text-[11px] text-text/90">          {/* partido, cada columna es estrecha: sin la lista de «Ideal para» */}
               <div className="mb-1">{t('chat.great')}</div>
               <ul className="list-disc space-y-0.5 pl-4 text-muted">
                 {[1, 2, 3].map((n) => <li key={n}>{t(`chat.${mode === 'plan' ? 'spec' : 'vibe'}${n}` as never)}</li>)}
               </ul>
-            </div>
+            </div>}
           </div>
         )}
         {chat.messages.filter((m) => !m.parent).map((m) => isSubagentTool(m) ? <ChatSubagent key={m.id} m={m} all={chat.messages} live={chat.running} /> : m.role === 'thinking' ? <ChatThinking key={m.id} text={m.text} live={m.liveThink} /> : m.role === 'user' ? (
@@ -334,9 +340,20 @@ export function ChatPanel({ fill = false, slot = 0, hub = false }: { fill?: bool
       )}
       <div className={`mx-auto w-full shrink-0 p-2 ${fill ? 'max-w-[760px]' : ''}`}>
         {hero && (          // encima de la caja: dónde va a trabajar el agente
-          <div className="ml-3 flex w-fit items-center gap-3 rounded-t-lg border border-b-0 border-line bg-bg/60 px-3 py-1.5 text-[11.5px] text-muted">
-            <span className="flex items-center gap-1.5">{chat.agent === 'codex' ? <MdCode size={13} /> : <MdChatBubbleOutline size={12} />}{chat.agent === 'codex' ? 'Codex' : 'Claude'}</span>
-            {project && <span className="flex min-w-0 items-center gap-1.5" title={project}><MdOutlineFolderOpen size={13} className="shrink-0" /><span className="truncate">{basename(project)}</span></span>}
+          <div className="mb-1.5 flex min-w-0 items-center gap-1 px-1 text-[11.5px]">
+            {/* el agente: un clic lo cambia (Claude ↔ Codex) mientras la conversación sigue vacía */}
+            <button onClick={() => chat.setAgent(chat.agent === 'codex' ? 'claude' : 'codex')} title={t('chat.switchAgent')}
+              className="group flex shrink-0 items-center gap-1.5 rounded-full bg-ov/[0.05] py-1 pl-1.5 pr-2 text-text ring-1 ring-ov/[0.06] transition-colors hover:bg-ov/[0.09]">
+              <AgentIcon name={chat.agent === 'codex' ? 'Codex' : 'Claude'} command={chat.agent} size={14} />
+              {chat.agent === 'codex' ? 'Codex' : 'Claude'}
+              <MdSwapHoriz size={13} className="text-muted transition-colors group-hover:text-accent" />
+            </button>
+            {project && (          // dónde va a trabajar: el proyecto y su rama
+              <span title={project} className="flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 text-muted">
+                <MdOutlineFolderOpen size={13} className="shrink-0" /><span className="truncate">{basename(project)}</span>
+                {branch && <><span className="text-muted/40">/</span><MdCallSplit size={12} className="shrink-0" /><span className="truncate">{branch}</span></>}
+              </span>
+            )}
           </div>
         )}
         <div ref={composer} onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault() }} onDrop={(e) => { const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/')); if (files.length) { e.preventDefault(); void attach(files) } }}
